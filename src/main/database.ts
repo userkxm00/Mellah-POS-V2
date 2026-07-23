@@ -1,25 +1,17 @@
-import { DatabaseSync } from 'node:sqlite'
+import initSqlJs from 'sql.js'
 import { app } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { seedInitialData } from './seed'
 
-let db: DatabaseSync | null = null
+let rawDb: any = null
+let dbPath: string = ''
 
-/**
- * Get the path to the SQLite database file.
- * Stored in the app's user data directory (not the business database location).
- */
 function getDatabasePath(): string {
   const userDataPath = app.getPath('userData')
   return path.join(userDataPath, 'mellah-pos.db')
 }
 
-/**
- * Get the path to the migrations directory.
- * In development, this is relative to the project root.
- * In production, it's bundled with the app.
- */
 function getMigrationsPath(): string {
   if (app.isPackaged) {
     return path.join(process.resourcesPath, 'database', 'migrations')
@@ -27,44 +19,134 @@ function getMigrationsPath(): string {
   return path.join(app.getAppPath(), 'database', 'migrations')
 }
 
-/**
- * Initialize the SQLite database connection with WAL mode and foreign keys.
- * Uses Node.js 22+ built-in SQLite (node:sqlite) — no native compilation required.
- */
-export function initDatabase(): DatabaseSync {
-  if (db) return db
-
-  const dbPath = getDatabasePath()
-  const dbDir = path.dirname(dbPath)
-
-  // Ensure the directory exists
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true })
-  }
-
-  db = new DatabaseSync(dbPath)
-
-  // Enable WAL mode for better concurrent read performance
-  db.exec('PRAGMA journal_mode = WAL')
-  // Enable foreign key enforcement
-  db.exec('PRAGMA foreign_keys = ON')
-
-  // Run migrations
-  runMigrations(db)
-
-  // Seed initial data if empty
-  seedInitialData(db)
-
-  return db
+export interface StatementWrapper {
+  all(...params: unknown[]): Promise<unknown[]>
+  run(...params: unknown[]): Promise<{ changes: number; lastInsertRowid: number | bigint }>
 }
 
-/**
- * Run all pending SQL migrations in order.
- * Migrations are tracked in a `_migrations` meta table.
- */
-function runMigrations(database: DatabaseSync): void {
-  // Create migrations tracking table
-  database.exec(`
+export interface DbWrapper {
+  exec(sql: string): Promise<void>
+  prepare(sql: string): StatementWrapper
+  query<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>
+  execute(sql: string, params?: unknown[]): Promise<{ changes: number; lastInsertRowid: number | bigint }>
+  close(): void
+}
+
+let activeWrapper: DbWrapper | null = null
+
+function persist(): void {
+  if (rawDb && dbPath) {
+    const data = rawDb.export()
+    fs.writeFileSync(dbPath, Buffer.from(data))
+  }
+}
+
+// Global promise to await database initialization
+let initPromise: Promise<DbWrapper> | null = null
+
+export function initDatabase(): Promise<DbWrapper> {
+  if (activeWrapper) return Promise.resolve(activeWrapper)
+  if (initPromise) return initPromise
+
+  initPromise = (async () => {
+    dbPath = getDatabasePath()
+    const dbDir = path.dirname(dbPath)
+
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true })
+    }
+
+    const SQL = await initSqlJs()
+
+    if (fs.existsSync(dbPath)) {
+      const fileBuffer = fs.readFileSync(dbPath)
+      rawDb = new SQL.Database(fileBuffer)
+    } else {
+      rawDb = new SQL.Database()
+      persist()
+    }
+
+    // Enable WAL mode & foreign keys (WASM SQLite requires manual configuration)
+    rawDb.run('PRAGMA foreign_keys = ON;')
+
+    const wrapper: DbWrapper = {
+      async exec(sql: string): Promise<void> {
+        rawDb.run(sql)
+        persist()
+      },
+      prepare(sql: string): StatementWrapper {
+        return {
+          async all(...params: unknown[]): Promise<unknown[]> {
+            const stmt = rawDb.prepare(sql)
+            const actualParams = Array.isArray(params[0]) ? params[0] : params
+            stmt.bind(actualParams)
+            const rows: unknown[] = []
+            while (stmt.step()) {
+              rows.push(stmt.getAsObject())
+            }
+            stmt.free()
+            return rows
+          },
+          async run(...params: unknown[]): Promise<{ changes: number; lastInsertRowid: number | bigint }> {
+            const stmt = rawDb.prepare(sql)
+            const actualParams = Array.isArray(params[0]) ? params[0] : params
+            stmt.run(actualParams)
+            stmt.free()
+            persist()
+
+            // Fetch changes and lastID
+            const info = rawDb.exec('SELECT changes() as changes, last_insert_rowid() as id')
+            const changes = info[0]?.values[0]?.[0] ?? 0
+            const lastInsertRowid = info[0]?.values[0]?.[1] ?? 0
+            return { changes, lastInsertRowid }
+          },
+        }
+      },
+      async query<T = unknown>(sql: string, params: unknown[] = []): Promise<T[]> {
+        const stmt = rawDb.prepare(sql)
+        stmt.bind(params)
+        const rows: T[] = []
+        while (stmt.step()) {
+          rows.push(stmt.getAsObject() as T)
+        }
+        stmt.free()
+        return rows
+      },
+      async execute(sql: string, params: unknown[] = []): Promise<{ changes: number; lastInsertRowid: number | bigint }> {
+        const stmt = rawDb.prepare(sql)
+        stmt.run(params)
+        stmt.free()
+        persist()
+
+        const info = rawDb.exec('SELECT changes() as changes, last_insert_rowid() as id')
+        const changes = info[0]?.values[0]?.[0] ?? 0
+        const lastInsertRowid = info[0]?.values[0]?.[1] ?? 0
+        return { changes, lastInsertRowid }
+      },
+      close(): void {
+        if (rawDb) {
+          persist()
+          rawDb.close()
+          rawDb = null
+          activeWrapper = null
+          initPromise = null
+        }
+      },
+    }
+
+    activeWrapper = wrapper
+
+    await runMigrations(wrapper)
+    await seedInitialData(wrapper)
+
+    return wrapper
+  })()
+
+  return initPromise
+}
+
+async function runMigrations(wrapper: DbWrapper): Promise<void> {
+  await wrapper.exec(`
     CREATE TABLE IF NOT EXISTS _migrations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
@@ -78,78 +160,57 @@ function runMigrations(database: DatabaseSync): void {
     return
   }
 
-  // Get all migration files sorted by name
   const migrationFiles = fs
     .readdirSync(migrationsPath)
     .filter((f) => f.endsWith('.sql'))
     .sort()
 
-  // Get already applied migrations
-  const stmt = database.prepare('SELECT name FROM _migrations')
-  const rows = stmt.all() as Array<{ name: string }>
-  const applied = new Set(rows.map((row) => row.name))
+  const appliedRows = await wrapper.query<{ name: string }>('SELECT name FROM _migrations')
+  const applied = new Set(appliedRows.map((row) => row.name))
 
-  // Apply pending migrations
   for (const file of migrationFiles) {
     if (applied.has(file)) continue
 
     const sql = fs.readFileSync(path.join(migrationsPath, file), 'utf-8')
 
-    // Execute migration in a pseudo-transaction
-    // node:sqlite DatabaseSync doesn't have .transaction() method,
-    // so we use BEGIN/COMMIT/ROLLBACK manually
     try {
-      database.exec('BEGIN')
-      database.exec(sql)
-      database.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file)
-      database.exec('COMMIT')
+      await wrapper.exec('BEGIN')
+      await wrapper.exec(sql)
+      await wrapper.execute('INSERT INTO _migrations (name) VALUES (?)', [file])
+      await wrapper.exec('COMMIT')
     } catch (error) {
-      database.exec('ROLLBACK')
+      await wrapper.exec('ROLLBACK')
       throw error
     }
   }
 }
 
-/**
- * Get the active database instance. Throws if not initialized.
- */
-export function getDatabase(): DatabaseSync {
-  if (!db) {
-    throw new Error('Database not initialized. Call initDatabase() first.')
+export function getDatabase(): DbWrapper {
+  if (!activeWrapper) {
+    throw new Error('Database not initialized. Ensure initDatabase() is awaited on app startup.')
   }
-  return db
+  return activeWrapper
 }
 
-/**
- * Close the database connection gracefully.
- */
 export function closeDatabase(): void {
-  if (db) {
-    db.close()
-    db = null
+  if (activeWrapper) {
+    activeWrapper.close()
   }
 }
 
-/**
- * Execute a write operation inside a transaction.
- * All multi-table writes MUST use this to ensure atomicity.
- */
-export function withTransaction<T>(fn: (database: DatabaseSync) => T): T {
-  const database = getDatabase()
+export async function withTransaction<T>(fn: (wrapper: DbWrapper) => Promise<T>): Promise<T> {
+  const wrapper = getDatabase()
   try {
-    database.exec('BEGIN')
-    const result = fn(database)
-    database.exec('COMMIT')
+    await wrapper.exec('BEGIN')
+    const result = await fn(wrapper)
+    await wrapper.exec('COMMIT')
     return result
   } catch (error) {
-    database.exec('ROLLBACK')
+    await wrapper.exec('ROLLBACK')
     throw error
   }
 }
 
-/**
- * Get the database path (for backup purposes).
- */
 export function getDatabaseFilePath(): string {
   return getDatabasePath()
 }

@@ -51,28 +51,26 @@ type SqlParam = string | number | bigint | null | Uint8Array
 
 function registerIpcHandlers(): void {
   // Generic database query handler (read-only)
-  ipcMain.handle('db:query', (_event, sql: string, params: unknown[]) => {
+  ipcMain.handle('db:query', async (_event, sql: string, params: unknown[]) => {
     const db = getDatabase()
-    const stmt = db.prepare(sql)
-    return stmt.all(...(params as SqlParam[]))
+    return db.query(sql, params)
   })
 
   // Generic database execute handler (single write)
-  ipcMain.handle('db:execute', (_event, sql: string, params: unknown[]) => {
+  ipcMain.handle('db:execute', async (_event, sql: string, params: unknown[]) => {
     const db = getDatabase()
-    const stmt = db.prepare(sql)
-    return stmt.run(...(params as SqlParam[]))
+    return db.execute(sql, params)
   })
 
   // Transaction handler (multiple writes atomically)
   ipcMain.handle(
     'db:transaction',
-    (_event, operations: Array<{ sql: string; params: unknown[] }>) => {
-      return withTransaction((db) => {
+    async (_event, operations: Array<{ sql: string; params: unknown[] }>) => {
+      return withTransaction(async (db) => {
         const results: unknown[] = []
         for (const op of operations) {
-          const stmt = db.prepare(op.sql)
-          results.push(stmt.run(...(op.params as SqlParam[])))
+          const res = await db.execute(op.sql, op.params)
+          results.push(res)
         }
         return results
       })
@@ -131,12 +129,12 @@ function createWindow(): void {
 
 // ----- App lifecycle -----
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.mellah.pos')
 
   // Initialize the database
-  initDatabase()
+  await initDatabase()
 
   // Register IPC handlers
   registerIpcHandlers()
