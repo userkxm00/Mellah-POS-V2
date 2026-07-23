@@ -5,12 +5,13 @@ import { startBackgroundSyncLoop } from '@/services/syncEngine'
 import { LoginPage } from '@/pages/LoginPage'
 import { POSCheckoutPage } from '@/pages/POSCheckoutPage'
 import { ProductsPage } from '@/pages/ProductsPage'
+import { ReturnsPage } from '@/pages/ReturnsPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { BranchesPage } from '@/pages/BranchesPage'
 import { ToastContainer } from '@/components/ui'
 import type { UserRole } from '@/types/database'
 
-type PageRoute = 'pos' | 'products' | 'users' | 'branches'
+type PageRoute = 'pos' | 'products' | 'returns' | 'users' | 'branches'
 
 export function App(): React.JSX.Element {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -82,6 +83,17 @@ export function App(): React.JSX.Element {
               }`}
             >
               🏪 نقطة البيع
+            </button>
+
+            <button
+              onClick={() => setCurrentPage('returns')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 btn-press ${
+                currentPage === 'returns'
+                  ? 'bg-accent text-white shadow-ambient-sm'
+                  : 'text-text-secondary hover:bg-gray-100 hover:text-text-primary'
+              }`}
+            >
+              🔄 المرتجعات
             </button>
 
             {hasRole(['admin', 'manager']) && (
@@ -175,6 +187,7 @@ export function App(): React.JSX.Element {
       {/* Main Page Area */}
       <main className="flex-1 overflow-auto">
         {currentPage === 'pos' && <POSCheckoutPage />}
+        {currentPage === 'returns' && <ReturnsPage onBack={() => setCurrentPage('pos')} />}
         {currentPage === 'products' && hasRole(['admin', 'manager']) && (
           <ProductsPage onNavigateToPos={() => setCurrentPage('pos')} />
         )}
