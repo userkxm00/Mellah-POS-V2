@@ -3,6 +3,7 @@ import type { PaymentMethod } from '@/types/database'
 import { generateUUID } from '@/lib/uuid'
 import { logger } from '@/lib/logger'
 import { DEFAULT_BRANCH_ID, DEFAULT_CASHIER_ID } from '@/stores/shiftStore'
+import { enqueueSyncOperation } from './syncEngine'
 
 export interface CreateSaleResult {
   saleId: string
@@ -86,6 +87,18 @@ export async function processSale(
     // Execute all operations atomically in one single DB transaction
     await window.electron.db.transaction(operations)
     logger.info('Sale completed atomically', { saleId, totalDzd, itemCount: items.length })
+
+    // Enqueue to sync_queue for background sync
+    enqueueSyncOperation('sales', 'insert', {
+      id: saleId,
+      branch_id: DEFAULT_BRANCH_ID,
+      shift_id: shiftId,
+      cashier_id: DEFAULT_CASHIER_ID,
+      total_dzd: totalDzd,
+      payment_method: paymentMethod,
+      status: 'completed',
+      created_at: now,
+    }).catch((err) => logger.error('Failed sync enqueue sale', err))
 
     return {
       saleId,

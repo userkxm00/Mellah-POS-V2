@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores/authStore'
+import { useSyncStore } from '@/stores/syncStore'
+import { startBackgroundSyncLoop } from '@/services/syncEngine'
 import { LoginPage } from '@/pages/LoginPage'
 import { POSCheckoutPage } from '@/pages/POSCheckoutPage'
 import { ProductsPage } from '@/pages/ProductsPage'
@@ -19,10 +21,16 @@ export function App(): React.JSX.Element {
   const logout = useAuthStore((s) => s.logout)
   const hasRole = useAuthStore((s) => s.hasRole)
 
+  const isOnline = useSyncStore((s) => s.isOnline)
+  const pendingCount = useSyncStore((s) => s.pendingCount)
+
   const [currentPage, setCurrentPage] = useState<PageRoute>('pos')
 
   useEffect(() => {
     checkAuthSession()
+    // Start background sync polling loop
+    const stopSyncLoop = startBackgroundSyncLoop()
+    return () => stopSyncLoop()
   }, [checkAuthSession])
 
   if (isLoading) {
@@ -117,8 +125,29 @@ export function App(): React.JSX.Element {
           </div>
         </div>
 
-        {/* User Profile & Logout */}
+        {/* Sync Connectivity Status & User Profile */}
         <div className="flex items-center gap-4">
+          {/* Sync Status Badge */}
+          <div
+            className={`flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-bold ${
+              isOnline
+                ? 'bg-success-light text-success border-success/20'
+                : 'bg-danger-light text-danger border-danger/20 animate-pulse'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isOnline ? 'bg-success animate-pulse' : 'bg-danger'
+              }`}
+            />
+            <span>{isOnline ? 'أونلاين (Online)' : 'أوفلاين (Offline)'}</span>
+            {pendingCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded bg-black/10 text-[10px]">
+                {pendingCount} معلق
+              </span>
+            )}
+          </div>
+
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-text-primary">{currentUser.full_name}</span>
             <span
