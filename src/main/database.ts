@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { app } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import { seedInitialData } from './seed'
 
 let db: DatabaseSync | null = null
 
@@ -50,6 +51,9 @@ export function initDatabase(): DatabaseSync {
 
   // Run migrations
   runMigrations(db)
+
+  // Seed initial data if empty
+  seedInitialData(db)
 
   return db
 }
