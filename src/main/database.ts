@@ -13,9 +13,6 @@ function getDatabasePath(): string {
 }
 
 function getMigrationsPath(): string {
-  if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'database', 'migrations')
-  }
   return path.join(app.getAppPath(), 'database', 'migrations')
 }
 
@@ -34,8 +31,10 @@ export interface DbWrapper {
 
 let activeWrapper: DbWrapper | null = null
 
+let inTransaction = false
+
 function persist(): void {
-  if (rawDb && dbPath) {
+  if (rawDb && dbPath && !inTransaction) {
     const data = rawDb.export()
     fs.writeFileSync(dbPath, Buffer.from(data))
   }
@@ -71,6 +70,12 @@ export function initDatabase(): Promise<DbWrapper> {
 
     const wrapper: DbWrapper = {
       async exec(sql: string): Promise<void> {
+        const cleanSql = sql.trim().toUpperCase()
+        if (cleanSql.startsWith('BEGIN')) {
+          inTransaction = true
+        } else if (cleanSql.startsWith('COMMIT') || cleanSql.startsWith('ROLLBACK')) {
+          inTransaction = false
+        }
         rawDb.run(sql)
         persist()
       },
@@ -113,6 +118,12 @@ export function initDatabase(): Promise<DbWrapper> {
         return rows
       },
       async execute(sql: string, params: unknown[] = []): Promise<{ changes: number; lastInsertRowid: number | bigint }> {
+        const cleanSql = sql.trim().toUpperCase()
+        if (cleanSql.startsWith('BEGIN')) {
+          inTransaction = true
+        } else if (cleanSql.startsWith('COMMIT') || cleanSql.startsWith('ROLLBACK')) {
+          inTransaction = false
+        }
         const stmt = rawDb.prepare(sql)
         stmt.run(params)
         stmt.free()
@@ -174,12 +185,24 @@ async function runMigrations(wrapper: DbWrapper): Promise<void> {
     const sql = fs.readFileSync(path.join(migrationsPath, file), 'utf-8')
 
     try {
+      const statements = sql
+        .split(';')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
+
       await wrapper.exec('BEGIN')
-      await wrapper.exec(sql)
+      for (const stmt of statements) {
+        await wrapper.exec(stmt)
+      }
       await wrapper.execute('INSERT INTO _migrations (name) VALUES (?)', [file])
       await wrapper.exec('COMMIT')
     } catch (error) {
-      await wrapper.exec('ROLLBACK')
+      console.error('MIGRATION FAILED:', file, error)
+      try {
+        await wrapper.exec('ROLLBACK')
+      } catch (rollbackErr) {
+        console.error('ROLLBACK FAILED:', rollbackErr)
+      }
       throw error
     }
   }

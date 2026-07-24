@@ -16,17 +16,28 @@ export interface CartItem {
 interface CartState {
   items: CartItem[]
   paymentMethod: PaymentMethod
+  cashAmountDzd: number | null
+  cardAmountDzd: number | null
+  discountPercent: number
+  discountDzd: number
   addItem: (variant: ProductVariantWithStock, productName: string, defaultPrice: number) => void
   updateQuantity: (variant_id: string, quantity: number) => void
   removeItem: (variant_id: string) => void
   clearCart: () => void
   setPaymentMethod: (method: PaymentMethod) => void
+  setMixedAmounts: (cash: number | null, card: number | null) => void
+  setDiscount: (percent: number, dzd: number) => void
+  getSubtotal: () => number
   getTotal: () => number
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   paymentMethod: 'cash',
+  cashAmountDzd: null,
+  cardAmountDzd: null,
+  discountPercent: 0,
+  discountDzd: 0,
 
   addItem: (variant, productName, defaultPrice) => {
     const price = variant.price_dzd ?? defaultPrice
@@ -87,17 +98,37 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   clearCart: () => {
-    set({ items: [], paymentMethod: 'cash' })
+    set({
+      items: [],
+      paymentMethod: 'cash',
+      cashAmountDzd: null,
+      cardAmountDzd: null,
+      discountPercent: 0,
+      discountDzd: 0,
+    })
   },
 
   setPaymentMethod: (paymentMethod) => {
     set({ paymentMethod })
   },
 
-  getTotal: () => {
+  setMixedAmounts: (cashAmountDzd, cardAmountDzd) => {
+    set({ cashAmountDzd, cardAmountDzd })
+  },
+
+  setDiscount: (discountPercent, discountDzd) => {
+    set({ discountPercent, discountDzd })
+  },
+
+  getSubtotal: () => {
     return get().items.reduce(
       (acc, item) => acc + item.unit_price_dzd * item.quantity,
       0
     )
+  },
+
+  getTotal: () => {
+    const subtotal = get().getSubtotal()
+    return Math.max(0, subtotal - get().discountDzd)
   },
 }))

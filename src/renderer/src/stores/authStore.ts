@@ -12,7 +12,7 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
-  loginWithPin: (pin: string) => Promise<UserWithBranch>
+  loginWithPin: (pin: string, userId?: string) => Promise<UserWithBranch>
   logout: () => void
   checkAuthSession: () => Promise<void>
   hasRole: (allowedRoles: UserRole[]) => boolean
@@ -27,30 +27,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
   error: null,
 
-  loginWithPin: async (pin: string) => {
+  loginWithPin: async (pin: string, userId?: string) => {
     set({ isLoading: true, error: null })
     try {
       const cleanPin = pin.trim()
-      const rows = await window.electron.db.query<UserWithBranch>(
-        `SELECT u.*, b.name as branch_name 
-         FROM users u 
-         JOIN branches b ON b.id = u.branch_id 
-         WHERE u.pin_hash = ? AND u.deleted_at IS NULL 
-         LIMIT 1`,
-        [cleanPin]
-      )
 
-      if (rows.length === 0) {
+      // PIN verification happens in the main process via bcrypt.
+      // The raw PIN never appears in a SQL query.
+      const result = await window.electron.verifyPin(cleanPin, userId)
+
+      if (!result) {
         throw new Error('رمز PIN غير صحيح')
       }
 
-      const user = rows[0]
-      const branchRows = await window.electron.db.query<Branch>(
-        `SELECT * FROM branches WHERE id = ?`,
-        [user.branch_id]
-      )
-
-      const branch = branchRows[0] ?? null
+      const user = result.user as unknown as UserWithBranch
+      const branch = result.branch as unknown as Branch | null
 
       localStorage.setItem(SESSION_KEY, user.id)
       set({
@@ -85,6 +76,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return
       }
 
+      // Session restore by user ID — no PIN involved, no security concern
       const rows = await window.electron.db.query<UserWithBranch>(
         `SELECT u.*, b.name as branch_name 
          FROM users u 

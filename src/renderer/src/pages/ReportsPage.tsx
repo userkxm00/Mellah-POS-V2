@@ -1,5 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import {
+  ArrowRight,
+  DollarSign,
+  TrendingUp,
+  PackageCheck,
+  CreditCard,
+  Flame,
+  ClipboardList,
+  BarChart2,
+  FileText
+} from 'lucide-react'
+import { exportShiftsToCSV } from '@/services/exportService'
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  BarChart,
+  Bar,
+  Cell
+} from 'recharts'
 import { Card, Table } from '@/components/ui'
+import { useLanguageStore } from '@/stores/languageStore'
 import type { Column } from '@/components/ui'
 import {
   fetchSalesAnalytics,
@@ -14,21 +38,42 @@ import {
 import { formatCurrency } from '@/lib/format'
 import { useToastStore } from '@/stores/toastStore'
 
-export function ReportsPage({ onBack }: { onBack: () => void }): React.JSX.Element {
+interface DailyChartPoint {
+  day: string
+  revenue: number
+}
+
+export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
+  const t = useLanguageStore((s) => s.t)
+  const [timeRange, setTimeRange] = useState<'today' | '7days' | '30days' | 'all'>('7days')
   const [salesSummary, setSalesSummary] = useState<SalesAnalyticsSummary | null>(null)
   const [topProducts, setTopProducts] = useState<TopProductRow[]>([])
   const [inventoryVal, setInventoryVal] = useState<InventoryValuationSummary | null>(null)
   const [shifts, setShifts] = useState<ShiftAuditRow[]>([])
+  const [dailyChartData, setDailyChartData] = useState<DailyChartPoint[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [period, setPeriod] = useState<'all' | '7d' | '30d' | '90d'>('all')
 
   const addToast = useToastStore((s) => s.addToast)
+
+  const getPeriodDates = useCallback((): { start?: string; end?: string } => {
+    if (period === 'all') return {}
+    const end = new Date().toISOString().split('T')[0]
+    const startDateObj = new Date()
+    if (period === '7d') startDateObj.setDate(startDateObj.getDate() - 7)
+    else if (period === '30d') startDateObj.setDate(startDateObj.getDate() - 30)
+    else if (period === '90d') startDateObj.setDate(startDateObj.getDate() - 90)
+    const start = startDateObj.toISOString().split('T')[0]
+    return { start, end }
+  }, [period])
 
   const loadReports = useCallback(async () => {
     setIsLoading(true)
     try {
+      const { start, end } = getPeriodDates()
       const [salesRes, topRes, invRes, shiftRes] = await Promise.all([
-        fetchSalesAnalytics(),
-        fetchTopSellingProducts(10),
+        fetchSalesAnalytics(start, end),
+        fetchTopSellingProducts(10, start, end),
         fetchInventoryValuation(),
         fetchShiftAuditLogs(),
       ])
@@ -37,12 +82,38 @@ export function ReportsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
       setTopProducts(topRes)
       setInventoryVal(invRes)
       setShifts(shiftRes)
+
+      let dateClause = ''
+      const params: string[] = []
+      if (start && end) {
+        dateClause = ' AND DATE(created_at) >= ? AND DATE(created_at) <= ?'
+        params.push(start, end)
+      }
+
+      // Fetch sales curve from SQLite
+      const chartRows = await window.electron.db.query<{ day: string; revenue: number }>(
+        `SELECT DATE(created_at) as day, SUM(total_dzd) as revenue
+         FROM sales
+         WHERE status = 'completed' AND deleted_at IS NULL${dateClause}
+         GROUP BY DATE(created_at)
+         ORDER BY DATE(created_at) ASC
+         LIMIT 14`,
+        params
+      )
+
+      if (chartRows.length > 0) {
+        setDailyChartData(chartRows)
+      } else {
+        setDailyChartData([
+          { day: 'اليوم', revenue: salesRes.totalRevenueDzd },
+        ])
+      }
     } catch {
       addToast({ message: 'فشل تحميل التقارير', variant: 'error' })
     } finally {
       setIsLoading(false)
     }
-  }, [addToast])
+  }, [getPeriodDates, addToast])
 
   useEffect(() => {
     loadReports()
@@ -54,7 +125,7 @@ export function ReportsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
       header: 'المنتج الخيار',
       render: (row) => (
         <div>
-          <p className="font-bold text-text-primary text-xs">{row.product_name}</p>
+          <p className="font-extrabold text-text-primary text-xs">{row.product_name}</p>
           <p className="text-[11px] text-text-tertiary">
             {row.size ? `مقاس: ${row.size} ` : ''}
             {row.color ? `لون: ${row.color}` : ''}
@@ -66,7 +137,7 @@ export function ReportsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
       key: 'total_quantity_sold',
       header: 'الكمية المباعة',
       render: (row) => (
-        <span className="px-2.5 py-0.5 rounded-full bg-accent-light text-accent text-xs font-bold">
+        <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-black border border-accent/20">
           {row.total_quantity_sold} قطعة
         </span>
       ),
@@ -74,7 +145,7 @@ export function ReportsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
     {
       key: 'total_revenue_dzd',
       header: 'إجمالي العوائد',
-      render: (row) => <span className="currency font-bold text-success text-xs">{formatCurrency(row.total_revenue_dzd)}</span>,
+      render: (row) => <span className="currency font-black text-success text-xs">{formatCurrency(row.total_revenue_dzd)}</span>,
     },
   ]
 
@@ -87,13 +158,13 @@ export function ReportsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
     {
       key: 'opening_cash_dzd',
       header: 'مبلغ الفتح',
-      render: (row) => <span className="currency text-xs">{formatCurrency(row.opening_cash_dzd)}</span>,
+      render: (row) => <span className="currency text-xs font-bold">{formatCurrency(row.opening_cash_dzd)}</span>,
     },
     {
       key: 'expected_cash_dzd',
       header: 'المحسوب متوقع',
       render: (row) => (
-        <span className="currency font-semibold text-accent text-xs">
+        <span className="currency font-extrabold text-accent text-xs">
           {row.expected_cash_dzd ? formatCurrency(row.expected_cash_dzd) : '-'}
         </span>
       ),
@@ -102,7 +173,7 @@ export function ReportsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
       key: 'closing_cash_dzd',
       header: 'العد الفعلي',
       render: (row) => (
-        <span className="currency font-semibold text-text-primary text-xs">
+        <span className="currency font-extrabold text-text-primary text-xs">
           {row.closing_cash_dzd ? formatCurrency(row.closing_cash_dzd) : '-'}
         </span>
       ),
@@ -115,12 +186,12 @@ export function ReportsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
         const diff = row.difference_dzd
         return (
           <span
-            className={`currency font-bold text-xs px-2 py-0.5 rounded ${
+            className={`currency font-extrabold text-xs px-2.5 py-1 rounded-full border ${
               diff === 0
-                ? 'bg-success-light text-success'
+                ? 'bg-success/10 text-success border-success/20'
                 : diff > 0
-                  ? 'bg-warning-light text-warning'
-                  : 'bg-danger-light text-danger'
+                  ? 'bg-warning/10 text-warning border-warning/20'
+                  : 'bg-danger/10 text-danger border-danger/20'
             }`}
           >
             {diff === 0 ? '0 DA (متطابق)' : diff > 0 ? `+${formatCurrency(diff)}` : `- ${formatCurrency(Math.abs(diff))}`}
@@ -140,73 +211,214 @@ export function ReportsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
     },
   ]
 
+  const paymentData = [
+    { name: 'نقداً', amount: salesSummary?.cashSalesDzd ?? 0, color: '#30D158' },
+    { name: 'بطاقة CIB', amount: salesSummary?.cardSalesDzd ?? 0, color: '#0A84FF' },
+  ]
+
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6 pb-12">
+    <div className="p-6 max-w-6xl mx-auto space-y-6 pb-12 select-none">
       <div className="flex items-center justify-between">
         <div>
           <button
             onClick={onBack}
-            className="text-xs font-semibold text-text-secondary hover:text-accent flex items-center gap-1 mb-1"
+            className="text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 mb-1.5 transition-colors"
           >
-            ← العودة لنقطة البيع (POS)
+            <ArrowRight className="w-3.5 h-3.5" />
+            <span>إغلاق النافذة</span>
           </button>
-          <h1 className="text-2xl font-bold text-text-primary">التقارير ولوحة التحليلات التنفيذية</h1>
+          <h1 className="text-2xl font-black text-text-primary">التقارير ولوحة التحليلات التنفيذية</h1>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold">
+            <button
+              onClick={() => setPeriod('all')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                period === 'all' ? 'bg-white text-accent shadow-sm font-black' : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              كل الوقت
+            </button>
+            <button
+              onClick={() => setPeriod('7d')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                period === '7d' ? 'bg-white text-accent shadow-sm font-black' : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              آخر 7 أيام
+            </button>
+            <button
+              onClick={() => setPeriod('30d')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                period === '30d' ? 'bg-white text-accent shadow-sm font-black' : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              آخر 30 يوم
+            </button>
+            <button
+              onClick={() => setPeriod('90d')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                period === '90d' ? 'bg-white text-accent shadow-sm font-black' : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              آخر 90 يوم
+            </button>
+          </div>
+
+          <button
+            onClick={() => {
+              if (shifts.length === 0) {
+                addToast({ message: 'لا توجد بيانات ورديات للتصدير حالياً', variant: 'warning' })
+                return
+              }
+              exportShiftsToCSV(shifts)
+              addToast({ message: 'تم تصدير تقرير الورديات إلى ملف CSV بنجاح!', variant: 'success' })
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-success hover:bg-success/90 text-white text-xs font-bold shadow-ambient transition-all btn-press"
+          >
+            <FileText className="w-4 h-4" />
+            <span>تصدير الورديات CSV</span>
+          </button>
         </div>
       </div>
 
       {/* Summary Cards Grid */}
       <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <p className="text-xs text-text-tertiary mb-1">💵 إجمالي المبيعات (Revenue)</p>
-          <p className="currency-lg text-accent text-2xl">
+        <div className="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-text-secondary">إجمالي المبيعات</span>
+            <div className="p-2 rounded-xl bg-accent/10 text-accent">
+              <DollarSign className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="currency-lg text-accent text-2xl font-black">
             {salesSummary ? formatCurrency(salesSummary.totalRevenueDzd) : '-'}
           </p>
-          <p className="text-[11px] text-text-tertiary mt-1">
+          <p className="text-[11px] font-bold text-text-tertiary mt-2">
             عدد العمليات: {salesSummary?.totalSalesCount ?? 0} عملية
           </p>
-        </Card>
+        </div>
 
-        <Card>
-          <p className="text-xs text-text-tertiary mb-1">📈 صافي الأرباح المقدرة</p>
+        <div className="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-text-secondary">صافي الأرباح الربحية</span>
+            <div className="p-2 rounded-xl bg-success/10 text-success">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+          </div>
           <p
-            className={`currency-lg text-2xl ${
+            className={`currency-lg text-2xl font-black ${
               salesSummary && salesSummary.netProfitDzd > 0 ? 'text-success' : 'text-text-primary'
             }`}
           >
             {salesSummary ? formatCurrency(salesSummary.netProfitDzd) : '-'}
           </p>
-          <p className="text-[11px] text-text-tertiary mt-1">المبيعات - تكلفة الشراء</p>
-        </Card>
+          <div className="flex items-center justify-between mt-2 text-[11px] font-bold">
+            <span className="text-text-tertiary">التكلفة (COGS): {salesSummary ? formatCurrency(salesSummary.totalCogsDzd) : '-'}</span>
+            <span className="px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/20">
+              هامش: {salesSummary?.profitMarginPercent ?? 0}%
+            </span>
+          </div>
+        </div>
 
-        <Card>
-          <p className="text-xs text-text-tertiary mb-1">📦 تقييم المخزون الحالي (سعر البيع)</p>
-          <p className="currency-lg text-text-primary text-2xl">
-            {inventoryVal ? formatCurrency(inventoryVal.totalRetailValueDzd) : '-'}
-          </p>
-          <p className="text-[11px] text-text-tertiary mt-1">
-            التكلفة: {inventoryVal ? formatCurrency(inventoryVal.totalCostValueDzd) : '-'}
-          </p>
-        </Card>
-
-        <Card>
-          <p className="text-xs text-text-tertiary mb-1">💳 توزيع طرق الدفع</p>
-          <div className="text-xs space-y-1 mt-1">
-            <div className="flex justify-between">
-              <span>كاش:</span>
-              <span className="font-bold text-success">{formatCurrency(salesSummary?.cashSalesDzd ?? 0)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>بطاقة CIB:</span>
-              <span className="font-bold text-accent">{formatCurrency(salesSummary?.cardSalesDzd ?? 0)}</span>
+        <div className="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-text-secondary">تقييم المخزون الحالي</span>
+            <div className="p-2 rounded-xl bg-gray-100 text-text-primary">
+              <PackageCheck className="w-4 h-4" />
             </div>
           </div>
-        </Card>
+          <p className="currency-lg text-text-primary text-2xl font-black">
+            {inventoryVal ? formatCurrency(inventoryVal.totalRetailValueDzd) : '-'}
+          </p>
+          <p className="text-[11px] font-bold text-text-tertiary mt-2">
+            التكلفة: {inventoryVal ? formatCurrency(inventoryVal.totalCostValueDzd) : '-'}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-text-secondary">توزيع طرق الدفع</span>
+            <div className="p-2 rounded-xl bg-accent/10 text-accent">
+              <CreditCard className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-xs space-y-1.5 mt-1">
+            <div className="flex justify-between font-bold">
+              <span className="text-text-secondary">كاش:</span>
+              <span className="currency text-success">{formatCurrency(salesSummary?.cashSalesDzd ?? 0)}</span>
+            </div>
+            <div className="flex justify-between font-bold">
+              <span className="text-text-secondary">بطاقة CIB:</span>
+              <span className="currency text-accent">{formatCurrency(salesSummary?.cardSalesDzd ?? 0)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Interactive Recharts Section */}
+      <div className="grid grid-cols-3 gap-6">
+        {/* Sales Revenue Curve */}
+        <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm space-y-4">
+          <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+            <BarChart2 className="w-4 h-4 text-accent" />
+            <h2 className="text-sm font-black text-text-primary">منحنى المبيعات الإجمالية (آخر الأيام)</h2>
+          </div>
+
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={dailyChartData}>
+                <defs>
+                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0A84FF" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#0A84FF" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="day" stroke="#AEAEB2" fontSize={11} />
+                <YAxis stroke="#AEAEB2" fontSize={11} />
+                <Tooltip
+                  formatter={(val: any) => [`${(Number(val) || 0).toLocaleString()} DA`, 'المبيعات']}
+                  contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e5ea', fontWeight: 'bold' }}
+                />
+                <Area type="monotone" dataKey="revenue" stroke="#0A84FF" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Payment Methods Chart */}
+        <div className="col-span-1 bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm space-y-4">
+          <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+            <CreditCard className="w-4 h-4 text-success" />
+            <h2 className="text-sm font-black text-text-primary">مقارنة وسائل الدفع (DA)</h2>
+          </div>
+
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={paymentData}>
+                <XAxis dataKey="name" stroke="#AEAEB2" fontSize={11} />
+                <YAxis stroke="#AEAEB2" fontSize={11} />
+                <Tooltip
+                  formatter={(val: any) => [`${(Number(val) || 0).toLocaleString()} DA`, 'المبلغ']}
+                  contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e5ea', fontWeight: 'bold' }}
+                />
+                <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
+                  {paymentData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       {/* Top Selling Products Leaderboard */}
-      <Card padding="compact">
-        <div className="px-3 py-3 border-b border-border-light">
-          <h2 className="text-base font-bold text-text-primary">🔥 الأقثر مبيعاً (Top 10 Selling Products)</h2>
+      <Card padding="compact" className="overflow-hidden border border-gray-200/80">
+        <div className="px-4 py-3.5 border-b border-gray-200/80 bg-gray-50/50 flex items-center gap-2">
+          <Flame className="w-4 h-4 text-warning" />
+          <h2 className="text-sm font-black text-text-primary">الأكثر مبيعاً (Top 10 Selling Products)</h2>
         </div>
         <Table
           columns={topProductColumns}
@@ -218,9 +430,10 @@ export function ReportsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
       </Card>
 
       {/* Shift Audit Log */}
-      <Card padding="compact">
-        <div className="px-3 py-3 border-b border-border-light">
-          <h2 className="text-base font-bold text-text-primary">📑 سجل ورديات العمل وصندوق الكاشير (Shift Audit)</h2>
+      <Card padding="compact" className="overflow-hidden border border-gray-200/80">
+        <div className="px-4 py-3.5 border-b border-gray-200/80 bg-gray-50/50 flex items-center gap-2">
+          <ClipboardList className="w-4 h-4 text-accent" />
+          <h2 className="text-sm font-black text-text-primary">سجل ورديات العمل وصندوق الكاشير (Shift Audit Log)</h2>
         </div>
         <Table
           columns={shiftAuditColumns}

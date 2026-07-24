@@ -2,10 +2,11 @@ import { create } from 'zustand'
 import type { Shift } from '@/types/database'
 import { generateUUID } from '@/lib/uuid'
 import { logger } from '@/lib/logger'
+import { useAuthStore } from '@/stores/authStore'
 
-// Seeded branch and cashier IDs for Phase 2
+// Fallback seed constants if session is empty
 export const DEFAULT_BRANCH_ID = 'b1111111-1111-4111-8111-111111111111'
-export const DEFAULT_CASHIER_ID = 'u2222222-2222-4222-8222-222222222222' // محمد الكاشير
+export const DEFAULT_CASHIER_ID = 'u2222222-2222-4222-8222-222222222222'
 
 interface ShiftState {
   activeShift: Shift | null
@@ -20,6 +21,15 @@ interface ShiftState {
   }>
 }
 
+function getActiveUserAndBranch(): { cashierId: string; branchId: string } {
+  const user = useAuthStore.getState().currentUser
+  const branch = useAuthStore.getState().currentBranch
+  return {
+    cashierId: user?.id ?? DEFAULT_CASHIER_ID,
+    branchId: branch?.id ?? DEFAULT_BRANCH_ID,
+  }
+}
+
 export const useShiftStore = create<ShiftState>((set, get) => ({
   activeShift: null,
   isLoading: false,
@@ -27,12 +37,14 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
 
   fetchActiveShift: async () => {
     set({ isLoading: true, error: null })
+    const { cashierId, branchId } = getActiveUserAndBranch()
+
     try {
       const rows = await window.electron.db.query<Shift>(
         `SELECT * FROM shifts 
          WHERE branch_id = ? AND cashier_id = ? AND status = 'open' 
          ORDER BY opened_at DESC LIMIT 1`,
-        [DEFAULT_BRANCH_ID, DEFAULT_CASHIER_ID]
+        [branchId, cashierId]
       )
 
       const shift = rows.length > 0 ? rows[0] : null
@@ -48,6 +60,8 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
 
   openShift: async (openingCashDzd: number) => {
     set({ isLoading: true, error: null })
+    const { cashierId, branchId } = getActiveUserAndBranch()
+
     try {
       const id = generateUUID()
       const now = new Date().toISOString()
@@ -56,13 +70,13 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
         `INSERT INTO shifts 
          (id, branch_id, cashier_id, opening_cash_dzd, status, opened_at) 
          VALUES (?, ?, ?, ?, 'open', ?)`,
-        [id, DEFAULT_BRANCH_ID, DEFAULT_CASHIER_ID, openingCashDzd, now]
+        [id, branchId, cashierId, openingCashDzd, now]
       )
 
       const newShift: Shift = {
         id,
-        branch_id: DEFAULT_BRANCH_ID,
-        cashier_id: DEFAULT_CASHIER_ID,
+        branch_id: branchId,
+        cashier_id: cashierId,
         opening_cash_dzd: openingCashDzd,
         expected_cash_dzd: null,
         closing_cash_dzd: null,

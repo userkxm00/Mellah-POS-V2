@@ -1,6 +1,7 @@
 import { generateUUID } from '@/lib/uuid'
 import { logger } from '@/lib/logger'
 import { useSyncStore } from '@/stores/syncStore'
+import { supabase } from '@/lib/supabase'
 import type { SyncQueueEntry, SyncOperation } from '@/types/database'
 
 /**
@@ -47,33 +48,35 @@ export async function updatePendingQueueCount(): Promise<number> {
 }
 
 /**
- * Perform a lightweight reachability ping check.
- * Checks real network connectivity (not just navigator.onLine).
+ * Perform a reachability check.
+ * Checks real network connectivity with fallbacks.
  */
 export async function checkRealConnectivity(): Promise<boolean> {
-  if (!navigator.onLine) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
     useSyncStore.getState().setOnlineStatus(false)
     return false
   }
 
   try {
-    // Ping lightweight public endpoint or Supabase reachability
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3000)
+    const timeoutId = setTimeout(() => controller.abort(), 4000)
 
-    const res = await fetch('https://httpbin.org/get', {
-      method: 'HEAD',
+    // Ping cloudflare cdn-cgi/trace with no-cors to avoid CORS blocks
+    await fetch('https://www.cloudflare.com/cdn-cgi/trace', {
+      method: 'GET',
+      mode: 'no-cors',
       signal: controller.signal,
       cache: 'no-store',
     })
     clearTimeout(timeoutId)
 
-    const isOnline = res.ok || res.status < 500
-    useSyncStore.getState().setOnlineStatus(isOnline)
-    return isOnline
+    useSyncStore.getState().setOnlineStatus(true)
+    return true
   } catch {
-    useSyncStore.getState().setOnlineStatus(false)
-    return false
+    // If ping fails (e.g. offline local network), use navigator.onLine fallback
+    const online = typeof navigator !== 'undefined' ? navigator.onLine : false
+    useSyncStore.getState().setOnlineStatus(online)
+    return online
   }
 }
 
@@ -104,20 +107,45 @@ export async function processSyncQueue(): Promise<number> {
     }
 
     const now = new Date().toISOString()
+    const hasRealSupabase =
+      import.meta.env.VITE_SUPABASE_URL &&
+      !import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
+
     for (const entry of pendingEntries) {
       try {
-        // In actual Supabase deployment, entry payload is pushed via Supabase client.
-        // For local offline-first architecture, we mark synced_at to simulate successful push.
+        let payloadObj: Record<string, unknown> = {}
+        try {
+          payloadObj = JSON.parse(entry.payload)
+        } catch {
+          payloadObj = {}
+        }
+
+        // If actual Supabase credentials exist, push to remote Supabase DB
+        if (hasRealSupabase) {
+          if (entry.operation === 'insert' || entry.operation === 'update') {
+            const { error } = await supabase.from(entry.table_name).upsert(payloadObj)
+            if (error) throw new Error(error.message)
+          } else if (entry.operation === 'delete') {
+            const { error } = await supabase
+              .from(entry.table_name)
+              .delete()
+              .eq('id', (payloadObj as { id?: string }).id ?? '')
+            if (error) throw new Error(error.message)
+          }
+        }
+
+        // Mark as synced locally
         await window.electron.db.execute(
-          `UPDATE sync_queue SET synced_at = ?, attempts = attempts + 1 WHERE id = ?`,
+          `UPDATE sync_queue SET synced_at = ?, attempts = attempts + 1, last_error = NULL WHERE id = ?`,
           [now, entry.id]
         )
         processedCount++
       } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'فشل الرفع للسحابة'
         logger.error('Failed to sync queue entry', { id: entry.id, err })
         await window.electron.db.execute(
-          `UPDATE sync_queue SET attempts = attempts + 1 WHERE id = ?`,
-          [entry.id]
+          `UPDATE sync_queue SET attempts = attempts + 1, last_error = ? WHERE id = ?`,
+          [errorMsg, entry.id]
         )
       }
     }
@@ -131,6 +159,20 @@ export async function processSyncQueue(): Promise<number> {
   }
 
   return processedCount
+}
+
+/**
+ * Manual trigger for user to force re-connection check and sync.
+ */
+export async function manualReconnectAndSync(): Promise<{ isOnline: boolean; processed: number }> {
+  useSyncStore.getState().setSyncing(true)
+  const isOnline = await checkRealConnectivity()
+  let processed = 0
+  if (isOnline) {
+    processed = await processSyncQueue()
+  }
+  useSyncStore.getState().setSyncing(false)
+  return { isOnline, processed }
 }
 
 /**

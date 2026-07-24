@@ -1,4 +1,7 @@
 import type { DbWrapper } from './database'
+import bcrypt from 'bcryptjs'
+
+const BCRYPT_ROUNDS = 10
 
 export async function seedInitialData(db: DbWrapper): Promise<void> {
   const branchRows = await db.query<{ count: number }>('SELECT COUNT(*) as count FROM branches')
@@ -22,15 +25,18 @@ export async function seedInitialData(db: DbWrapper): Promise<void> {
       'شارع ديدوش مراد، الجزائر',
     ])
 
-    // 2. Users
+    // 2. Users — PINs are hashed with bcrypt before storage
+    const adminPinHash = bcrypt.hashSync('1234', BCRYPT_ROUNDS)
+    const cashierPinHash = bcrypt.hashSync('0000', BCRYPT_ROUNDS)
+
     await db.execute(
       'INSERT INTO users (id, branch_id, full_name, role, pin_hash) VALUES (?, ?, ?, ?, ?)',
-      [adminId, branchId, 'أحمد المدير', 'admin', '1234']
+      [adminId, branchId, 'أحمد المدير', 'admin', adminPinHash]
     )
 
     await db.execute(
       'INSERT INTO users (id, branch_id, full_name, role, pin_hash) VALUES (?, ?, ?, ?, ?)',
-      [cashierId, branchId, 'محمد الكاشير', 'cashier', '0000']
+      [cashierId, branchId, 'محمد الكاشير', 'cashier', cashierPinHash]
     )
 
     // 3. Store Settings

@@ -1,0 +1,465 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { ArrowRight, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText } from 'lucide-react'
+import { Card, Input, Modal } from '@/components/ui'
+import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+import { exportDatabaseBackup, importDatabaseBackup } from '@/services/backupService'
+import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore, type Language } from '@/stores/languageStore'
+import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
+import { printThermalReceipt } from '@/services/receiptService'
+
+export interface PrinterInfo {
+  name: string
+  isDefault: boolean
+}
+
+export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Element {
+  const [storeName, setStoreName] = useState<string>('بوتيك الملاح للملابس')
+  const [storeAddress, setStoreAddress] = useState<string>('')
+  const [storePhone, setStorePhone] = useState<string>('')
+  const [footerText, setFooterText] = useState<string>('شكراً لزيارتكم، البضاعة المباعة ترجع أو تبدل خلال 7 أيام مع إحضار الفاتورة.')
+  const [sessionTimeout, setSessionTimeout] = useState<number>(5)
+
+  const currentLang = useLanguageStore((s) => s.language)
+  const setLanguageStore = useLanguageStore((s) => s.setLanguage)
+  const t = useLanguageStore((s) => s.t)
+
+  // Printer settings
+  const [printers, setPrinters] = useState<PrinterInfo[]>([])
+  const [selectedPrinter, setSelectedPrinter] = useState<string>(
+    localStorage.getItem('mellah_printer_name') ?? ''
+  )
+  const [paperWidth, setPaperWidth] = useState<'80mm' | '58mm'>(
+    (localStorage.getItem('mellah_paper_width') as '80mm' | '58mm') ?? '80mm'
+  )
+  const [autoPrint, setAutoPrint] = useState<boolean>(
+    localStorage.getItem('mellah_auto_print') === 'true'
+  )
+
+  const [isSaving, setIsSaving] = useState<boolean>(false)
+  const [isExporting, setIsExporting] = useState<boolean>(false)
+  const [isImporting, setIsImporting] = useState<boolean>(false)
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState<boolean>(false)
+  const [pendingBackupContent, setPendingBackupContent] = useState<string | null>(null)
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const addToast = useToastStore((s) => s.addToast)
+
+  // Fetch printers and store settings
+  const loadSettings = useCallback(async () => {
+    try {
+      if (window.electron?.getPrinters) {
+        const printerList = await window.electron.getPrinters()
+        setPrinters(printerList)
+        if (!selectedPrinter && printerList.length > 0) {
+          const defaultP = printerList.find((p) => p.isDefault) ?? printerList[0]
+          setSelectedPrinter(defaultP.name)
+        }
+      }
+
+      const rows = await window.electron.db.query<{
+        store_name: string
+        store_address: string | null
+        store_phone: string | null
+        receipt_footer_text: string
+        default_language: string
+        session_timeout_minutes: number | null
+      }>(
+        'SELECT store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes FROM store_settings WHERE branch_id = ?',
+        [DEFAULT_BRANCH_ID]
+      )
+
+      if (rows.length > 0) {
+        setStoreName(rows[0].store_name ?? 'بوتيك الملاح للملابس')
+        setStoreAddress(rows[0].store_address ?? '')
+        setStorePhone(rows[0].store_phone ?? '')
+        setFooterText(rows[0].receipt_footer_text ?? '')
+        if (rows[0].session_timeout_minutes) setSessionTimeout(rows[0].session_timeout_minutes)
+        if (rows[0].default_language) {
+          setLanguageStore(rows[0].default_language as Language)
+        }
+      }
+    } catch {
+      // Default fallback settings
+    }
+  }, [selectedPrinter, setLanguageStore])
+
+  useEffect(() => {
+    loadSettings()
+  }, [loadSettings])
+
+  const handleSave = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault()
+    setIsSaving(true)
+    try {
+      const now = new Date().toISOString()
+      await window.electron.db.execute(
+        `INSERT INTO store_settings (branch_id, store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(branch_id) DO UPDATE SET
+           store_name=excluded.store_name,
+           store_address=excluded.store_address,
+           store_phone=excluded.store_phone,
+           receipt_footer_text=excluded.receipt_footer_text,
+           default_language=excluded.default_language,
+           session_timeout_minutes=excluded.session_timeout_minutes,
+           updated_at=excluded.updated_at`,
+        [DEFAULT_BRANCH_ID, storeName.trim(), storeAddress.trim() || null, storePhone.trim() || null, footerText.trim(), currentLang, sessionTimeout, now]
+      )
+
+      localStorage.setItem('mellah_printer_name', selectedPrinter)
+      localStorage.setItem('mellah_paper_width', paperWidth)
+      localStorage.setItem('mellah_auto_print', String(autoPrint))
+
+      // Refresh store settings in Zustand store
+      useStoreSettingsStore.getState().loadSettings()
+
+      addToast({ message: 'تم حفظ إعدادات المتجر وطابعة الفواتير واللغة بنجاح! ✅', variant: 'success' })
+    } catch {
+      addToast({ message: 'فشل حفظ الإعدادات', variant: 'error' })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleTestPrint = async (): Promise<void> => {
+    try {
+      await printThermalReceipt(
+        {
+          storeName: storeName || 'بوتيك الملاح للملابس',
+          branchAddress: storeAddress || 'الجزائر العاصمة',
+          receiptId: 'TEST-123456',
+          date: new Date().toISOString(),
+          cashierName: 'تجربة الطابعة',
+          items: [
+            { product_name: 'قميص رجالي فاخر (تجربة)', size: 'L', color: 'أزرق', quantity: 1, unit_price: 3500 },
+            { product_name: 'سروال جينز عصري (تجربة)', size: '42', color: 'أسود', quantity: 1, unit_price: 4200 },
+          ],
+          subtotalDzd: 7700,
+          discountDzd: 200,
+          totalDzd: 7500,
+          paymentMethod: 'cash',
+        },
+        { printerName: selectedPrinter || undefined, paperWidth }
+      )
+      addToast({ message: 'تم إرسال أمر الطباعة التجريبية! 🖨️', variant: 'success' })
+    } catch {
+      addToast({ message: 'فشل إرسال الفاتورة التجريبية للطابعة', variant: 'error' })
+    }
+  }
+
+  const handleBackup = async (): Promise<void> => {
+    setIsExporting(true)
+    try {
+      const fileName = await exportDatabaseBackup()
+      addToast({ message: `تم تصدير النسخة الاحتياطية بنجاح: ${fileName}`, variant: 'success' })
+    } catch (err) {
+      addToast({ message: (err as Error).message, variant: 'error' })
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const content = event.target?.result as string
+      if (content) {
+        setPendingBackupContent(content)
+        setIsRestoreModalOpen(true)
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  const handleConfirmRestore = async (): Promise<void> => {
+    if (!pendingBackupContent) return
+    setIsImporting(true)
+    try {
+      const count = await importDatabaseBackup(pendingBackupContent)
+      addToast({ message: `تمت استعادة البيانات بنجاح! الإجمالي: ${count} سجل`, variant: 'success' })
+      setIsRestoreModalOpen(false)
+      setPendingBackupContent(null)
+      loadSettings()
+    } catch (err) {
+      addToast({ message: (err as Error).message, variant: 'error' })
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto space-y-6 pb-12 select-none">
+      <div className="flex items-center justify-between">
+        <div>
+          <button
+            onClick={onBack}
+            className="text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 mb-1.5 transition-colors"
+          >
+            <ArrowRight className="w-3.5 h-3.5" />
+            <span>{t('إغلاق النافذة')}</span>
+          </button>
+          <h1 className="text-2xl font-black text-text-primary">{t('إعدادات المتجر وطابعة الفواتير واللغة والنسخ الاحتياطي')}</h1>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-6">
+        {/* Settings Form Column */}
+        <form onSubmit={handleSave} className="col-span-2 space-y-5">
+          <Card className="p-6 space-y-4 border border-gray-200/80">
+            <h2 className="text-sm font-black text-text-primary flex items-center gap-2 pb-2 border-b border-gray-100">
+              <Store className="w-4 h-4 text-accent" />
+              <span>{t('بيانات المتجر والفواتير')}</span>
+            </h2>
+
+            <Input
+              label={t('اسم المتجر (المطبوع أعلى الفاتورة)')}
+              value={storeName}
+              onChange={(e) => setStoreName(e.target.value)}
+              required
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label={t('عنوان المتجر')}
+                placeholder="مثال: الجزائر العاصمة، حي حسيبة بن بوعلي"
+                value={storeAddress}
+                onChange={(e) => setStoreAddress(e.target.value)}
+              />
+              <Input
+                label={t('هاتف المتجر')}
+                placeholder="مثال: 0550123456"
+                value={storePhone}
+                onChange={(e) => setStorePhone(e.target.value)}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-primary">{t('نص أسفل الفاتورة الحرارية (Footer Text)')}</label>
+              <textarea
+                rows={2}
+                value={footerText}
+                onChange={(e) => setFooterText(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+            </div>
+          </Card>
+
+          {/* Language & Session Timeout Settings Card */}
+          <Card className="p-6 space-y-4 border border-gray-200/80">
+            <h2 className="text-sm font-black text-text-primary flex items-center gap-2 pb-2 border-b border-gray-100">
+              <Globe className="w-4 h-4 text-accent" />
+              <span>{t('اللغة والأمان')}</span>
+            </h2>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-text-primary">{t('لغة الواجهة (Language)')}</label>
+                <select
+                  value={currentLang}
+                  onChange={(e) => setLanguageStore(e.target.value as Language)}
+                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                >
+                  <option value="ar">العربية (RTL)</option>
+                  <option value="fr">Français (LTR)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-text-primary flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-text-tertiary" />
+                  <span>قفل الجلسة عند التوقف (دقائق)</span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={sessionTimeout}
+                  onChange={(e) => setSessionTimeout(parseInt(e.target.value) || 5)}
+                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* Thermal Printer Settings Card */}
+          <Card className="p-6 space-y-4 border border-gray-200/80">
+            <h2 className="text-sm font-black text-text-primary flex items-center gap-2 pb-2 border-b border-gray-100">
+              <Printer className="w-4 h-4 text-accent" />
+              <span>إعدادات طابعة الفواتير الحرارية (Thermal Printer)</span>
+            </h2>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-primary">طابعة الفواتير المتصلة بالكمبيوتر</label>
+              <select
+                value={selectedPrinter}
+                onChange={(e) => setSelectedPrinter(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+              >
+                <option value="">الطابعة الافتراضية للفرع</option>
+                {printers.map((p) => (
+                  <option key={p.name} value={p.name}>
+                    {p.name} {p.isDefault ? '(الافتراضية للنظام)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-text-primary">عرض ورق الفاتورة الحرارية</label>
+                <select
+                  value={paperWidth}
+                  onChange={(e) => setPaperWidth(e.target.value as '80mm' | '58mm')}
+                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                >
+                  <option value="80mm">80 مم (80mm Thermal Receipt)</option>
+                  <option value="58mm">58 مم (58mm Compact Receipt)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 pt-6">
+                <input
+                  type="checkbox"
+                  id="autoPrintCheck"
+                  checked={autoPrint}
+                  onChange={(e) => setAutoPrint(e.target.checked)}
+                  className="w-4 h-4 rounded text-accent focus:ring-accent accent-accent cursor-pointer"
+                />
+                <label htmlFor="autoPrintCheck" className="text-xs font-bold text-text-primary cursor-pointer">
+                  طباعة الفاتورة تلقائياً فور إنهاء عملية البيع
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="flex-1 py-3.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-extrabold shadow-ambient transition-all btn-press flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>حفظ الإعدادات والتغييرات</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleTestPrint}
+                className="px-5 py-3.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-text-secondary text-xs font-extrabold transition-all btn-press flex items-center gap-1.5"
+              >
+                <FileText className="w-4 h-4" />
+                <span>طباعة تجريبية</span>
+              </button>
+            </div>
+          </Card>
+        </form>
+
+        {/* Database Backup Column */}
+        <div className="col-span-1 space-y-5">
+          <Card className="p-6 space-y-4 border border-gray-200/80">
+            <h2 className="text-sm font-black text-text-primary flex items-center gap-2 pb-2 border-b border-gray-100">
+              <Database className="w-4 h-4 text-success" />
+              <span>حماية البيانات والنسخ الاحتياطي</span>
+            </h2>
+
+            <p className="text-xs text-text-secondary leading-relaxed font-semibold">
+              قم بتصدير نسخة احتياطية من جميع مبيعاتك ومنتجاتك وسجل الستوك لحفظها على جهازك أو فلاشة خارجية لضمان سلامة البيانات.
+            </p>
+
+            <button
+              onClick={handleBackup}
+              disabled={isExporting}
+              className="w-full py-3.5 rounded-2xl bg-success hover:bg-success/90 text-white text-xs font-extrabold shadow-ambient transition-all btn-press flex items-center justify-center gap-2"
+            >
+              <Database className="w-4 h-4" />
+              <span>تصدير نسخة احتياطية الآن</span>
+            </button>
+          </Card>
+
+          <Card className="p-6 space-y-4 border border-amber-200 bg-amber-50/40">
+            <h2 className="text-sm font-black text-amber-900 flex items-center gap-2 pb-2 border-b border-amber-200">
+              <Upload className="w-4 h-4 text-amber-600" />
+              <span>استرجاع نسخة احتياطية (Restore)</span>
+            </h2>
+
+            <p className="text-xs text-amber-800 leading-relaxed font-semibold">
+              استيراد بيانات كاملة من ملف JSON محفوط سابقاً لاستعادة المنتجات وسجلات المبيعات.
+            </p>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".json"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold shadow-ambient transition-all btn-press flex items-center justify-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              <span>استرجاع نسخة احتياطية من ملف</span>
+            </button>
+          </Card>
+
+          {/* About App Card */}
+          <Card className="p-6 space-y-3 border border-gray-200/80 bg-gray-50/50">
+            <h2 className="text-sm font-black text-text-primary flex items-center gap-2 pb-2 border-b border-gray-200">
+              <Store className="w-4 h-4 text-accent" />
+              <span>حول برنامج Mellah POS</span>
+            </h2>
+
+            <div className="space-y-1.5 text-xs text-text-secondary font-semibold">
+              <p><span className="font-extrabold text-text-primary">إصدار النظام:</span> 1.0.0 Commercial Release</p>
+              <p><span className="font-extrabold text-text-primary">قاعدة البيانات:</span> SQLite Offline Sync Engine</p>
+              <p><span className="font-extrabold text-text-primary">محرك الواجهة:</span> Electron Desktop Engine</p>
+              <p className="text-[11px] text-text-tertiary pt-2 border-t border-gray-200">
+                برنامج الملاح مخصص ومطور خصيصاً للمحلات التجارية والأنشطة في الجزائر.
+              </p>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Backup Confirmation Modal */}
+      <Modal
+        isOpen={isRestoreModalOpen}
+        onClose={() => setIsRestoreModalOpen(false)}
+        title="تأكيد استرجاع النسخة الاحتياطية"
+        size="md"
+      >
+        <div className="space-y-4 select-none">
+          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-xs font-bold text-amber-900 space-y-1">
+              <p className="font-extrabold text-sm">تحذير هامي جدًا!</p>
+              <p>
+                استرجاع النسخة الاحتياطية سيعيد استبدال جميع البيانات الحالية في الجداول (المبيعات، الستوك، الزبائن) بالبيانات الموجودة في الملف المحدد.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setIsRestoreModalOpen(false)}
+              className="flex-1 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-text-secondary"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={handleConfirmRestore}
+              disabled={isImporting}
+              className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-xs font-bold text-white shadow-ambient transition-all btn-press"
+            >
+              {isImporting ? 'جاري الاسترجاع...' : 'تأكيد واسترجاع البيانات الآن'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  )
+}

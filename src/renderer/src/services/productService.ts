@@ -148,3 +148,55 @@ export async function addStockMovement(
     throw new Error(msg)
   }
 }
+
+export interface LowStockVariant {
+  variant_id: string
+  product_id: string
+  product_name: string
+  category_name: string | null
+  size: string | null
+  color: string | null
+  barcode: string | null
+  price_dzd: number
+  cost_dzd: number | null
+  current_stock: number
+  min_stock_level: number
+  suggested_reorder_qty: number
+}
+
+export async function fetchLowStockVariants(): Promise<LowStockVariant[]> {
+  try {
+    const rows = await window.electron.db.query<LowStockVariant>(`
+      SELECT 
+        v.id as variant_id,
+        p.id as product_id,
+        p.name as product_name,
+        c.name as category_name,
+        v.size,
+        v.color,
+        v.barcode,
+        COALESCE(v.price_dzd, p.price_dzd) as price_dzd,
+        p.cost_dzd,
+        COALESCE(SUM(sm.quantity_change), 0) as current_stock,
+        COALESCE(v.min_stock_level, 5) as min_stock_level,
+        CASE 
+          WHEN COALESCE(SUM(sm.quantity_change), 0) < COALESCE(v.min_stock_level, 5)
+          THEN (COALESCE(v.min_stock_level, 5) * 2) - COALESCE(SUM(sm.quantity_change), 0)
+          ELSE 0
+        END as suggested_reorder_qty
+      FROM product_variants v
+      JOIN products p ON p.id = v.product_id
+      LEFT JOIN categories c ON c.id = p.category_id
+      LEFT JOIN stock_movements sm ON sm.variant_id = v.id
+      WHERE p.deleted_at IS NULL AND v.deleted_at IS NULL
+      GROUP BY v.id
+      HAVING current_stock <= min_stock_level
+      ORDER BY current_stock ASC
+    `)
+    return rows
+  } catch (err) {
+    logger.error('Failed to fetch low stock variants', err)
+    return []
+  }
+}
+

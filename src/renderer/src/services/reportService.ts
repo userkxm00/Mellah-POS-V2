@@ -3,7 +3,9 @@ import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 export interface SalesAnalyticsSummary {
   totalRevenueDzd: number
   totalSalesCount: number
+  totalCogsDzd: number
   netProfitDzd: number
+  profitMarginPercent: number
   cashSalesDzd: number
   cardSalesDzd: number
 }
@@ -36,7 +38,15 @@ export interface ShiftAuditRow {
   closed_at: string | null
 }
 
-export async function fetchSalesAnalytics(): Promise<SalesAnalyticsSummary> {
+export async function fetchSalesAnalytics(startDate?: string, endDate?: string): Promise<SalesAnalyticsSummary> {
+  let dateClause = ''
+  const params: unknown[] = [DEFAULT_BRANCH_ID]
+
+  if (startDate && endDate) {
+    dateClause = ' AND DATE(created_at) >= ? AND DATE(created_at) <= ?'
+    params.push(startDate, endDate)
+  }
+
   // 1. Total Sales & Payment Method Breakdown
   const salesSummary = await window.electron.db.query<{
     payment_method: string
@@ -45,9 +55,9 @@ export async function fetchSalesAnalytics(): Promise<SalesAnalyticsSummary> {
   }>(
     `SELECT payment_method, SUM(total_dzd) as total, COUNT(*) as count
      FROM sales
-     WHERE branch_id = ? AND status = 'completed'
+     WHERE branch_id = ? AND status = 'completed'${dateClause}
      GROUP BY payment_method`,
-    [DEFAULT_BRANCH_ID]
+    params
   )
 
   let totalRevenue = 0
@@ -66,29 +76,48 @@ export async function fetchSalesAnalytics(): Promise<SalesAnalyticsSummary> {
   }
 
   // 2. Net Profit Calculation (Sales Revenue - Item Costs)
+  const profitParams: unknown[] = [DEFAULT_BRANCH_ID]
+  let profitDateClause = ''
+  if (startDate && endDate) {
+    profitDateClause = ' AND DATE(s.created_at) >= ? AND DATE(s.created_at) <= ?'
+    profitParams.push(startDate, endDate)
+  }
+
   const profitRow = await window.electron.db.query<{ total_cost: number | null }>(
     `SELECT SUM(si.quantity * COALESCE(p.cost_dzd, 0)) as total_cost
      FROM sale_items si
      JOIN sales s ON s.id = si.sale_id
      JOIN product_variants v ON v.id = si.variant_id
      JOIN products p ON p.id = v.product_id
-     WHERE s.branch_id = ? AND s.status = 'completed'`,
-    [DEFAULT_BRANCH_ID]
+     WHERE s.branch_id = ? AND s.status = 'completed'${profitDateClause}`,
+    profitParams
   )
 
   const totalCost = profitRow[0]?.total_cost ?? 0
   const netProfit = totalRevenue - totalCost
+  const profitMarginPercent = totalRevenue > 0 ? Number(((netProfit / totalRevenue) * 100).toFixed(1)) : 0
 
   return {
     totalRevenueDzd: totalRevenue,
     totalSalesCount: totalCount,
+    totalCogsDzd: totalCost,
     netProfitDzd: netProfit,
+    profitMarginPercent,
     cashSalesDzd: cashSales,
     cardSalesDzd: cardSales,
   }
 }
 
-export async function fetchTopSellingProducts(limit = 10): Promise<TopProductRow[]> {
+export async function fetchTopSellingProducts(limit = 10, startDate?: string, endDate?: string): Promise<TopProductRow[]> {
+  let dateClause = ''
+  const params: unknown[] = [DEFAULT_BRANCH_ID]
+
+  if (startDate && endDate) {
+    dateClause = ' AND DATE(s.created_at) >= ? AND DATE(s.created_at) <= ?'
+    params.push(startDate, endDate)
+  }
+  params.push(limit)
+
   return window.electron.db.query<TopProductRow>(
     `SELECT 
        si.variant_id, p.name as product_name, v.size, v.color,
@@ -98,11 +127,11 @@ export async function fetchTopSellingProducts(limit = 10): Promise<TopProductRow
      JOIN sales s ON s.id = si.sale_id
      JOIN product_variants v ON v.id = si.variant_id
      JOIN products p ON p.id = v.product_id
-     WHERE s.branch_id = ? AND s.status = 'completed'
+     WHERE s.branch_id = ? AND s.status = 'completed'${dateClause}
      GROUP BY si.variant_id
      ORDER BY total_quantity_sold DESC
      LIMIT ?`,
-    [DEFAULT_BRANCH_ID, limit]
+    params
   )
 }
 

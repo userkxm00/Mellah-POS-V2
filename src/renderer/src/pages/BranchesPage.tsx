@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Card, Button, Input, Modal, Table } from '@/components/ui'
+import { ArrowRight, Plus, Building2, MapPin, Edit3, Trash2 } from 'lucide-react'
+import { Card, Input, Modal, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
+import { recordAuditLog } from '@/services/auditLogService'
 
 interface BranchItem {
   id: string
@@ -11,14 +14,22 @@ interface BranchItem {
   created_at: string
 }
 
-export function BranchesPage({ onBack }: { onBack: () => void }): React.JSX.Element {
+export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
+  const t = useLanguageStore((s) => s.t)
   const [branches, setBranches] = useState<BranchItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
 
+  // Add branch state
   const [name, setName] = useState<string>('')
   const [address, setAddress] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+
+  // Edit branch state
+  const [editingBranch, setEditingBranch] = useState<BranchItem | null>(null)
+  const [editName, setEditName] = useState<string>('')
+  const [editAddress, setEditAddress] = useState<string>('')
+  const [isEditSaving, setIsEditSaving] = useState<boolean>(false)
 
   const addToast = useToastStore((s) => s.addToast)
 
@@ -56,7 +67,8 @@ export function BranchesPage({ onBack }: { onBack: () => void }): React.JSX.Elem
         [id, name.trim(), address.trim() || null, now, now]
       )
 
-      addToast({ message: 'تم إضافة الفرع بنجاح!', variant: 'success' })
+      addToast({ message: 'تم إضافة الفرع بنجاح! ✅', variant: 'success' })
+      recordAuditLog('branch_created', 'branches', `إضافة فرع: ${name.trim()}`, id).catch(() => {})
       setIsModalOpen(false)
       setName('')
       setAddress('')
@@ -68,16 +80,72 @@ export function BranchesPage({ onBack }: { onBack: () => void }): React.JSX.Elem
     }
   }
 
+  const handleOpenEdit = (branch: BranchItem): void => {
+    setEditingBranch(branch)
+    setEditName(branch.name)
+    setEditAddress(branch.address ?? '')
+  }
+
+  const handleSaveEdit = async (): Promise<void> => {
+    if (!editingBranch || !editName.trim()) return
+    setIsEditSaving(true)
+    try {
+      const now = new Date().toISOString()
+      await window.electron.db.execute(
+        'UPDATE branches SET name = ?, address = ?, updated_at = ? WHERE id = ?',
+        [editName.trim(), editAddress.trim() || null, now, editingBranch.id]
+      )
+      addToast({ message: `تم تحديث بيانات الفرع "${editName.trim()}" ✅`, variant: 'success' })
+      recordAuditLog('branch_updated', 'branches', `تعديل فرع: ${editName.trim()}`, editingBranch.id).catch(() => {})
+      setEditingBranch(null)
+      await loadBranches()
+    } catch {
+      addToast({ message: 'فشل تحديث بيانات الفرع', variant: 'error' })
+    } finally {
+      setIsEditSaving(false)
+    }
+  }
+
+  const handleDeleteBranch = async (id: string, name: string): Promise<void> => {
+    if (branches.length <= 1) {
+      addToast({ message: 'لا يمكن حذف الفرع الأخير للنظام', variant: 'error' })
+      return
+    }
+    if (!window.confirm(`هل أنت متأكد من رغبتك في حذف الفرع (${name})؟`)) return
+
+    try {
+      const now = new Date().toISOString()
+      await window.electron.db.execute('UPDATE branches SET deleted_at = ? WHERE id = ?', [now, id])
+      addToast({ message: 'تم أرشفة الفرع', variant: 'info' })
+      recordAuditLog('branch_deleted', 'branches', `حذف فرع: ${name}`, id).catch(() => {})
+      await loadBranches()
+    } catch {
+      addToast({ message: 'فشل حذف الفرع', variant: 'error' })
+    }
+  }
+
   const columns: Column<BranchItem>[] = [
     {
       key: 'name',
       header: 'اسم الفرع',
-      render: (row) => <span className="font-bold text-text-primary">{row.name}</span>,
+      render: (row) => (
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-accent/10 text-accent">
+            <Building2 className="w-4 h-4" />
+          </div>
+          <span className="font-extrabold text-text-primary text-sm">{row.name}</span>
+        </div>
+      ),
     },
     {
       key: 'address',
       header: 'العنوان / الموقع',
-      render: (row) => <span className="text-text-secondary text-xs">{row.address ?? 'غير محدد'}</span>,
+      render: (row) => (
+        <span className="flex items-center gap-1 text-text-secondary text-xs font-semibold">
+          <MapPin className="w-3.5 h-3.5 text-text-tertiary" />
+          <span>{row.address ?? 'غير محدد'}</span>
+        </span>
+      ),
     },
     {
       key: 'created_at',
@@ -88,27 +156,55 @@ export function BranchesPage({ onBack }: { onBack: () => void }): React.JSX.Elem
         </span>
       ),
     },
+    {
+      key: 'id',
+      header: 'الإجراءات',
+      align: 'left',
+      render: (row) => (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => handleOpenEdit(row)}
+            className="flex items-center gap-1 text-xs text-warning font-bold hover:bg-warning/10 px-2.5 py-1 rounded-lg transition-colors"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>تعديل</span>
+          </button>
+          <button
+            onClick={() => handleDeleteBranch(row.id, row.name)}
+            className="flex items-center gap-1 text-xs text-danger font-bold hover:bg-danger/10 px-2.5 py-1 rounded-lg transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>حذف</span>
+          </button>
+        </div>
+      ),
+    },
   ]
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6 pb-12">
+    <div className="p-6 max-w-5xl mx-auto space-y-6 pb-12 select-none">
       <div className="flex items-center justify-between">
         <div>
           <button
             onClick={onBack}
-            className="text-xs font-semibold text-text-secondary hover:text-accent flex items-center gap-1 mb-1"
+            className="text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 mb-1.5 transition-colors"
           >
-            ← العودة لنقطة البيع (POS)
+            <ArrowRight className="w-3.5 h-3.5" />
+            <span>إغلاق النافذة</span>
           </button>
-          <h1 className="text-2xl font-bold text-text-primary">إدارة فروع المتجر (Multi-Branch)</h1>
+          <h1 className="text-2xl font-black text-text-primary">إدارة فروع المتجر (Multi-Branch)</h1>
         </div>
 
-        <Button variant="primary" onClick={() => setIsModalOpen(true)}>
-          + إضافة فرع جديد
-        </Button>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-bold shadow-ambient transition-all btn-press"
+        >
+          <Plus className="w-4 h-4" />
+          <span>إضافة فرع جديد</span>
+        </button>
       </div>
 
-      <Card padding="compact">
+      <Card padding="compact" className="overflow-hidden border border-gray-200/80">
         <Table
           columns={columns}
           data={branches}
@@ -117,6 +213,7 @@ export function BranchesPage({ onBack }: { onBack: () => void }): React.JSX.Elem
         />
       </Card>
 
+      {/* Add Branch Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="إضافة فرع جديد للمتجر">
         <form onSubmit={handleAddBranch} className="space-y-4">
           <Input
@@ -136,14 +233,57 @@ export function BranchesPage({ onBack }: { onBack: () => void }): React.JSX.Elem
           />
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit" variant="primary" className="flex-1" loading={isSubmitting}>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 py-3 rounded-xl bg-accent text-white text-sm font-bold shadow-ambient btn-press"
+            >
               حفظ الفرع
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press"
+            >
               إلغاء
-            </Button>
+            </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Edit Branch Modal */}
+      <Modal isOpen={editingBranch !== null} onClose={() => setEditingBranch(null)} title={`✏️ تعديل فرع — ${editingBranch?.name ?? ''}`}>
+        <div className="space-y-4">
+          <Input
+            label="اسم الفرع"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            required
+            autoFocus
+          />
+
+          <Input
+            label="عنوان الفرع التفصيلي"
+            value={editAddress}
+            onChange={(e) => setEditAddress(e.target.value)}
+          />
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={handleSaveEdit}
+              disabled={isEditSaving}
+              className="flex-1 py-3 rounded-xl bg-accent text-white text-sm font-bold shadow-ambient btn-press"
+            >
+              حفظ التعديلات
+            </button>
+            <button
+              onClick={() => setEditingBranch(null)}
+              className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press"
+            >
+              إلغاء
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

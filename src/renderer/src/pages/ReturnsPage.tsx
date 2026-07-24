@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Card, Button, Table } from '@/components/ui'
+import { ArrowRight, Plus, RotateCcw, Banknote, CreditCard, Tag } from 'lucide-react'
+import { Card, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { formatCurrency } from '@/lib/format'
 import { ReturnModal } from '@/components/returns/ReturnModal'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface ReturnHistoryRow {
   id: string
@@ -20,7 +22,8 @@ interface ReturnHistoryRow {
   created_at: string
 }
 
-export function ReturnsPage({ onBack }: { onBack: () => void }): React.JSX.Element {
+export function ReturnsPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
+  const t = useLanguageStore((s) => s.t)
   const [returns, setReturns] = useState<ReturnHistoryRow[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
@@ -58,14 +61,14 @@ export function ReturnsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
     {
       key: 'original_sale_id',
       header: 'رقم الوصل الأصلي',
-      render: (row) => <span className="font-mono text-xs text-text-primary">{row.original_sale_id}</span>,
+      render: (row) => <span className="font-mono text-xs text-text-primary font-bold">{row.original_sale_id}</span>,
     },
     {
       key: 'product_name',
       header: 'المنتج المرجوع',
       render: (row) => (
         <div>
-          <p className="font-bold text-text-primary text-xs">{row.product_name}</p>
+          <p className="font-extrabold text-text-primary text-xs">{row.product_name}</p>
           <p className="text-[11px] text-text-tertiary">
             {row.size ? `مقاس: ${row.size} ` : ''}
             {row.color ? `لون: ${row.color}` : ''}
@@ -76,19 +79,29 @@ export function ReturnsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
     {
       key: 'quantity',
       header: 'الكمية المرجوعة',
-      render: (row) => <span className="text-xs font-bold text-danger">{row.quantity} قطعة</span>,
+      render: (row) => <span className="text-xs font-extrabold text-danger">{row.quantity} قطعة</span>,
     },
     {
       key: 'total_refund_dzd',
       header: 'المبلغ المسترد',
-      render: (row) => <span className="currency font-bold text-danger">{formatCurrency(row.total_refund_dzd)}</span>,
+      render: (row) => <span className="currency font-black text-danger">{formatCurrency(row.total_refund_dzd)}</span>,
     },
     {
       key: 'refund_method',
       header: 'طريقة الاسترداد',
       render: (row) => (
-        <span className="px-2.5 py-0.5 rounded-full bg-gray-100 text-text-secondary text-xs font-bold">
-          {row.refund_method === 'cash' ? '💵 نقداً' : '🏷️ رصيد متجر'}
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-text-secondary text-xs font-bold border border-gray-200/60">
+          {row.refund_method === 'cash' ? (
+            <>
+              <Banknote className="w-3.5 h-3.5 text-success" />
+              <span>نقداً</span>
+            </>
+          ) : (
+            <>
+              <Tag className="w-3.5 h-3.5 text-accent" />
+              <span>رصيد متجر</span>
+            </>
+          )}
         </span>
       ),
     },
@@ -100,7 +113,7 @@ export function ReturnsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
     {
       key: 'cashier_name',
       header: 'الكاشير',
-      render: (row) => <span className="text-xs font-semibold">{row.cashier_name ?? 'عام'}</span>,
+      render: (row) => <span className="text-xs font-bold text-text-primary">{row.cashier_name ?? 'عام'}</span>,
     },
     {
       key: 'created_at',
@@ -114,30 +127,38 @@ export function ReturnsPage({ onBack }: { onBack: () => void }): React.JSX.Eleme
   ]
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6 pb-12">
+    <div className="p-6 max-w-6xl mx-auto space-y-6 pb-12 select-none">
       <div className="flex items-center justify-between">
         <div>
           <button
-            onClick={onBack}
-            className="text-xs font-semibold text-text-secondary hover:text-accent flex items-center gap-1 mb-1"
+            onClick={() => {
+              if (onBack) onBack()
+              else window.close()
+            }}
+            className="text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 mb-1.5 transition-colors"
           >
-            ← العودة لنقطة البيع (POS)
+            <ArrowRight className="w-3.5 h-3.5" />
+            <span>{t('إغلاق النافذة')}</span>
           </button>
-          <h1 className="text-2xl font-bold text-text-primary">إدارة المرتجعات واسترداد المبالغ</h1>
+          <h1 className="text-2xl font-black text-text-primary">{t('إدارة المرتجعات واستبدال البضاعة')}</h1>
         </div>
 
-        <Button variant="primary" onClick={() => setIsModalOpen(true)}>
-          + تسجيل مرتجع جديد
-        </Button>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-bold shadow-ambient transition-all btn-press"
+        >
+          <Plus className="w-4 h-4" />
+          <span>{t('تسجيل مرتجع جديد')}</span>
+        </button>
       </div>
 
-      <Card padding="compact">
+      <Card padding="compact" className="overflow-hidden border border-gray-200/80">
         <Table
           columns={columns}
           data={returns}
           loading={isLoading}
           rowKey={(row) => row.id}
-          emptyMessage="لا توجد عمليات إرجاع مسجلة حالياً"
+          emptyMessage={t('لا توجد عمليات إرجاع مسجلة حالياً')}
         />
       </Card>
 

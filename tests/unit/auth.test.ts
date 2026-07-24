@@ -4,6 +4,7 @@ const { DatabaseSync } = require('node:sqlite')
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import bcrypt from 'bcryptjs'
 import type { UserRole } from '../../src/renderer/src/types/database'
 
 describe('Auth, Roles & Multi-Branch Management (Phase 4)', () => {
@@ -39,17 +40,20 @@ describe('Auth, Roles & Multi-Branch Management (Phase 4)', () => {
     }
   })
 
-  it('creates users with valid roles and PIN codes', () => {
+  it('creates users with valid roles and bcrypt hashed PIN codes', () => {
     const adminId = 'u-admin-1'
     const cashierId = 'u-cashier-1'
 
-    db.prepare(
-      "INSERT INTO users (id, branch_id, full_name, role, pin_hash) VALUES (?, ?, 'Admin User', 'admin', '1234')"
-    ).run(adminId, branch1Id)
+    const adminHash = bcrypt.hashSync('1234', 10)
+    const cashierHash = bcrypt.hashSync('5555', 10)
 
     db.prepare(
-      "INSERT INTO users (id, branch_id, full_name, role, pin_hash) VALUES (?, ?, 'Cashier User', 'cashier', '5555')"
-    ).run(cashierId, branch1Id)
+      "INSERT INTO users (id, branch_id, full_name, role, pin_hash) VALUES (?, ?, 'Admin User', 'admin', ?)"
+    ).run(adminId, branch1Id, adminHash)
+
+    db.prepare(
+      "INSERT INTO users (id, branch_id, full_name, role, pin_hash) VALUES (?, ?, 'Cashier User', 'cashier', ?)"
+    ).run(cashierId, branch1Id, cashierHash)
 
     const admin = db.prepare('SELECT * FROM users WHERE id = ?').get(adminId) as {
       full_name: string
@@ -59,7 +63,8 @@ describe('Auth, Roles & Multi-Branch Management (Phase 4)', () => {
 
     expect(admin).toBeDefined()
     expect(admin.role).toBe('admin')
-    expect(admin.pin_hash).toBe('1234')
+    expect(bcrypt.compareSync('1234', admin.pin_hash)).toBe(true)
+    expect(bcrypt.compareSync('9999', admin.pin_hash)).toBe(false)
 
     const cashier = db.prepare('SELECT * FROM users WHERE id = ?').get(cashierId) as {
       full_name: string
@@ -69,23 +74,25 @@ describe('Auth, Roles & Multi-Branch Management (Phase 4)', () => {
 
     expect(cashier).toBeDefined()
     expect(cashier.role).toBe('cashier')
-    expect(cashier.pin_hash).toBe('5555')
+    expect(bcrypt.compareSync('5555', cashier.pin_hash)).toBe(true)
   })
 
-  it('queries user profile by PIN code for authentication', () => {
-    const user = db
+  it('verifies user authentication using bcrypt pin matching', () => {
+    const users = db
       .prepare(
         `SELECT u.*, b.name as branch_name 
          FROM users u 
          JOIN branches b ON b.id = u.branch_id 
-         WHERE u.pin_hash = ? AND u.deleted_at IS NULL`
+         WHERE u.deleted_at IS NULL`
       )
-      .get('1234') as { full_name: string; role: string; branch_name: string }
+      .all() as Array<{ id: string; full_name: string; role: string; pin_hash: string; branch_name: string }>
 
-    expect(user).toBeDefined()
-    expect(user.full_name).toBe('Admin User')
-    expect(user.role).toBe('admin')
-    expect(user.branch_name).toBe('Algiers Branch')
+    const matchedUser = users.find((u) => bcrypt.compareSync('1234', u.pin_hash))
+
+    expect(matchedUser).toBeDefined()
+    expect(matchedUser?.full_name).toBe('Admin User')
+    expect(matchedUser?.role).toBe('admin')
+    expect(matchedUser?.branch_name).toBe('Algiers Branch')
   })
 
   it('validates role permission helper rules', () => {

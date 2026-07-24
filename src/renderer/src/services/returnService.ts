@@ -100,7 +100,7 @@ export async function lookupSaleForReturn(saleId: string): Promise<SaleReturnLoo
 export async function processReturn(
   saleId: string,
   returnItems: ReturnItemInput[],
-  refundMethod: 'cash' | 'store_credit',
+  refundMethod: 'cash' | 'store_credit' | 'exchange',
   reason: string
 ): Promise<string> {
   const activeItems = returnItems.filter((i) => i.quantity > 0)
@@ -153,6 +153,23 @@ export async function processReturn(
         now,
       ],
     })
+  }
+
+  // 3. If refund method is store_credit, calculate total refund amount and credit customer
+  if (refundMethod === 'store_credit') {
+    const totalRefundDzd = activeItems.reduce((acc, item) => acc + item.unit_price_dzd * item.quantity, 0)
+    // Fetch sale's customer_id
+    const saleRows = await window.electron.db.query<{ customer_id: string | null }>(
+      'SELECT customer_id FROM sales WHERE id = ?',
+      [saleId]
+    )
+    const customerId = saleRows[0]?.customer_id
+    if (customerId) {
+      operations.push({
+        sql: `UPDATE customers SET store_credit_balance = COALESCE(store_credit_balance, 0) + ?, updated_at = ? WHERE id = ?`,
+        params: [totalRefundDzd, now, customerId],
+      })
+    }
   }
 
   try {

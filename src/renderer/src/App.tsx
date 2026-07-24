@@ -1,51 +1,109 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
+import { Home } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { startBackgroundSyncLoop } from '@/services/syncEngine'
+import { SplashScreen } from '@/pages/SplashScreen'
 import { LoginPage } from '@/pages/LoginPage'
+import { HomeLauncherPage } from '@/pages/HomeLauncherPage'
 import { POSCheckoutPage } from '@/pages/POSCheckoutPage'
-import { ProductsPage } from '@/pages/ProductsPage'
+import { SalesHistoryPage } from '@/pages/SalesHistoryPage'
 import { ReturnsPage } from '@/pages/ReturnsPage'
+import { CustomersPage } from '@/pages/CustomersPage'
+import { LabelPrinterPage } from '@/pages/LabelPrinterPage'
+import { ProductsPage } from '@/pages/ProductsPage'
 import { ReportsPage } from '@/pages/ReportsPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { BranchesPage } from '@/pages/BranchesPage'
+import { SettingsPage } from '@/pages/SettingsPage'
+import { AuditLogPage } from '@/pages/AuditLogPage'
+import { MaintenancePage } from '@/pages/MaintenancePage'
 import { ToastContainer } from '@/components/ui'
-import type { UserRole } from '@/types/database'
+import { FirstRunWizardModal } from '@/components/setup/FirstRunWizardModal'
+import { SessionLockModal } from '@/components/auth/SessionLockModal'
+import { useIdleTimer } from '@/hooks/useIdleTimer'
 
-type PageRoute = 'pos' | 'products' | 'returns' | 'reports' | 'users' | 'branches'
+// In-window routes (fast navigation inside the main window)
+type InWindowRoute = 'launcher' | 'pos' | 'history' | 'returns' | 'customers' | 'labels' | 'maintenance'
+
+// Modules that open in a secondary Electron BrowserWindow (all non-POS modules)
+const SECONDARY_MODULES = new Set([
+  'history',
+  'returns',
+  'customers',
+  'labels',
+  'products',
+  'reports',
+  'users',
+  'branches',
+  'settings',
+  'audit_logs',
+  'maintenance',
+])
+
+/**
+ * Detects if this renderer instance was opened as a secondary module window.
+ * The main process passes `?module=xxx` when creating module windows.
+ */
+function getSecondaryModule(): string | null {
+  const params = new URLSearchParams(window.location.search)
+  return params.get('module')
+}
 
 export function App(): React.JSX.Element {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const currentUser = useAuthStore((s) => s.currentUser)
-  const currentBranch = useAuthStore((s) => s.currentBranch)
   const isLoading = useAuthStore((s) => s.isLoading)
   const checkAuthSession = useAuthStore((s) => s.checkAuthSession)
-  const logout = useAuthStore((s) => s.logout)
   const hasRole = useAuthStore((s) => s.hasRole)
 
-  const isOnline = useSyncStore((s) => s.isOnline)
-  const pendingCount = useSyncStore((s) => s.pendingCount)
+  const [showSplash, setShowSplash] = useState(true)
+  const [currentPage, setCurrentPage] = useState<InWindowRoute>('launcher')
 
-  const [currentPage, setCurrentPage] = useState<PageRoute>('pos')
+  const { isLocked, unlockSession } = useIdleTimer(5)
+
+  // Check if this is a secondary module window
+  const secondaryModule = getSecondaryModule()
 
   useEffect(() => {
     checkAuthSession()
-    // Start background sync polling loop
     const stopSyncLoop = startBackgroundSyncLoop()
     return () => stopSyncLoop()
   }, [checkAuthSession])
 
-  if (isLoading) {
+  // Handle navigation from the launcher
+  const handleLauncherNavigate = useCallback((moduleId: string) => {
+    if (SECONDARY_MODULES.has(moduleId)) {
+      // Open in a new Electron BrowserWindow via IPC
+      window.electron.openModuleWindow(moduleId)
+    } else {
+      // Navigate in-window
+      setCurrentPage(moduleId as InWindowRoute)
+    }
+  }, [])
+
+  const goHome = useCallback(() => {
+    setCurrentPage('launcher')
+  }, [])
+
+  // ── Splash Screen ──
+  if (showSplash && !secondaryModule) {
+    return <SplashScreen onFinished={() => setShowSplash(false)} />
+  }
+
+  // ── Loading state ──
+  if (isLoading && !secondaryModule) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-bg-base">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-10 w-10 border-4 border-accent border-t-transparent" />
-          <p className="text-sm font-semibold text-text-secondary">جاري التحقق من الجلسة...</p>
+      <div className="h-screen w-screen flex items-center justify-center bg-[#F2F2F7]">
+        <div className="flex flex-col items-center gap-4 bg-white/80 p-8 rounded-3xl shadow-ambient border border-white backdrop-blur-xl">
+          <div className="animate-spin rounded-full h-10 w-10 border-3 border-accent border-t-transparent" />
+          <p className="text-sm font-bold text-text-secondary">جاري التحقق من الجلسة...</p>
         </div>
       </div>
     )
   }
 
+  // ── Login screen ──
   if (!isAuthenticated || !currentUser) {
     return (
       <>
@@ -55,167 +113,67 @@ export function App(): React.JSX.Element {
     )
   }
 
-  const roleBadges: Record<UserRole, { title: string; style: string }> = {
-    admin: { title: '👑 مدير', style: 'bg-accent-light text-accent border-accent/20' },
-    manager: { title: '💼 مشرف', style: 'bg-warning-light text-warning border-warning/20' },
-    cashier: { title: '👤 كاشير', style: 'bg-success-light text-success border-success/20' },
+  // ════════════════════════════════════════════
+  // SECONDARY MODULE WINDOW (standalone)
+  // ════════════════════════════════════════════
+  if (secondaryModule) {
+    return (
+      <div className="h-screen w-screen overflow-auto bg-[#F2F2F7]">
+        {secondaryModule === 'history' && <SalesHistoryPage onBack={() => window.close()} />}
+        {secondaryModule === 'returns' && <ReturnsPage onBack={() => window.close()} />}
+        {secondaryModule === 'customers' && <CustomersPage onBack={() => window.close()} />}
+        {secondaryModule === 'labels' && <LabelPrinterPage onBack={() => window.close()} />}
+        {secondaryModule === 'products' && hasRole(['admin', 'manager']) && (
+          <ProductsPage onNavigateToPos={() => {}} />
+        )}
+        {secondaryModule === 'reports' && hasRole(['admin', 'manager']) && (
+          <ReportsPage onBack={() => window.close()} />
+        )}
+        {secondaryModule === 'users' && hasRole(['admin']) && (
+          <UsersPage onBack={() => window.close()} />
+        )}
+        {secondaryModule === 'branches' && hasRole(['admin']) && (
+          <BranchesPage onBack={() => window.close()} />
+        )}
+        {secondaryModule === 'settings' && hasRole(['admin']) && (
+          <SettingsPage onBack={() => window.close()} />
+        )}
+        {secondaryModule === 'audit_logs' && hasRole(['admin']) && (
+          <AuditLogPage onBack={() => window.close()} />
+        )}
+        {secondaryModule === 'maintenance' && hasRole(['admin']) && (
+          <MaintenancePage onBack={() => window.close()} />
+        )}
+        <ToastContainer />
+      </div>
+    )
   }
 
+  // ════════════════════════════════════════════
+  // MAIN WINDOW — Launcher + In-Window Pages
+  // ════════════════════════════════════════════
+  if (currentPage === 'launcher') {
+    return (
+      <>
+        <HomeLauncherPage onNavigate={handleLauncherNavigate} />
+        <FirstRunWizardModal />
+        <ToastContainer />
+      </>
+    )
+  }
+
+  // In-window pages (POS, history, returns, customers, labels)
   return (
-    <div className="relative h-screen w-screen overflow-hidden flex flex-col bg-bg-base">
-      {/* Top Global App Navigation Bar */}
-      <nav className="glass border-b border-border-light px-6 py-2 flex items-center justify-between z-30 select-none">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-accent text-lg">MELLAH</span>
-            <span className="text-xs text-text-tertiary font-mono">
-              ({currentBranch?.name ?? 'الفرع الرئيسي'})
-            </span>
-          </div>
-
-          {/* Navigation Links */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setCurrentPage('pos')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 btn-press ${
-                currentPage === 'pos'
-                  ? 'bg-accent text-white shadow-ambient-sm'
-                  : 'text-text-secondary hover:bg-gray-100 hover:text-text-primary'
-              }`}
-            >
-              🏪 نقطة البيع
-            </button>
-
-            <button
-              onClick={() => setCurrentPage('returns')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 btn-press ${
-                currentPage === 'returns'
-                  ? 'bg-accent text-white shadow-ambient-sm'
-                  : 'text-text-secondary hover:bg-gray-100 hover:text-text-primary'
-              }`}
-            >
-              🔄 المرتجعات
-            </button>
-
-            {hasRole(['admin', 'manager']) && (
-              <button
-                onClick={() => setCurrentPage('products')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 btn-press ${
-                  currentPage === 'products'
-                    ? 'bg-accent text-white shadow-ambient-sm'
-                    : 'text-text-secondary hover:bg-gray-100 hover:text-text-primary'
-                }`}
-              >
-                📦 المنتجات والمخزون
-              </button>
-            )}
-
-            {hasRole(['admin', 'manager']) && (
-              <button
-                onClick={() => setCurrentPage('reports')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 btn-press ${
-                  currentPage === 'reports'
-                    ? 'bg-accent text-white shadow-ambient-sm'
-                    : 'text-text-secondary hover:bg-gray-100 hover:text-text-primary'
-                }`}
-              >
-                📊 التقارير والتحليلات
-              </button>
-            )}
-
-            {hasRole(['admin']) && (
-              <button
-                onClick={() => setCurrentPage('users')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 btn-press ${
-                  currentPage === 'users'
-                    ? 'bg-accent text-white shadow-ambient-sm'
-                    : 'text-text-secondary hover:bg-gray-100 hover:text-text-primary'
-                }`}
-              >
-                👥 المستخدمين والصلاحيات
-              </button>
-            )}
-
-            {hasRole(['admin']) && (
-              <button
-                onClick={() => setCurrentPage('branches')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 btn-press ${
-                  currentPage === 'branches'
-                    ? 'bg-accent text-white shadow-ambient-sm'
-                    : 'text-text-secondary hover:bg-gray-100 hover:text-text-primary'
-                }`}
-              >
-                🏢 الفروع
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Sync Connectivity Status & User Profile */}
-        <div className="flex items-center gap-4">
-          {/* Sync Status Badge */}
-          <div
-            className={`flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-bold ${
-              isOnline
-                ? 'bg-success-light text-success border-success/20'
-                : 'bg-danger-light text-danger border-danger/20 animate-pulse'
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isOnline ? 'bg-success animate-pulse' : 'bg-danger'
-              }`}
-            />
-            <span>{isOnline ? 'أونلاين (Online)' : 'أوفلاين (Offline)'}</span>
-            {pendingCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded bg-black/10 text-[10px]">
-                {pendingCount} معلق
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-text-primary">{currentUser.full_name}</span>
-            <span
-              className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${
-                roleBadges[currentUser.role].style
-              }`}
-            >
-              {roleBadges[currentUser.role].title}
-            </span>
-          </div>
-
-          <button
-            onClick={() => {
-              if (window.confirm('هل تريد تسجيل الخروج؟')) {
-                logout()
-              }
-            }}
-            className="px-3 py-1.5 rounded-xl bg-gray-100 text-text-secondary hover:bg-danger-light hover:text-danger text-xs font-bold transition-colors btn-press"
-          >
-            🚪 خروج
-          </button>
-        </div>
-      </nav>
-
-      {/* Main Page Area */}
-      <main className="flex-1 overflow-auto">
-        {currentPage === 'pos' && <POSCheckoutPage />}
-        {currentPage === 'returns' && <ReturnsPage onBack={() => setCurrentPage('pos')} />}
-        {currentPage === 'products' && hasRole(['admin', 'manager']) && (
-          <ProductsPage onNavigateToPos={() => setCurrentPage('pos')} />
-        )}
-        {currentPage === 'reports' && hasRole(['admin', 'manager']) && (
-          <ReportsPage onBack={() => setCurrentPage('pos')} />
-        )}
-        {currentPage === 'users' && hasRole(['admin']) && (
-          <UsersPage onBack={() => setCurrentPage('pos')} />
-        )}
-        {currentPage === 'branches' && hasRole(['admin']) && (
-          <BranchesPage onBack={() => setCurrentPage('pos')} />
-        )}
+    <div className="relative h-screen w-screen overflow-hidden flex flex-col bg-[#F2F2F7]">
+      <main className="flex-1 overflow-auto page-enter">
+        {currentPage === 'pos' && <POSCheckoutPage onNavigateToHome={goHome} />}
+        {currentPage === 'history' && <SalesHistoryPage onBack={goHome} />}
+        {currentPage === 'returns' && <ReturnsPage onBack={goHome} />}
+        {currentPage === 'customers' && <CustomersPage onBack={goHome} />}
+        {currentPage === 'labels' && <LabelPrinterPage onBack={goHome} />}
       </main>
-
+      <FirstRunWizardModal />
+      <SessionLockModal isOpen={isLocked} onUnlock={unlockSession} />
       <ToastContainer />
     </div>
   )

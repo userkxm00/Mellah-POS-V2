@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Modal, Button, Input } from '@/components/ui'
+import { Lock, Banknote, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Modal, Input } from '@/components/ui'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useToastStore } from '@/stores/toastStore'
 import { formatCurrency } from '@/lib/format'
@@ -24,23 +25,17 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): Reac
     if (isOpen && activeShift) {
       setIsFetchingSummary(true)
       window.electron.db
-        .query<{ payment_method: string; total: number }>(
-          `SELECT payment_method, SUM(total_dzd) as total 
+        .query<{ cash_total: number; card_total: number }>(
+          `SELECT 
+             COALESCE(SUM(cash_amount_dzd), 0) as cash_total,
+             COALESCE(SUM(card_amount_dzd), 0) as card_total
            FROM sales 
-           WHERE shift_id = ? AND status = 'completed' 
-           GROUP BY payment_method`,
+           WHERE shift_id = ? AND status = 'completed'`,
           [activeShift.id]
         )
         .then((rows) => {
-          let cash = 0
-          let card = 0
-          for (const r of rows) {
-            if (r.payment_method === 'cash' || r.payment_method === 'mixed') {
-              cash += r.total
-            } else if (r.payment_method === 'card') {
-              card += r.total
-            }
-          }
+          const cash = rows[0]?.cash_total ?? 0
+          const card = rows[0]?.card_total ?? 0
           setCashSalesTotal(cash)
           setCardSalesTotal(card)
           const expected = (activeShift.opening_cash_dzd || 0) + cash
@@ -91,37 +86,37 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): Reac
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="قفل الصندوق — إغلاق الدوام" size="lg">
-      <form onSubmit={handleConfirmClose} className="space-y-6">
+      <form onSubmit={handleConfirmClose} className="space-y-6 select-none">
         {/* Summary metrics cards */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="p-4 rounded-xl bg-gray-50 border border-border-light">
-            <p className="text-xs text-text-tertiary mb-1">المبلغ الأولي</p>
-            <p className="currency text-text-primary font-bold text-lg">
+          <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80">
+            <p className="text-xs font-bold text-text-tertiary mb-1">المبلغ الأولي</p>
+            <p className="currency text-text-primary font-black text-lg">
               {formatCurrency(openingCash)}
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-gray-50 border border-border-light">
-            <p className="text-xs text-text-tertiary mb-1">مبيعات الكاش في الوردية</p>
-            <p className="currency text-success font-bold text-lg">
+          <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80">
+            <p className="text-xs font-bold text-text-tertiary mb-1">مبيعات الكاش في الوردية</p>
+            <p className="currency text-success font-black text-lg">
               + {formatCurrency(cashSalesTotal)}
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-accent-light border border-accent/20">
-            <p className="text-xs text-accent mb-1 font-medium">المبلغ المتوقع في الصندوق</p>
-            <p className="currency text-accent font-extrabold text-xl">
+          <div className="p-4 rounded-2xl bg-accent/10 border border-accent/20">
+            <p className="text-xs text-accent mb-1 font-bold">المبلغ المتوقع في الصندوق</p>
+            <p className="currency text-accent font-black text-xl">
               {formatCurrency(expectedCash)}
             </p>
           </div>
         </div>
 
         {cardSalesTotal > 0 && (
-          <p className="text-xs text-text-tertiary">
+          <p className="text-xs font-bold text-text-tertiary">
             ملاحظة: مبيعات البطاقة الحسابية ({formatCurrency(cardSalesTotal)}) غير محسوبة ضمن الكاش الفعلي للصندوق.
           </p>
         )}
 
         {/* Input for actual count */}
-        <div className="space-y-3 pt-2 border-t border-border-light">
+        <div className="space-y-3 pt-2 border-t border-gray-200/80">
           <Input
             label="العد الفعلي للكاش الموجود في الصندوق الان (DA)"
             type="number"
@@ -135,15 +130,15 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): Reac
           />
 
           {/* Difference badge */}
-          <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 border border-border-light">
-            <span className="text-sm font-medium text-text-secondary">الفرق (العد الفعلي - المتوقع):</span>
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-200/80">
+            <span className="text-sm font-bold text-text-secondary">الفرق (العد الفعلي - المتوقع):</span>
             <span
-              className={`currency font-extrabold text-lg px-3 py-1 rounded-lg ${
+              className={`currency font-black text-sm px-3 py-1 rounded-full border ${
                 difference === 0
-                  ? 'bg-success-light text-success'
+                  ? 'bg-success/10 text-success border-success/20'
                   : difference > 0
-                    ? 'bg-warning-light text-warning'
-                    : 'bg-danger-light text-danger'
+                    ? 'bg-warning/10 text-warning border-warning/20'
+                    : 'bg-danger/10 text-danger border-danger/20'
               }`}
             >
               {difference === 0
@@ -156,24 +151,28 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): Reac
         </div>
 
         <div className="flex gap-3 pt-2">
-          <Button
+          <button
             type="submit"
-            variant="danger"
-            className="flex-1"
-            loading={isLoading || isFetchingSummary}
-            size="lg"
+            disabled={isLoading || isFetchingSummary}
+            className="flex-1 py-3.5 rounded-2xl bg-danger hover:bg-danger-hover text-white text-sm font-extrabold shadow-ambient transition-all btn-press flex items-center justify-center gap-2"
           >
-            تأكيد قفل الصندوق والإغلاق
-          </Button>
-          <Button
+            {isLoading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+            ) : (
+              <>
+                <Lock className="w-4 h-4" />
+                <span>تأكيد قفل الصندوق والإغلاق</span>
+              </>
+            )}
+          </button>
+          <button
             type="button"
-            variant="secondary"
             onClick={onClose}
             disabled={isLoading}
-            size="lg"
+            className="px-6 py-3.5 rounded-2xl bg-gray-100 text-text-secondary text-sm font-bold btn-press"
           >
             إلغاء
-          </Button>
+          </button>
         </div>
       </form>
     </Modal>

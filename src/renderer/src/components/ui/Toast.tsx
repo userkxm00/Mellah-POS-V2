@@ -86,10 +86,14 @@ function ToastItem({ toast }: { toast: ToastType }): React.JSX.Element {
 export function ToastContainer(): React.JSX.Element {
   const toasts = useToastStore((s) => s.toasts)
 
+  if (toasts.length === 0) return <></>
+
   return (
-    <div className="fixed top-4 left-4 z-[100] flex flex-col gap-2">
+    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2.5 pointer-events-none">
       {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} />
+        <div key={toast.id} className="pointer-events-auto">
+          <ToastItem toast={toast} />
+        </div>
       ))}
     </div>
   )

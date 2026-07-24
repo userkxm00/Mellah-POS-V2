@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { Modal, Button, Input, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { lookupSaleForReturn, processReturn, type SaleReturnLookupResult, type SaleReturnLookupItem } from '@/services/returnService'
+import { printThermalReturnReceipt } from '@/services/receiptService'
+import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
 import { formatCurrency } from '@/lib/format'
 import { useToastStore } from '@/stores/toastStore'
 
@@ -15,7 +17,7 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
   const [saleInput, setSaleInput] = useState<string>('')
   const [saleData, setSaleData] = useState<SaleReturnLookupResult | null>(null)
   const [returnQtyMap, setReturnQtyMap] = useState<Record<string, number>>({})
-  const [refundMethod, setRefundMethod] = useState<'cash' | 'store_credit'>('cash')
+  const [refundMethod, setRefundMethod] = useState<'cash' | 'store_credit' | 'exchange'>('cash')
   const [reason, setReason] = useState<string>('')
   const [isSearching, setIsSearching] = useState<boolean>(false)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
@@ -77,9 +79,37 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
         }
       })
 
-      await processReturn(saleData.sale_id, returnItems, refundMethod, reason)
+      const returnId = await processReturn(saleData.sale_id, returnItems, refundMethod, reason)
+
+      // Print Thermal Return Receipt
+      const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
+      const paperWidth = (localStorage.getItem('mellah_paper_width') as '80mm' | '58mm') ?? '80mm'
+      printThermalReturnReceipt(
+        {
+          storeName: useStoreSettingsStore.getState().settings.store_name,
+          returnId,
+          originalSaleId: saleData.sale_id,
+          date: new Date().toISOString(),
+          cashierName: saleData.cashier_name,
+          items: returnItems.map((ri) => {
+            const matched = saleData.items.find((item) => item.variant_id === ri.variant_id)
+            return {
+              product_name: matched?.product_name ?? 'منتج',
+              size: matched?.size,
+              color: matched?.color,
+              quantity: ri.quantity,
+              unit_price: ri.unit_price_dzd,
+            }
+          }),
+          refundTotalDzd: totalRefund,
+          refundMethod,
+          reason: reason.trim() || 'مرتجع بضاعة',
+        },
+        { printerName, paperWidth }
+      ).catch(() => {})
+
       addToast({
-        message: `تم تسجيل المرتجع واستعادة البضاعة للمخزون بنجاح! المبلغ المسترد: ${formatCurrency(totalRefund)}`,
+        message: `تم تسجيل المرتجع وتوليد وصل الإرجاع الحراري بنجاح! 🧾`,
         variant: 'success',
       })
       onSuccess()
@@ -229,6 +259,17 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
                     onClick={() => setRefundMethod('store_credit')}
                   >
                     🏷️ رصيد متجر (Store Credit)
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border btn-press ${
+                      refundMethod === 'exchange'
+                        ? 'bg-accent text-white border-accent'
+                        : 'bg-white text-text-secondary border-border'
+                    }`}
+                    onClick={() => setRefundMethod('exchange')}
+                  >
+                    🔄 استبدال (Exchange)
                   </button>
                 </div>
               </div>
