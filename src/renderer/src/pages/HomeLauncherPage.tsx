@@ -176,7 +176,7 @@ interface HomeLauncherPageProps {
   onNavigate: (moduleId: string) => void
 }
 
-import appIcon from '@/assets/app-icon.png'
+import { AnimatedBrandLogo } from '@/components/brand/AnimatedBrandLogo'
 import { useLanguageStore } from '@/stores/languageStore'
 import { UpdateNotificationBanner } from '@/components/updates/UpdateNotificationBanner'
 
@@ -279,15 +279,10 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
 
       {/* ── Top Bar ── */}
       <header className="glass-header border-b border-gray-200/80 px-8 py-3.5 flex items-center justify-between z-20 shadow-layered-sm">
-        <div className="flex items-center gap-3.5">
-          <img src={appIcon} alt="Mellah POS Logo" className="w-11 h-11 object-contain rounded-2xl shadow-hero-glow" />
-          <div>
-            <h1 className="text-lg font-black text-accent tracking-wider leading-tight">MELLAH POS</h1>
-            <p className="text-xs font-bold text-text-secondary">
-              {currentBranch?.name ? t(currentBranch.name) : t('الفرع الرئيسي')}
-            </p>
-          </div>
-        </div>
+        <AnimatedBrandLogo
+          size="md"
+          subtitle={currentBranch?.name ? t(currentBranch.name) : t('الفرع الرئيسي')}
+        />
 
         <div className="flex items-center gap-4">
           {/* Sync status & Reconnect button */}

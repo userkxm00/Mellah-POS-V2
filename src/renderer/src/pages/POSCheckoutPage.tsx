@@ -72,7 +72,7 @@ interface CustomerOption {
   store_credit_balance?: number
 }
 
-import appIcon from '@/assets/app-icon.png'
+import { AnimatedBrandLogo } from '@/components/brand/AnimatedBrandLogo'
 
 export function POSCheckoutPage({
   onNavigateToHome,
@@ -491,15 +491,10 @@ export function POSCheckoutPage({
               <span>{t('الرئيسية')}</span>
             </button>
           )}
-          <img src={appIcon} alt="Mellah POS Logo" className="w-9 h-9 object-contain rounded-xl" />
-          <div>
-            <h1 className="text-base font-extrabold text-text-primary tracking-tight">
-              {t('شاشة نقطة البيع (POS)')}
-            </h1>
-            <p className="text-xs text-text-secondary font-medium">
-              {useStoreSettingsStore.getState().settings.store_name}
-            </p>
-          </div>
+          <AnimatedBrandLogo
+            size="sm"
+            subtitle={useStoreSettingsStore.getState().settings.store_name || t('شاشة نقطة البيع (POS)')}
+          />
         </div>
 
         <div className="flex items-center gap-3">
