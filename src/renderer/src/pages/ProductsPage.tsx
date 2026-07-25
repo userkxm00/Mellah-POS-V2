@@ -21,6 +21,8 @@ import { ProductDetailPage } from '@/pages/ProductDetailPage'
 import { CategoriesModal } from '@/components/products/CategoriesModal'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
+import { useAuthStore } from '@/stores/authStore'
+import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 
 interface ProductRow {
   id: string
@@ -144,8 +146,12 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
   const loadProducts = useCallback(async () => {
     setIsLoading(true)
     try {
+      const activeBranch = useAuthStore.getState().currentBranch
+      const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+
       const catRows = await window.electron.db.query<CategoryItem>(
-        'SELECT id, name FROM categories WHERE deleted_at IS NULL ORDER BY name'
+        'SELECT id, name FROM categories WHERE branch_id = ? AND deleted_at IS NULL ORDER BY name',
+        [branchId]
       )
       setCategories(catRows)
 
@@ -157,15 +163,16 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
            COALESCE(SUM(sm.quantity_change), 0) as total_stock
          FROM products p
          LEFT JOIN categories c ON c.id = p.category_id
-         LEFT JOIN product_variants v ON v.product_id = p.id AND v.deleted_at IS NULL
-         LEFT JOIN stock_movements sm ON sm.variant_id = v.id
-         WHERE p.deleted_at IS NULL
+         LEFT JOIN product_variants v ON v.product_id = p.id AND v.branch_id = ? AND v.deleted_at IS NULL
+         LEFT JOIN stock_movements sm ON sm.variant_id = v.id AND sm.branch_id = ?
+         WHERE p.branch_id = ? AND p.deleted_at IS NULL
          GROUP BY p.id
-         ORDER BY p.updated_at DESC`
+         ORDER BY p.updated_at DESC`,
+        [branchId, branchId, branchId]
       )
       setProducts(prodRows)
     } catch {
-      addToast({ message: 'فشل تحميل المنتجات', variant: 'error' })
+      addToast({ message: 'فشل تحميل المنتجات للفرع الحالي', variant: 'error' })
     } finally {
       setIsLoading(false)
     }

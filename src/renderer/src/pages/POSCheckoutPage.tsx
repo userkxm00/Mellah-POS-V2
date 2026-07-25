@@ -172,17 +172,22 @@ export function POSCheckoutPage({
     fetchActiveShift()
   }, [fetchActiveShift])
 
-  // Load Categories, Variants & Customers from SQLite
+  // Load Categories, Variants & Customers from SQLite (Branch-Scoped)
   const loadData = useCallback(async () => {
     setIsLoadingVariants(true)
     try {
+      const activeBranch = useAuthStore.getState().currentBranch
+      const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+
       const catRows = await window.electron.db.query<CategoryItem>(
-        `SELECT id, name FROM categories WHERE deleted_at IS NULL ORDER BY name`
+        `SELECT id, name FROM categories WHERE branch_id = ? AND deleted_at IS NULL ORDER BY name`,
+        [branchId]
       )
       setCategories(catRows)
 
       const custRows = await window.electron.db.query<CustomerOption>(
-        `SELECT id, full_name, phone, loyalty_points, COALESCE(store_credit_balance, 0) as store_credit_balance FROM customers WHERE deleted_at IS NULL ORDER BY full_name`
+        `SELECT id, full_name, phone, loyalty_points, COALESCE(store_credit_balance, 0) as store_credit_balance FROM customers WHERE branch_id = ? AND deleted_at IS NULL ORDER BY full_name`,
+        [branchId]
       )
       setCustomers(custRows)
 
@@ -195,14 +200,15 @@ export function POSCheckoutPage({
          FROM product_variants v
          JOIN products p ON p.id = v.product_id
          LEFT JOIN categories c ON c.id = p.category_id
-         LEFT JOIN stock_movements sm ON sm.variant_id = v.id
-         WHERE v.deleted_at IS NULL AND p.deleted_at IS NULL
+         LEFT JOIN stock_movements sm ON sm.variant_id = v.id AND sm.branch_id = ?
+         WHERE v.branch_id = ? AND v.deleted_at IS NULL AND p.deleted_at IS NULL
          GROUP BY v.id
-         ORDER BY p.name, v.size, v.color`
+         ORDER BY p.name, v.size, v.color`,
+        [branchId, branchId]
       )
       setVariants(variantRows)
     } catch {
-      addToast({ message: 'فشل تحميل قائمة المنتجات', variant: 'error' })
+      addToast({ message: 'فشل تحميل قائمة المنتجات والزبائن للفرع الحالي', variant: 'error' })
     } finally {
       setIsLoadingVariants(false)
     }

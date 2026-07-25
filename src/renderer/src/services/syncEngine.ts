@@ -236,10 +236,6 @@ export async function pullFromSupabase(): Promise<number> {
     'product_variants',
     'customers',
     'store_settings',
-    'sales',
-    'sale_items',
-    'stock_movements',
-    'returns',
   ]
 
   for (const tableName of syncTables) {
