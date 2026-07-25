@@ -42,6 +42,7 @@
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/bcryptjs": "^3.0.0",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^26.1.1",

@@ -31,46 +31,26 @@ export function AnimatedBrandLogo({
 
         {/* Outer Icon Box */}
         <div
-          className={`relative ${currentSize.container} bg-gradient-to-br from-accent via-blue-600 to-indigo-800 flex items-center justify-center shadow-layered-md overflow-hidden border border-white/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-accent/40`}
+          className={`relative ${currentSize.container} bg-[#0A6EDB] flex items-center justify-center shadow-layered-md overflow-hidden border border-white/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-blue-500/40`}
         >
           {/* Shimmer Light Sweep Effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
 
-          {/* Discord/Microsoft Style Sleek Vector SVG Emblem */}
+          {/* Minimalist World-Class Monogram M Vector */}
           <svg
-            className={`${currentSize.icon} text-white drop-shadow-md transition-transform duration-500 group-hover:rotate-6`}
-            viewBox="0 0 64 64"
+            className={`${currentSize.icon} text-white drop-shadow-md transition-transform duration-500 group-hover:scale-105`}
+            viewBox="0 0 512 512"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            {/* Top Crown Curve / Hanger Arc */}
             <path
-              d="M32 10C35.3137 10 38 12.6863 38 16C38 17.5 37.2 18.8 36 19.5L48 26C50.5 27.5 52 30.2 52 33V48C52 51.3 49.3 54 46 54H18C14.7 54 12 51.3 12 48V33C12 30.2 13.5 27.5 16 26L28 19.5C26.8 18.8 26 17.5 26 16C26 12.6863 28.6863 10 32 10Z"
-              fill="url(#logo_grad_bg)"
-              fillOpacity="0.25"
-              stroke="currentColor"
-              strokeWidth="3.5"
+              d="M140,342 L140,178 L256,292 L372,178 L372,342"
+              fill="none"
+              stroke="#FFFFFF"
+              strokeWidth="46"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-            {/* Minimalist Bold Monogram M & Tag Tagline */}
-            <path
-              d="M20 46V32L32 40L44 32V46"
-              stroke="white"
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {/* Accent Gold Sparkle Dot */}
-            <circle cx="32" cy="16" r="3" fill="#F59E0B" />
-
-            {/* Gradient Definition */}
-            <defs>
-              <linearGradient id="logo_grad_bg" x1="12" y1="10" x2="52" y2="54" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#60A5FA" />
-                <stop offset="1" stopColor="#F59E0B" />
-              </linearGradient>
-            </defs>
           </svg>
         </div>
       </div>
