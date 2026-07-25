@@ -43,7 +43,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const user = result.user as unknown as UserWithBranch
       const branch = result.branch as unknown as Branch | null
 
-      localStorage.setItem(SESSION_KEY, user.id)
+      sessionStorage.setItem(SESSION_KEY, user.id)
       set({
         currentUser: user,
         currentBranch: branch,
@@ -62,6 +62,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    sessionStorage.removeItem(SESSION_KEY)
     localStorage.removeItem(SESSION_KEY)
     set({ currentUser: null, currentBranch: null, isAuthenticated: false })
     logger.info('User logged out')
@@ -70,13 +71,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   checkAuthSession: async () => {
     set({ isLoading: true })
     try {
-      const savedUserId = localStorage.getItem(SESSION_KEY)
+      // Clear legacy localStorage session key to prevent cross-restart logins
+      localStorage.removeItem(SESSION_KEY)
+
+      const savedUserId = sessionStorage.getItem(SESSION_KEY)
       if (!savedUserId) {
         set({ isAuthenticated: false, isLoading: false })
         return
       }
 
-      // Session restore by user ID — no PIN involved, no security concern
+      // Session restore by user ID within active window instance
       const rows = await window.electron.db.query<UserWithBranch>(
         `SELECT u.*, b.name as branch_name 
          FROM users u 
@@ -100,7 +104,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
         })
       } else {
-        localStorage.removeItem(SESSION_KEY)
+        sessionStorage.removeItem(SESSION_KEY)
         set({ isAuthenticated: false, isLoading: false })
       }
     } catch {
