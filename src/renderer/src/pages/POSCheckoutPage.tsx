@@ -72,6 +72,8 @@ interface CustomerOption {
   store_credit_balance?: number
 }
 
+import appIcon from '@/assets/app-icon.png'
+
 export function POSCheckoutPage({
   onNavigateToHome,
 }: {
@@ -489,9 +491,7 @@ export function POSCheckoutPage({
               <span>{t('الرئيسية')}</span>
             </button>
           )}
-          <div className="p-2 rounded-xl bg-accent/10 text-accent">
-            <Store className="w-5 h-5" />
-          </div>
+          <img src={appIcon} alt="Mellah POS Logo" className="w-9 h-9 object-contain rounded-xl" />
           <div>
             <h1 className="text-base font-extrabold text-text-primary tracking-tight">
               {t('شاشة نقطة البيع (POS)')}

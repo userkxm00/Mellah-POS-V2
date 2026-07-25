@@ -14,6 +14,7 @@ import { Button } from '@/components/ui'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
+import appIcon from '@/assets/app-icon.png'
 import type { UserRole } from '@/types/database'
 
 interface LocalUser {
@@ -137,10 +138,8 @@ export function LoginPage(): React.JSX.Element {
 
         <div className="relative w-full max-w-2xl flex flex-col items-center page-enter">
           {/* Brand Header */}
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center shadow-ambient">
-              <Store className="w-6 h-6 text-white" />
-            </div>
+          <div className="flex items-center gap-3.5 mb-2">
+            <img src={appIcon} alt="Mellah POS Logo" className="w-14 h-14 object-contain rounded-2xl shadow-ambient" />
             <div>
               <h1 className="text-2xl font-black text-accent tracking-wider">MELLAH POS</h1>
               <p className="text-xs font-bold text-text-secondary">{t('الفرع الرئيسي')}</p>
