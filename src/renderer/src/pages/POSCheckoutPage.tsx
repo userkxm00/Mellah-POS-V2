@@ -486,7 +486,7 @@ export function POSCheckoutPage({
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent text-white text-xs font-bold shadow-ambient hover:bg-accent-hover transition-all btn-press shrink-0"
             >
               <Home className="w-4 h-4 text-white" />
-              <span>الرئيسية</span>
+              <span>{t('الرئيسية')}</span>
             </button>
           )}
           <div className="p-2 rounded-xl bg-accent/10 text-accent">
@@ -494,7 +494,7 @@ export function POSCheckoutPage({
           </div>
           <div>
             <h1 className="text-base font-extrabold text-text-primary tracking-tight">
-              شاشة نقطة البيع (POS)
+              {t('شاشة نقطة البيع (POS)')}
             </h1>
             <p className="text-xs text-text-secondary font-medium">
               {useStoreSettingsStore.getState().settings.store_name}
@@ -509,7 +509,7 @@ export function POSCheckoutPage({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold hover:bg-amber-200 transition-all btn-press"
           >
             <Pause className="w-3.5 h-3.5" />
-            <span>السلات المعلقة ({heldCarts.length})</span>
+            <span>{t('السلال المعلقة')} ({heldCarts.length})</span>
           </button>
 
           {/* Open Drawer */}
@@ -518,18 +518,18 @@ export function POSCheckoutPage({
             className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-text-secondary text-xs font-bold transition-all btn-press"
           >
             <Wallet className="w-3.5 h-3.5" />
-            <span>فتح الدرج</span>
+            <span>{t('فتح الدرج')}</span>
           </button>
 
           {activeShift ? (
             <div className="flex items-center gap-2 bg-success/10 px-3.5 py-1 rounded-full border border-success/20">
               <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-xs font-bold text-success">وردية نشطة</span>
+              <span className="text-xs font-bold text-success">{t('وردية نشطة')}</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 bg-danger/10 px-3.5 py-1 rounded-full border border-danger/20">
               <span className="w-2 h-2 rounded-full bg-danger" />
-              <span className="text-xs font-bold text-danger">مغلقة</span>
+              <span className="text-xs font-bold text-danger">{t('مغلقة')}</span>
             </div>
           )}
 
@@ -546,7 +546,7 @@ export function POSCheckoutPage({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-text-primary text-xs font-bold shadow-ambient-sm hover:bg-gray-100 disabled:opacity-50"
           >
             <Lock className="w-3.5 h-3.5 text-text-secondary" />
-            <span>إغلاق الوردية</span>
+            <span>{t('إغلاق الوردية')}</span>
           </button>
         </div>
       </header>
@@ -558,7 +558,7 @@ export function POSCheckoutPage({
           {/* Search Bar & Category Filters */}
           <div className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-ambient-sm flex flex-col gap-3">
             <Input
-              placeholder="ابحث باسم المنتج، اللون، المقاس، أو امسح الباركود..."
+              placeholder={t('ابحث باسم المنتج، اللون، المقاس، أو امسح الباركود...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-gray-50/80 border-gray-200 text-sm focus:bg-white"
@@ -576,7 +576,7 @@ export function POSCheckoutPage({
                 onClick={() => setSelectedCategoryId(null)}
               >
                 <Tag className="w-3.5 h-3.5" />
-                <span>جميع الفئات ({variants.length})</span>
+                <span>{t('جميع الفئات')} ({variants.length})</span>
               </button>
               {categories.map((cat) => (
                 <button
@@ -588,7 +588,7 @@ export function POSCheckoutPage({
                   }`}
                   onClick={() => setSelectedCategoryId(cat.id)}
                 >
-                  {cat.name}
+                  {t(cat.name)}
                 </button>
               ))}
             </div>
@@ -605,8 +605,8 @@ export function POSCheckoutPage({
             ) : filteredVariants.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 bg-white rounded-2xl border border-gray-200/80 p-8 text-center">
                 <Store className="w-12 h-12 text-text-tertiary mb-3 opacity-40" />
-                <p className="text-sm font-bold text-text-secondary">لا توجد منتجات تطابق البحث</p>
-                <p className="text-xs text-text-tertiary mt-1">تأكد من اختيار الفئة أو كلمة البحث</p>
+                <p className="text-sm font-bold text-text-secondary">{t('لا توجد منتجات تطابق البحث')}</p>
+                <p className="text-xs text-text-tertiary mt-1">{t('تأكد من اختيار الفئة أو كلمة البحث')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-4">
@@ -637,13 +637,13 @@ export function POSCheckoutPage({
                             {v.product_name}
                           </h3>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent">
-                            {v.category_name ?? 'عام'}
+                            {t(v.category_name ?? 'عام')}
                           </span>
                         </div>
 
                         <div className="flex items-center gap-1.5 text-xs text-text-secondary font-semibold">
-                          {v.size && <span className="bg-gray-100 px-2 py-0.5 rounded-md">مقاس: {v.size}</span>}
-                          {v.color && <span className="bg-gray-100 px-2 py-0.5 rounded-md">لون: {v.color}</span>}
+                          {v.size && <span className="bg-gray-100 px-2 py-0.5 rounded-md">{t('مقاس:')} {v.size}</span>}
+                          {v.color && <span className="bg-gray-100 px-2 py-0.5 rounded-md">{t('لون:')} {t(v.color)}</span>}
                         </div>
                       </div>
 
@@ -660,7 +660,7 @@ export function POSCheckoutPage({
                                 : 'bg-success-light text-success'
                           }`}
                         >
-                          {isOutOfStock ? 'نفد' : `${v.current_stock} قطعة`}
+                          {isOutOfStock ? t('نفد') : `${v.current_stock} ${t('قطعة')}`}
                         </span>
                       </div>
                     </Card>
@@ -677,7 +677,7 @@ export function POSCheckoutPage({
           <div className="p-4 border-b border-gray-200/80 bg-gray-50/50 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShoppingCart className="w-5 h-5 text-accent" />
-              <h2 className="font-extrabold text-base text-text-primary">سلة البيع الحالية</h2>
+              <h2 className="font-extrabold text-base text-text-primary">{t('سلة البيع الحالية')}</h2>
               <span className="bg-accent text-white text-xs font-black px-2 py-0.5 rounded-full">
                 {cartItems.length}
               </span>
@@ -688,7 +688,7 @@ export function POSCheckoutPage({
                 onClick={handleHoldCart}
                 disabled={cartItems.length === 0}
                 className="p-1.5 rounded-xl bg-amber-100 text-amber-900 hover:bg-amber-200 transition-all text-xs font-bold disabled:opacity-40"
-                title="تعليق السلة الحالية (F2)"
+                title={t('تعليق الفاتورة (F2)')}
               >
                 <Pause className="w-4 h-4" />
               </button>
@@ -696,7 +696,7 @@ export function POSCheckoutPage({
                 onClick={clearCart}
                 disabled={cartItems.length === 0}
                 className="p-1.5 rounded-xl text-danger hover:bg-danger-light transition-all text-xs font-bold disabled:opacity-40"
-                title="تفريغ السلة"
+                title={t('تفريغ السلة')}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -711,7 +711,7 @@ export function POSCheckoutPage({
                 onChange={(e) => setSelectedCustomerId(e.target.value || null)}
                 className="flex-1 px-3 py-2 rounded-xl text-xs font-bold bg-white border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
               >
-                <option value="">— اختر زبون لجمع نقاط الولاء —</option>
+                <option value="">— {t('اختر زبون لجمع نقاط الولاء')} —</option>
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.full_name} ({c.loyalty_points} نقطة) {c.store_credit_balance ? `• رصيد: ${c.store_credit_balance} دج` : ''}
@@ -758,8 +758,8 @@ export function POSCheckoutPage({
             {cartItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center text-text-tertiary">
                 <ShoppingCart className="w-12 h-12 opacity-30 mb-2" />
-                <p className="text-xs font-bold">السلة فارغة حالياً</p>
-                <p className="text-[11px] mt-0.5">انقر على أي منتج لإضافته للطلب</p>
+                <p className="text-xs font-bold">{t('السلة فارغة حالياً')}</p>
+                <p className="text-[11px] mt-0.5">{t('انقر على أي منتج لإضافته للطلب')}</p>
               </div>
             ) : (
               cartItems.map((item) => (
@@ -767,8 +767,8 @@ export function POSCheckoutPage({
                   <div className="flex-1">
                     <h4 className="font-extrabold text-xs text-text-primary">{item.product_name}</h4>
                     <p className="text-[10px] font-medium text-text-tertiary">
-                      {item.variant_size ? `مقاس: ${item.variant_size}` : ''}{' '}
-                      {item.variant_color ? `لون: ${item.variant_color}` : ''}
+                      {item.variant_size ? `${t('مقاس:')} ${item.variant_size}` : ''}{' '}
+                      {item.variant_color ? `${t('لون:')} ${t(item.variant_color)}` : ''}
                     </p>
                     <span className="currency font-bold text-accent text-xs">
                       {formatCurrency(item.unit_price_dzd)}
@@ -821,7 +821,7 @@ export function POSCheckoutPage({
                       : 'bg-white border border-gray-200 text-text-secondary hover:bg-gray-100'
                   }`}
                 >
-                  {pm === 'cash' ? '💵 نقد' : pm === 'card' ? '💳 CIB' : '🔀 مزدوج'}
+                  {t(pm === 'cash' ? '💵 نقد' : pm === 'card' ? '💳 CIB' : '🔀 مزدوج')}
                 </button>
               ))}
             </div>
@@ -830,7 +830,7 @@ export function POSCheckoutPage({
             {paymentMethod === 'cash' && cartItems.length > 0 && (
               <div className="p-3 bg-white rounded-xl border border-gray-200 space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-text-primary">
-                  <span>المبلغ النقدي المقدم من الزبون:</span>
+                  <span>{t('المبلغ النقدي المقدم من الزبون:')}</span>
                   <input
                     type="number"
                     placeholder="مثلاً: 5000"
@@ -841,7 +841,7 @@ export function POSCheckoutPage({
                 </div>
                 {tenderedCashNum > 0 && (
                   <div className="flex items-center justify-between p-2 rounded-lg bg-success/10 border border-success/20 text-xs font-black text-success">
-                    <span>الباقي للزبون (Change):</span>
+                    <span>{t('الباقي للزبون (Change):')}</span>
                     <span className="text-sm font-extrabold">{formatCurrency(changeDzd)}</span>
                   </div>
                 )}
@@ -850,7 +850,7 @@ export function POSCheckoutPage({
 
             {/* Discount Row */}
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-text-secondary">الخصم (دج):</span>
+              <span className="text-xs font-bold text-text-secondary">{t('الخصم (دج):')}</span>
               <input
                 type="number"
                 min={0}
@@ -864,17 +864,17 @@ export function POSCheckoutPage({
             {/* Totals Summary Display */}
             <div className="p-3 rounded-xl bg-accent/5 border border-accent/20 space-y-1">
               <div className="flex justify-between text-xs text-text-tertiary">
-                <span>المجموع الفرعي:</span>
+                <span>{t('المجموع الفرعي:')}</span>
                 <span className="font-bold">{formatCurrency(cartSubtotal)}</span>
               </div>
               {discountDzd > 0 && (
                 <div className="flex justify-between text-xs text-danger font-bold">
-                  <span>الخصم المطبق:</span>
+                  <span>{t('الخصم المطبق:')}</span>
                   <span>-{formatCurrency(discountDzd)}</span>
                 </div>
               )}
               <div className="flex justify-between text-base font-black text-accent pt-1 border-t border-accent/10">
-                <span>المبلغ النهائي المستحق:</span>
+                <span>{t('المبلغ النهائي المستحق:')}</span>
                 <span>{formatCurrency(cartTotal)}</span>
               </div>
             </div>
@@ -890,7 +890,7 @@ export function POSCheckoutPage({
               ) : (
                 <>
                   <CheckCircle2 className="w-5 h-5" />
-                  <span>إتمام عملية البيع ({formatCurrency(cartTotal)})</span>
+                  <span>{t('إتمام عملية البيع')} ({formatCurrency(cartTotal)})</span>
                 </>
               )}
             </button>

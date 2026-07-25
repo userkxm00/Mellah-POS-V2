@@ -26,6 +26,18 @@ const frDictionary: Record<string, string> = {
   'إغلاق النافذة': 'Fermer la fenêtre',
   'نافذة جديدة': 'Nouvelle fenêtre',
   'شاشة رئيسية': 'Écran principal',
+  'الرئيسية': 'Accueil',
+  'شاشة نقطة البيع (POS)': 'Écran Caisse (POS)',
+  'وردية نشطة': 'Caisse Active',
+  'ورديّة نشطة': 'Caisse Active',
+  'مغلقة': 'Fermée',
+  'فتح الدرج': 'Ouvrir Tiroir',
+  'إغلاق الوردية': 'Clôturer Caisse',
+  'إغلاق وردية': 'Clôturer Caisse',
+  'السلال المعلقة': 'Ventes en Attente',
+  'فرع الجزائر العاصمة': 'Succursale Alger',
+  'مبيعات اليوم': 'Ventes du Jour',
+  'عملية': 'opérations',
 
   // Launcher Tiles
   'نقطة البيع (POS)': 'Caisse (POS)',
@@ -84,10 +96,11 @@ const frDictionary: Record<string, string> = {
   'مبلغ الباقي للزبون': 'Rendu Monnaie Client',
   'مبلغ الباقي للزبون:': 'Rendu Monnaie Client:',
   'تعليق الفاتورة (F2)': 'Mettre en Attente (F2)',
-  'السلال المعلقة': 'Ventes en Attente',
   'فتح درج النقد': 'Ouvrir Tiroir-Caisse',
   'بحث باسم المنتج أو الباركود...': 'Rechercher produit ou code-barres...',
+  'ابحث باسم المنتج، اللون، المقاس، أو امسح الباركود...': 'Rechercher par nom, couleur, taille ou code-barres...',
   'السلة الحالية': 'Panier Actuel',
+  'سلة البيع الحالية': 'Panier de Vente Actuel',
   'تفاصيل الدفع': 'Détails du Paiement',
   'نقداً (كاش)': 'Espèces (Cash)',
   'بطاقة CIB': 'Carte CIB',
@@ -95,21 +108,65 @@ const frDictionary: Record<string, string> = {
   'رصيد المتجر': 'Avoir Magasin',
   'استبدال نقاط الولاء': 'Échanger Points de Fidélité',
   'تحديد الزبون': 'Sélectionner un Client',
+  '— اختر زبون لجمع نقاط الولاء —': '— Sélectionner un client pour accumuler les points —',
   'زبون عادي (افتراضي)': 'Client Standard',
   'إضافة زبون جديد': 'Nouveau Client',
   'إتمام عملية البيع (Enter)': 'Valider la Vente (Enter)',
+  'إتمام عملية البيع': 'Valider la Vente',
   'جاري معالجة البيع...': 'Traitement de la vente...',
   'الخصم (دج):': 'Remise (DZD):',
+  'الخصم (دج)': 'Remise (DZD)',
+  'الخصم المطبق:': 'Remise appliquée:',
   'المجموع الفرعي:': 'Sous-total:',
+  'المجموع الفرعي': 'Sous-total',
   'المبلغ النهائي:': 'Montant Total:',
+  'المبلغ النهائي المستحق:': 'Net à Payer:',
+  'المبلغ النهائي المستحق': 'Net à Payer',
   'المبلغ المدفوع كاش:': 'Montant Espèces:',
+  'المبلغ النقدي المقدم من الزبون:': 'Espèces reçues du client:',
+  'الباقي للزبون (Change):': 'Monnaie à rendre (Rendu):',
   'السلة فارغة حالياً': 'Le panier est actuellement vide',
   'أضف منتجات من القائمة أو امسح الباركود للبدء': 'Ajoutez des produits de la liste ou scannez un code-barres',
+  'انقر على أي منتج لإضافته للطلب': 'Cliquez sur un produit pour l\'ajouter',
   'حاسبة الباقي': 'Calculateur de Monnaie',
-  'المبلغ النقدي المدفوع من الزبون:': 'Espèces reçues du client:',
   'الباقي المستحق للزبون:': 'Monnaie à rendre au client:',
   'تأكيد الدفع وإتمام البيع': 'Valider le paiement',
   'إلغاء': 'Annuler',
+  '💵 نقد': '💵 Espèces',
+  '💳 CIB': '💳 CIB',
+  '🔀 مزدوج': '🔀 Mixte',
+  'نقداً': 'Espèces',
+  'مزدوج': 'Mixte',
+  'استبدال': 'Échanger',
+  'تطبيق رصيد المتجر': 'Appliquer avoir magasin',
+
+  // Categories & Colors
+  'جميع الفئات': 'Toutes les Catégories',
+  'أحذية': 'Chaussures',
+  'إكسسوارات': 'Accessoires',
+  'ملابس رجالية': 'Vêtements Homme',
+  'ملابس نسائية': 'Vêtements Femme',
+  'عام': 'Général',
+  'لا توجد منتجات تطابق البحث': 'Aucun produit ne correspond à la recherche',
+  'تأكد من اختيار الفئة أو كلمة البحث': 'Vérifiez la catégorie ou le terme de recherche',
+  'أسود': 'Noir',
+  'أبيض': 'Blanc',
+  'أزرق': 'Bleu',
+  'أحمر': 'Rouge',
+  'أخضر': 'Vert',
+  'رمادي': 'Gris',
+  'وردي': 'Rose',
+  'بني': 'Marron',
+  'أصفر': 'Jaune',
+  'برتقالي': 'Orange',
+  'كحلي': 'Bleu Marine',
+  'بيج': 'Beige',
+  'قطعة': 'pcs',
+  'قطع': 'pcs',
+  'مقاس:': 'Taille:',
+  'لون:': 'Couleur:',
+  'الستوك:': 'Stock:',
+  'نفد': 'Épuisé',
 
   // Products & Inventory Page
   'إضافة منتج جديد': 'Ajouter un Produit',
@@ -119,7 +176,6 @@ const frDictionary: Record<string, string> = {
   'تصدير CSV': 'Exporter CSV',
   'طلب تزود (PO)': 'Bon de Commande (PO)',
   'الفئات': 'Catégories',
-  'جميع الفئات': 'Toutes les Catégories',
   'المنخفض فقط': 'Stock Bas Uniquement',
   'ابحث باسم المنتج أو الفئة...': 'Rechercher par nom ou catégorie...',
   'المنتج': 'Produit',
@@ -161,12 +217,19 @@ const frDictionary: Record<string, string> = {
   'تعديل (Adjustment)': 'Ajustement',
   'تالف (Damaged)': 'Endommagé',
   'حفظ التعديلات': 'Enregistrer les modifications',
-  'قطع': 'pcs',
-  'قطعة': 'pcs',
   'قطعة بالمخزون': 'pcs en stock',
 
-  // Sales History Page
+  // Sales History Page & Modal
   'سجل المبيعات والتنزيلات': 'Historique des Ventes',
+  'سجل الفواتير والمبيعات اليومية': 'Historique des Factures & Ventes',
+  'العودة للشاشة الرئيسية': 'Retour à l\'Accueil',
+  'تصدير السجلات CSV': 'Exporter CSV',
+  'إجمالي الفواتير النشطة': 'Total Factures Actives',
+  'مجموع المبيعات المحددة': 'Total des Ventes',
+  'إجمالي المبيعات المحُددة': 'Total des Ventes Sélectionnées',
+  'فواتير ملغاة': 'Factures Annulées',
+  'الوردية الحالية': 'Session Caisse Actuelle',
+  'مجال تاريخ (من-إلى)': 'Période (Du-Au)',
   'ابحث برقم الفاتورة أو اسم الكاشير...': 'Rechercher par n° de facture ou caissier...',
   'فلترة بالتواريخ': 'Filtrer par Date',
   'كل الأوقات': 'Tout le temps',
@@ -179,7 +242,9 @@ const frDictionary: Record<string, string> = {
   'التاريخ والوقت': 'Date & Heure',
   'الكاشير': 'Caissier',
   'الزبون': 'Client',
+  'الكاشير والزبون': 'Caissier & Client',
   'المبلغ الإجمالي': 'Montant Total',
+  'مبلغ الفاتورة': 'Montant Facture',
   'طريقة الدفع': 'Mode de Paiement',
   'الحالة': 'Statut',
   'مكتملة': 'Complétée',
@@ -188,6 +253,8 @@ const frDictionary: Record<string, string> = {
   'إعادة طباعة': 'Réimprimer',
   'إلغاء الفاتورة (Void)': 'Annuler la Facture (Void)',
   'تفاصيل الفاتورة': 'Détails de la Facture',
+  'التفاصيل والطباعة': 'Détails & Impression',
+  'لا توجد مبيعات مسجلة في هذا التاريخ': 'Aucune vente enregistrée à cette date',
 
   // Returns Page
   'إدارة المرتجعات واستبدال البضاعة': 'Gestion des Retours Produit',
@@ -314,7 +381,33 @@ export const useLanguageStore = create<LanguageState>((set, get) => ({
   t: (keyOrText: string) => {
     const lang = get().language
     if (lang === 'ar') return keyOrText
+    if (!keyOrText) return ''
     const trimmed = keyOrText.trim()
-    return frDictionary[trimmed] || frDictionary[keyOrText] || keyOrText
+    if (frDictionary[trimmed]) return frDictionary[trimmed]
+    if (frDictionary[keyOrText]) return frDictionary[keyOrText]
+
+    // Smart regex pattern fallbacks for dynamic strings
+    if (/^\d+\s*قطعة/.test(trimmed)) {
+      return trimmed.replace('قطعة', 'pièce(s)')
+    }
+    if (trimmed.startsWith('مقاس:')) {
+      return trimmed.replace('مقاس:', 'Taille:')
+    }
+    if (trimmed.startsWith('لون:')) {
+      const colorVal = trimmed.replace('لون:', '').trim()
+      const translatedColor = frDictionary[colorVal] || colorVal
+      return `Couleur: ${translatedColor}`
+    }
+    if (trimmed.startsWith('مبيعات اليوم')) {
+      return trimmed.replace('مبيعات اليوم', 'Ventes du Jour').replace('عملية', 'opérations')
+    }
+    if (trimmed.startsWith('جميع الفئات')) {
+      return trimmed.replace('جميع الفئات', 'Toutes les Catégories')
+    }
+    if (/^\d+\s*فاتورة/.test(trimmed)) {
+      return trimmed.replace('فاتورة', 'facture(s)').replace('فواتير', 'factures')
+    }
+
+    return keyOrText
   },
 }))

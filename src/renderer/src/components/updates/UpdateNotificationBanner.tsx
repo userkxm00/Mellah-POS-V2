@@ -31,14 +31,15 @@ export function UpdateNotificationBanner(): React.JSX.Element | null {
     window.electron?.updater?.installUpdate()
   }
 
-  // Don't show for idle, not-available, or dismissed states
-  if (update.status === 'idle' || update.status === 'not-available' || dismissed) {
+  // Don't show for idle, not-available, checking or background error states
+  if (
+    update.status === 'idle' ||
+    update.status === 'not-available' ||
+    update.status === 'checking' ||
+    update.status === 'error' ||
+    dismissed
+  ) {
     return null
-  }
-
-  // Checking state — subtle
-  if (update.status === 'checking') {
-    return null // Don't show banner for background checks
   }
 
   const getBannerStyle = (): string => {
@@ -49,8 +50,6 @@ export function UpdateNotificationBanner(): React.JSX.Element | null {
         return 'bg-gradient-to-l from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/30'
       case 'downloaded':
         return 'bg-gradient-to-l from-success/10 via-success/5 to-transparent border-success/30'
-      case 'error':
-        return 'bg-gradient-to-l from-danger/10 via-danger/5 to-transparent border-danger/30'
       default:
         return ''
     }
@@ -107,22 +106,6 @@ export function UpdateNotificationBanner(): React.JSX.Element | null {
               </p>
               <p className="text-xs text-text-tertiary">
                 {t('اضغط على الزر لإعادة التشغيل وتثبيت التحديث.')}
-              </p>
-            </div>
-          </>
-        )}
-
-        {update.status === 'error' && (
-          <>
-            <div className="p-2 rounded-xl bg-danger/15">
-              <AlertTriangle className="w-4.5 h-4.5 text-danger" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-text-primary">
-                {t('فشل فحص التحديثات')}
-              </p>
-              <p className="text-xs text-text-tertiary">
-                {update.error ?? t('تعذر الاتصال بخادم التحديثات.')}
               </p>
             </div>
           </>

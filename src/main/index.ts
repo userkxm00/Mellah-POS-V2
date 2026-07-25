@@ -297,6 +297,14 @@ function registerIpcHandlers(): void {
 
 let mainWindow: BrowserWindow | null = null
 
+function getAppIconPath(): string {
+  const p1 = path.join(__dirname, '../../build/icon.png')
+  if (fs.existsSync(p1)) return p1
+  const p2 = path.join(app.getAppPath(), 'build/icon.png')
+  if (fs.existsSync(p2)) return p2
+  return path.join(process.cwd(), 'build/icon.png')
+}
+
 function createWindow(): void {
   const state = loadWindowState()
 
@@ -313,6 +321,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     title: 'MELLAH POS',
+    icon: getAppIconPath(),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -377,6 +386,7 @@ function createModuleWindow(moduleName: string): void {
     minimizable: true,
     autoHideMenuBar: true,
     title: moduleWindowTitles[moduleName] ?? `${moduleName} — MELLAH POS`,
+    icon: getAppIconPath(),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,

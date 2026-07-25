@@ -282,7 +282,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
           <div>
             <h1 className="text-lg font-black text-accent tracking-wider leading-tight">MELLAH POS</h1>
             <p className="text-xs font-bold text-text-secondary">
-              {currentBranch?.name ?? 'الفرع الرئيسي'}
+              {currentBranch?.name ? t(currentBranch.name) : t('الفرع الرئيسي')}
             </p>
           </div>
         </div>
@@ -302,7 +302,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
                   isOnline ? 'bg-success animate-pulse' : 'bg-danger'
                 }`}
               />
-              <span>{isOnline ? 'أونلاين (متزامن)' : 'أوفلاين (محلي)'}</span>
+              <span>{isOnline ? t('أونلاين (متزامن)') : t('أوفلاين (محلي)')}</span>
             </div>
 
             <button
@@ -312,7 +312,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               title="إعادة الاتصال بالشبكة والمزامنة يدوياً"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isReconnecting ? 'animate-spin text-accent' : ''}`} />
-              <span>{isReconnecting ? 'جاري الفحص...' : 'إعادة الاتصال'}</span>
+              <span>{isReconnecting ? t('جاري الفحص...') : t('إعادة الاتصال')}</span>
             </button>
           </div>
 
@@ -326,7 +326,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
                 {currentUser.full_name}
               </span>
               <span className="text-[10px] font-bold text-text-tertiary mt-0.5">
-                {badge.label}
+                {t(badge.label)}
               </span>
             </div>
           </div>
@@ -339,7 +339,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gray-200/60 text-text-secondary hover:bg-danger/10 hover:text-danger text-xs font-bold transition-colors btn-press"
           >
             <LogOut className="w-4 h-4" />
-            <span>خروج</span>
+            <span>{t('خروج')}</span>
           </button>
         </div>
       </header>
@@ -353,13 +353,13 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
           <div className="space-y-1.5 text-center md:text-right z-10">
             <div className="inline-flex items-center gap-1.5 bg-white/15 px-3 py-1 rounded-full text-xs font-bold text-white/90 backdrop-blur-md mb-1 shadow-sm border border-white/20">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>لوحة التحكم والتشغيل المركزية</span>
+              <span>{t('لوحة التحكم والتشغيل المركزية')}</span>
             </div>
             <h2 className="text-2xl font-black tracking-tight">
-              مرحباً بك، {currentUser.full_name} 👋
+              {t('مرحباً بك،')} {currentUser.full_name} 👋
             </h2>
             <p className="text-xs text-white/80 font-medium">
-              اختر الوحدة المطلوبة للبدء. نظام نقاط البيع يعمل بمرونة وسرعة تامة.
+              {t('اختر الوحدة المطلوبة للبدء. نظام نقاط البيع يعمل بمرونة وسرعة تامة.')}
             </p>
           </div>
 
@@ -385,9 +385,9 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-text-tertiary">الفرع النشط</p>
+              <p className="text-[11px] font-bold text-text-tertiary">{t('الفرع النشط')}</p>
               <p className="text-xs font-black text-text-primary mt-0.5">
-                {currentBranch?.name ?? 'الفرع الرئيسي'}
+                {currentBranch?.name ? t(currentBranch.name) : t('الفرع الرئيسي')}
               </p>
             </div>
           </div>
@@ -397,7 +397,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-text-tertiary">مبيعات اليوم ({todayTxCount} عملية)</p>
+              <p className="text-[11px] font-bold text-text-tertiary">{t('مبيعات اليوم')} ({todayTxCount} {t('عملية')})</p>
               <p className="text-xs font-black text-success mt-0.5 currency font-mono">
                 {formatCurrency(todaySalesDzd)}
               </p>
@@ -409,9 +409,9 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               <UserCheck className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-text-tertiary">صلاحياتك الحالية</p>
+              <p className="text-[11px] font-bold text-text-tertiary">{t('صلاحياتك الحالية')}</p>
               <p className="text-xs font-black text-text-primary mt-0.5">
-                {badge.label} ({currentUser.full_name})
+                {t(badge.label)} ({currentUser.full_name})
               </p>
             </div>
           </div>
@@ -421,10 +421,10 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         <div className="flex items-center justify-between pt-2">
           <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
-            <span>وحدات النظام المتوفرة</span>
+            <span>{t('وحدات النظام المتوفرة')}</span>
           </h3>
           <span className="text-xs font-bold text-text-tertiary">
-            {visibleTiles.length} وحدات متاحة حسب صلاحياتك
+            {visibleTiles.length} {t('متاحة حسب صلاحياتك')}
           </span>
         </div>
 

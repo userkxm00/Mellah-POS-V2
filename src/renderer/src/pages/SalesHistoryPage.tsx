@@ -235,7 +235,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
   const columns: Column<SaleRow>[] = [
     {
       key: 'id',
-      header: 'رقم الفاتورة',
+      header: t('رقم الفاتورة'),
       render: (row) => (
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-accent/10 text-accent">
@@ -252,17 +252,17 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
     },
     {
       key: 'cashier_name',
-      header: 'الكاشير والزبون',
+      header: t('الكاشير والزبون'),
       render: (row) => (
         <div>
-          <span className="font-bold text-text-primary text-xs block">{row.cashier_name ?? 'كاشير الفرع'}</span>
-          <span className="text-[11px] text-text-tertiary block">{row.customer_name ? `الزبون: ${row.customer_name}` : 'زبون عام'}</span>
+          <span className="font-bold text-text-primary text-xs block">{row.cashier_name ?? t('كاشير الفرع')}</span>
+          <span className="text-[11px] text-text-tertiary block">{row.customer_name ? `${t('الزبون:')} ${row.customer_name}` : t('زبون عام')}</span>
         </div>
       ),
     },
     {
       key: 'payment_method',
-      header: 'طريقة الدفع',
+      header: t('طريقة الدفع'),
       render: (row) => {
         const isCash = row.payment_method === 'cash'
         const isCard = row.payment_method === 'card'
@@ -277,28 +277,28 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
             }`}
           >
             {isCash ? <Banknote className="w-3 h-3" /> : isCard ? <CreditCard className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
-            <span>{isCash ? 'نقداً' : isCard ? 'بطاقة CIB' : 'مزدوج'}</span>
+            <span>{t(isCash ? 'نقداً' : isCard ? 'بطاقة CIB' : 'مزدوج')}</span>
           </span>
         )
       },
     },
     {
       key: 'total_dzd',
-      header: 'مبلغ الفاتورة',
+      header: t('مبلغ الفاتورة'),
       render: (row) => (
         <div>
           <span className={`currency font-black text-sm block ${row.status === 'voided' ? 'line-through text-text-tertiary' : 'text-accent'}`}>
             {formatCurrency(row.total_dzd)}
           </span>
           {row.discount_dzd && row.discount_dzd > 0 ? (
-            <span className="text-[10px] text-danger font-bold block">خصم: {formatCurrency(row.discount_dzd)}</span>
+            <span className="text-[10px] text-danger font-bold block">{t('الخصم (دج):')} {formatCurrency(row.discount_dzd)}</span>
           ) : null}
         </div>
       ),
     },
     {
       key: 'status',
-      header: 'الحالة',
+      header: t('الحالة'),
       render: (row) => (
         <span
           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
@@ -309,13 +309,13 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
                 : 'bg-warning-light text-warning'
           }`}
         >
-          {row.status === 'completed' ? 'مكتملة' : row.status === 'voided' ? 'ملغاة 🚫' : 'مرجع'}
+          {t(row.status === 'completed' ? 'مكتملة' : row.status === 'voided' ? 'ملغاة (Voided)' : 'مرتجعة')}
         </span>
       ),
     },
     {
       key: 'actions',
-      header: 'التفاصيل والطباعة',
+      header: t('التفاصيل والطباعة'),
       align: 'left',
       render: (row) => (
         <div className="flex items-center gap-1.5">
@@ -324,7 +324,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
             className="flex items-center gap-1 px-3 py-1 rounded-xl bg-accent/10 hover:bg-accent/20 text-accent font-bold text-xs transition-colors btn-press"
           >
             <Eye className="w-3.5 h-3.5" />
-            <span>عرض</span>
+            <span>{t('التفاصيل والجرد')}</span>
           </button>
         </div>
       ),
@@ -340,9 +340,9 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
             className="text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 mb-1.5 transition-colors"
           >
             <ArrowRight className="w-3.5 h-3.5" />
-            <span>العودة للشاشة الرئيسية</span>
+            <span>{t('العودة للشاشة الرئيسية')}</span>
           </button>
-          <h1 className="text-2xl font-black text-text-primary">سجل الفواتير والمبيعات اليومية</h1>
+          <h1 className="text-2xl font-black text-text-primary">{t('سجل الفواتير والمبيعات اليومية')}</h1>
         </div>
 
         <button
@@ -350,24 +350,24 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
           className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-success hover:bg-success/90 text-white text-xs font-bold shadow-ambient transition-all btn-press"
         >
           <FileText className="w-4 h-4" />
-          <span>تصدير المبيعات CSV</span>
+          <span>{t('تصدير السجلات CSV')}</span>
         </button>
       </div>
 
       {/* Summary Stat Card */}
       <div className="grid grid-cols-3 gap-4">
         <Card className="p-4 bg-accent/5 border border-accent/20">
-          <p className="text-xs text-text-tertiary font-bold mb-1">إجمالي الفواتير النشطة</p>
-          <p className="text-2xl font-black text-text-primary">{validSales.length} فاتورة</p>
+          <p className="text-xs text-text-tertiary font-bold mb-1">{t('إجمالي الفواتير النشطة')}</p>
+          <p className="text-2xl font-black text-text-primary">{validSales.length} {t('فاتورة')}</p>
         </Card>
         <Card className="p-4 bg-accent/5 border border-accent/20">
-          <p className="text-xs text-text-tertiary font-bold mb-1">مجموع المبيعات المحددة</p>
+          <p className="text-xs text-text-tertiary font-bold mb-1">{t('إجمالي المبيعات المحُددة')}</p>
           <p className="currency text-accent font-black text-2xl">{formatCurrency(dayTotalDzd)}</p>
         </Card>
         <Card className="p-4 bg-danger/5 border border-danger/20">
-          <p className="text-xs text-text-tertiary font-bold mb-1">فواتير ملغاة</p>
+          <p className="text-xs text-text-tertiary font-bold mb-1">{t('فواتير ملغاة')}</p>
           <p className="text-2xl font-black text-danger">
-            {filteredSales.filter((s) => s.status === 'voided').length} فاتورة
+            {filteredSales.filter((s) => s.status === 'voided').length} {t('فاتورة')}
           </p>
         </Card>
       </div>
@@ -382,7 +382,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
                 dateFilter === 'current_shift' ? 'bg-white text-accent shadow-sm font-black' : 'hover:text-text-primary'
               }`}
             >
-              الوردية الحالية
+              {t('الوردية الحالية')}
             </button>
             <button
               onClick={() => setDateFilter('today')}
@@ -390,7 +390,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
                 dateFilter === 'today' ? 'bg-white text-accent shadow-sm font-black' : 'hover:text-text-primary'
               }`}
             >
-              اليوم
+              {t('اليوم')}
             </button>
             <button
               onClick={() => setDateFilter('yesterday')}
@@ -398,7 +398,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
                 dateFilter === 'yesterday' ? 'bg-white text-accent shadow-sm font-black' : 'hover:text-text-primary'
               }`}
             >
-              أمس
+              {t('أمس')}
             </button>
             <button
               onClick={() => setDateFilter('range')}
@@ -406,7 +406,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
                 dateFilter === 'range' ? 'bg-white text-accent shadow-sm font-black' : 'hover:text-text-primary'
               }`}
             >
-              مجال تاريخ (من-إلى)
+              {t('مجال تاريخ (من-إلى)')}
             </button>
           </div>
 
@@ -418,7 +418,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
                 onChange={(e) => setStartDate(e.target.value)}
                 className="px-3 py-1.5 rounded-xl text-xs font-mono bg-gray-50 border border-gray-200"
               />
-              <span className="text-xs font-bold text-text-tertiary">إلى</span>
+              <span className="text-xs font-bold text-text-tertiary">{t('إلى')}</span>
               <input
                 type="date"
                 value={endDate}
@@ -432,7 +432,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
         {/* Search Input */}
         <div className="w-full md:w-72">
           <Input
-            placeholder="ابحث برقم الفاتورة أو اسم الكاشير..."
+            placeholder={t('ابحث برقم الفاتورة أو اسم الكاشير...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-gray-50/80 border-gray-200 text-xs"
@@ -448,7 +448,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
           data={filteredSales}
           loading={isLoading}
           rowKey={(row) => row.id}
-          emptyMessage="لا توجد مبيعات مسجلة في هذا التاريخ"
+          emptyMessage={t('لا توجد مبيعات مسجلة في هذا التاريخ')}
         />
       </Card>
 
@@ -456,41 +456,41 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
       <Modal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        title={`تفاصيل الفاتورة #${selectedSale?.id.slice(0, 8)}`}
+        title={`${t('تفاصيل الفاتورة')} #${selectedSale?.id.slice(0, 8)}`}
         size="lg"
       >
         {selectedSale && (
           <div className="space-y-5 select-none">
             <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 grid grid-cols-4 gap-3 text-xs">
               <div>
-                <p className="font-bold text-text-tertiary">تاريخ البيع:</p>
+                <p className="font-bold text-text-tertiary">{t('تاريخ البيع:')}</p>
                 <p className="font-bold text-text-primary font-mono mt-0.5">
                   {new Date(selectedSale.created_at).toLocaleString('ar-DZ')}
                 </p>
               </div>
               <div>
-                <p className="font-bold text-text-tertiary">الكاشير:</p>
+                <p className="font-bold text-text-tertiary">{t('الكاشير:')}</p>
                 <p className="font-bold text-text-primary mt-0.5">{selectedSale.cashier_name}</p>
               </div>
               <div>
-                <p className="font-bold text-text-tertiary">الزبون:</p>
-                <p className="font-bold text-text-primary mt-0.5">{selectedSale.customer_name ?? 'زبون عام'}</p>
+                <p className="font-bold text-text-tertiary">{t('الزبون:')}</p>
+                <p className="font-bold text-text-primary mt-0.5">{selectedSale.customer_name ?? t('زبون عام')}</p>
               </div>
               <div>
-                <p className="font-bold text-text-tertiary">طريقة الدفع:</p>
+                <p className="font-bold text-text-tertiary">{t('طريقة الدفع:')}</p>
                 <p className="font-bold text-accent mt-0.5">
                   {selectedSale.payment_method === 'cash'
-                    ? 'نقداً'
+                    ? t('نقداً')
                     : selectedSale.payment_method === 'card'
-                      ? 'بطاقة CIB'
-                      : `مزدوج (${selectedSale.cash_amount_dzd ?? 0} دج نقد + ${selectedSale.card_amount_dzd ?? 0} دج كارت)`}
+                      ? t('بطاقة CIB')
+                      : `${t('مزدوج')} (${selectedSale.cash_amount_dzd ?? 0} دج نقد + ${selectedSale.card_amount_dzd ?? 0} دج كارت)`}
                 </p>
               </div>
             </div>
 
             {selectedSale.status === 'voided' && (
               <div className="p-3 bg-danger/10 border border-danger/20 rounded-xl text-xs text-danger font-bold">
-                🚫 هذه الفاتورة ملغاة. السبب: {selectedSale.void_reason ?? 'بدون سبب مذكور'}
+                🚫 {t('فواتير ملغاة')}. السبب: {selectedSale.void_reason ?? 'بدون سبب مذكور'}
               </div>
             )}
 
@@ -499,9 +499,9 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
               <table className="w-full text-right text-xs">
                 <thead className="bg-gray-50 border-b border-gray-200/80 font-bold text-text-secondary">
                   <tr>
-                    <th className="p-3">المنتج الخيار</th>
-                    <th className="p-3 text-center">الكمية</th>
-                    <th className="p-3 text-left">السعر الإجمالي</th>
+                    <th className="p-3">{t('المنتج')}</th>
+                    <th className="p-3 text-center">{t('الكمية المرتجعة')}</th>
+                    <th className="p-3 text-left">{t('مبلغ الفاتورة')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -511,7 +511,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
                         {item.product_name}
                         {(item.size || item.color) && (
                           <span className="block text-[11px] font-medium text-text-tertiary">
-                            {item.size ? `مقاس: ${item.size}` : ''} {item.color ? `لون: ${item.color}` : ''}
+                            {item.size ? `${t('مقاس:')} ${item.size}` : ''} {item.color ? `${t('لون:')} ${t(item.color)}` : ''}
                           </span>
                         )}
                       </td>
@@ -529,18 +529,18 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
             <div className="p-3 bg-gray-50 rounded-xl space-y-1.5 text-xs font-semibold">
               {selectedSale.subtotal_dzd && selectedSale.subtotal_dzd > selectedSale.total_dzd && (
                 <div className="flex justify-between text-text-tertiary">
-                  <span>المجموع الفرعي:</span>
+                  <span>{t('المجموع الفرعي:')}</span>
                   <span>{formatCurrency(selectedSale.subtotal_dzd)}</span>
                 </div>
               )}
               {selectedSale.discount_dzd && selectedSale.discount_dzd > 0 && (
                 <div className="flex justify-between text-danger font-bold">
-                  <span>الخصم المطبق:</span>
+                  <span>{t('الخصم المطبق:')}</span>
                   <span>-{formatCurrency(selectedSale.discount_dzd)}</span>
                 </div>
               )}
               <div className="flex justify-between text-base font-black text-accent pt-1 border-t border-gray-200">
-                <span>المبلغ الإجمالي المستحق:</span>
+                <span>{t('المبلغ النهائي المستحق:')}</span>
                 <span>{formatCurrency(selectedSale.total_dzd)}</span>
               </div>
             </div>
