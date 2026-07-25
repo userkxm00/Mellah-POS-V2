@@ -14,7 +14,8 @@ import {
   Home,
   Pause,
   RotateCcw,
-  Wallet
+  Wallet,
+  Printer
 } from 'lucide-react'
 import { Card, Input, Modal, Button, ToastContainer } from '@/components/ui'
 import { formatCurrency } from '@/lib/format'
@@ -136,7 +137,35 @@ export function POSCheckoutPage({
   const [newCustName, setNewCustName] = useState<string>('')
   const [newCustPhone, setNewCustPhone] = useState<string>('')
 
+  // POS Operational Toggles (Persisted in localStorage)
+  const [autoPrintReceipt, setAutoPrintReceipt] = useState<boolean>(
+    () => localStorage.getItem('mellah_auto_print') !== 'false'
+  )
+  const [autoOpenDrawer, setAutoOpenDrawer] = useState<boolean>(
+    () => localStorage.getItem('mellah_auto_drawer') !== 'false'
+  )
+
   const addToast = useToastStore((s) => s.addToast)
+
+  const toggleAutoPrint = (): void => {
+    const next = !autoPrintReceipt
+    setAutoPrintReceipt(next)
+    localStorage.setItem('mellah_auto_print', String(next))
+    addToast({
+      message: next ? 'تم تفعيل الطباعة التلقائية للفواتير 🖨️' : 'تم إيقاف الطباعة التلقائية (يمكنك الطباعة يدوياً عند الحاجة)',
+      variant: 'info',
+    })
+  }
+
+  const toggleAutoDrawer = (): void => {
+    const next = !autoOpenDrawer
+    setAutoOpenDrawer(next)
+    localStorage.setItem('mellah_auto_drawer', String(next))
+    addToast({
+      message: next ? 'تم تفعيل فتح درج النقود تلقائياً بعد البيع 💵' : 'تم إيقاف فتح الدرج التلقائي (يمكن الفتح يدوياً)',
+      variant: 'info',
+    })
+  }
 
   // Fetch active shift on mount
   useEffect(() => {
@@ -332,9 +361,15 @@ export function POSCheckoutPage({
     }
   }
 
-  // Open Cash Drawer Trigger
-  const handleOpenDrawer = (): void => {
-    addToast({ message: 'تم إرسال أمر فتح درج النقد (Cash Drawer)! 💵', variant: 'info' })
+  // Open Cash Drawer Trigger (Supports ESC/POS Pulse Kick)
+  const handleOpenDrawer = async (): Promise<void> => {
+    const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
+    const ok = await window.electron.openCashDrawer(printerName)
+    if (ok) {
+      addToast({ message: 'تم إرسال أمر فتح درج النقود بنجاح! 💵', variant: 'success' })
+    } else {
+      addToast({ message: 'تم فتح الدرج (أو إرسال التنبيه المحلي للطابعة)', variant: 'info' })
+    }
   }
 
   // Manager PIN Verification for high discount (> 10% or > 5000 DZD)
@@ -423,12 +458,16 @@ export function POSCheckoutPage({
         duration: 4000,
       })
 
-      // Auto-Thermal Printing
-      const autoPrintEnabled = localStorage.getItem('mellah_auto_print') !== 'false'
+      // Auto Cash Drawer Kick
       const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
+      if (autoOpenDrawer) {
+        window.electron.openCashDrawer(printerName).catch(() => {})
+      }
+
+      // Auto-Thermal Printing
       const paperWidth = (localStorage.getItem('mellah_paper_width') as '80mm' | '58mm') ?? '80mm'
 
-      if (autoPrintEnabled) {
+      if (autoPrintReceipt) {
         const currentUser = useAuthStore.getState().currentUser
         printThermalReceipt(
           {
@@ -506,13 +545,44 @@ export function POSCheckoutPage({
             <span>{t('السلال المعلقة')} ({heldCarts.length})</span>
           </button>
 
-          {/* Open Drawer */}
+          {/* Quick Toggle: Auto Print */}
           <button
-            onClick={handleOpenDrawer}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-text-secondary text-xs font-bold transition-all btn-press"
+            onClick={toggleAutoPrint}
+            title={autoPrintReceipt ? 'الطباعة التلقائية مفعّلة' : 'الطباعة التلقائية معطّلة'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all btn-press border ${
+              autoPrintReceipt
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                : 'bg-gray-100 text-gray-400 border-gray-200 line-through opacity-75 hover:bg-gray-200'
+            }`}
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>{t('طباعة الفاتورة')}</span>
+            <span className={`w-2 h-2 rounded-full ${autoPrintReceipt ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+          </button>
+
+          {/* Quick Toggle: Auto Cash Drawer */}
+          <button
+            onClick={toggleAutoDrawer}
+            title={autoOpenDrawer ? 'فتح درج النقود مفعّل' : 'فتح درج النقود معطّل'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all btn-press border ${
+              autoOpenDrawer
+                ? 'bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100'
+                : 'bg-gray-100 text-gray-400 border-gray-200 line-through opacity-75 hover:bg-gray-200'
+            }`}
           >
             <Wallet className="w-3.5 h-3.5" />
-            <span>{t('فتح الدرج')}</span>
+            <span>{t('فتح لاكاس')}</span>
+            <span className={`w-2 h-2 rounded-full ${autoOpenDrawer ? 'bg-blue-500' : 'bg-gray-300'}`} />
+          </button>
+
+          {/* Manual Open Drawer */}
+          <button
+            onClick={handleOpenDrawer}
+            title="تجربة فتح درج النقود يدويًا (ESC/POS)"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-text-secondary text-xs font-bold transition-all btn-press"
+          >
+            <Wallet className="w-3.5 h-3.5 text-amber-600" />
+            <span>{t('اختبار لاكاس')}</span>
           </button>
 
           {activeShift ? (

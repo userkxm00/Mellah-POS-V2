@@ -67,6 +67,7 @@ export interface ElectronApi {
   hashPin: (pin: string) => Promise<string>
   getPrinters: () => Promise<PrinterInfo[]>
   printHtml: (htmlContent: string, printerName?: string) => Promise<boolean>
+  openCashDrawer: (printerName?: string) => Promise<boolean>
   updater: UpdaterApi
   maintenance: MaintenanceApi
   appInfo: AppInfoApi
@@ -100,6 +101,9 @@ const api: ElectronApi = {
   },
   printHtml: (htmlContent: string, printerName?: string): Promise<boolean> => {
     return ipcRenderer.invoke('printer:print-html', htmlContent, printerName) as Promise<boolean>
+  },
+  openCashDrawer: (printerName?: string): Promise<boolean> => {
+    return ipcRenderer.invoke('printer:open-cash-drawer', printerName) as Promise<boolean>
   },
   updater: {
     checkForUpdates: (): Promise<string | null> => {

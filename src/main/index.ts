@@ -199,6 +199,43 @@ function registerIpcHandlers(): void {
     }
   })
 
+  // ── Open Cash Drawer ESC/POS Pulse Handler ──
+  ipcMain.handle('printer:open-cash-drawer', async (_event, printerName?: string) => {
+    let printWin: BrowserWindow | null = null
+    try {
+      printWin = new BrowserWindow({
+        show: false,
+        webPreferences: { nodeIntegration: false, contextIsolation: true },
+      })
+      // Standard ESC/POS cash drawer pulse HTML snippet
+      const htmlContent = `<!DOCTYPE html><html><head><style>@page{size:80mm 10mm;margin:0;}body{margin:0;font-size:1px;}</style></head><body>&#27;&#112;&#0;&#25;&#250;</body></html>`
+      await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`)
+
+      return await new Promise<boolean>((resolve) => {
+        if (!printWin) return resolve(false)
+        printWin.webContents.print(
+          {
+            silent: true,
+            deviceName: printerName || '',
+            margins: { marginType: 'none' },
+          },
+          (success) => {
+            if (printWin) {
+              printWin.destroy()
+              printWin = null
+            }
+            resolve(success)
+          }
+        )
+      })
+    } catch {
+      if (printWin) {
+        (printWin as BrowserWindow).destroy()
+      }
+      return false
+    }
+  })
+
   // ── Open a secondary module window ──
   ipcMain.handle('app:open-module-window', async (_event, moduleName: string) => {
     createModuleWindow(moduleName)
