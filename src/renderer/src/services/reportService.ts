@@ -1,4 +1,5 @@
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+import { supabase } from '@/lib/supabase'
 
 export interface SalesAnalyticsSummary {
   totalRevenueDzd: number
@@ -184,4 +185,64 @@ export async function fetchShiftAuditLogs(): Promise<ShiftAuditRow[]> {
      ORDER BY sh.opened_at DESC`,
     [DEFAULT_BRANCH_ID]
   )
+}
+
+export interface CloudBranchRevenueRow {
+  branch_id: string
+  branch_name: string
+  total_revenue_dzd: number
+  sales_count: number
+}
+
+/**
+ * Direct Supabase Cloud Query for Admin Multi-Branch Sales Analytics.
+ * Decoupled from local SQLite POS registers to maintain zero pollution and zero FK errors.
+ */
+export async function fetchCloudMultiBranchAnalytics(): Promise<CloudBranchRevenueRow[]> {
+  const hasRealSupabase =
+    import.meta.env.VITE_SUPABASE_URL &&
+    !import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
+
+  if (!hasRealSupabase) return []
+
+  try {
+    const { data: salesData, error: salesErr } = await supabase
+      .from('sales')
+      .select('branch_id, total_dzd')
+      .eq('status', 'completed')
+
+    if (salesErr || !salesData) return []
+
+    const { data: branchData } = await supabase
+      .from('branches')
+      .select('id, name')
+
+    const branchMap = new Map<string, string>()
+    if (branchData) {
+      for (const b of branchData) {
+        branchMap.set(b.id, b.name)
+      }
+    }
+
+    const map = new Map<string, { total_revenue_dzd: number; sales_count: number }>()
+
+    for (const s of salesData) {
+      const bId = s.branch_id
+      const amount = Number(s.total_dzd) || 0
+      const current = map.get(bId) || { total_revenue_dzd: 0, sales_count: 0 }
+      map.set(bId, {
+        total_revenue_dzd: current.total_revenue_dzd + amount,
+        sales_count: current.sales_count + 1,
+      })
+    }
+
+    return Array.from(map.entries()).map(([branch_id, stats]) => ({
+      branch_id,
+      branch_name: branchMap.get(branch_id) || 'فرع تجاري',
+      total_revenue_dzd: stats.total_revenue_dzd,
+      sales_count: stats.sales_count,
+    }))
+  } catch {
+    return []
+  }
 }

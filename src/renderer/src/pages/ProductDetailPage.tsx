@@ -87,6 +87,9 @@ export function ProductDetailPage({
   const loadProductDetail = useCallback(async () => {
     setIsLoading(true)
     try {
+      const activeBranch = useAuthStore.getState().currentBranch
+      const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+
       const prods = await window.electron.db.query<{
         id: string
         name: string
@@ -100,12 +103,12 @@ export function ProductDetailPage({
         `SELECT p.id, p.name, p.description, p.price_dzd, p.cost_dzd, p.image_url, p.category_id, c.name as category_name
          FROM products p
          LEFT JOIN categories c ON c.id = p.category_id
-         WHERE p.id = ? AND p.deleted_at IS NULL`,
-        [productId]
+         WHERE p.id = ? AND p.branch_id = ? AND p.deleted_at IS NULL`,
+        [productId, branchId]
       )
 
       if (prods.length === 0) {
-        addToast({ message: 'المنتج غير موجود', variant: 'error' })
+        addToast({ message: 'المنتج غير موجود في الفرع الحالي', variant: 'error' })
         onBack()
         return
       }
@@ -115,11 +118,11 @@ export function ProductDetailPage({
       const variants = await window.electron.db.query<ProductVariantWithStock>(
         `SELECT v.*, COALESCE(SUM(sm.quantity_change), 0) as current_stock
          FROM product_variants v
-         LEFT JOIN stock_movements sm ON sm.variant_id = v.id
-         WHERE v.product_id = ? AND v.deleted_at IS NULL
+         LEFT JOIN stock_movements sm ON sm.variant_id = v.id AND sm.branch_id = ?
+         WHERE v.product_id = ? AND v.branch_id = ? AND v.deleted_at IS NULL
          GROUP BY v.id
          ORDER BY v.size, v.color`,
-        [productId]
+        [branchId, productId, branchId]
       )
 
       setProduct({ ...p, variants })
@@ -132,9 +135,12 @@ export function ProductDetailPage({
 
   const loadCategories = useCallback(async () => {
     try {
+      const activeBranch = useAuthStore.getState().currentBranch
+      const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+
       const rows = await window.electron.db.query<CategoryOption>(
-        `SELECT id, name FROM categories WHERE deleted_at IS NULL AND branch_id = ? ORDER BY name`,
-        [DEFAULT_BRANCH_ID]
+        `SELECT id, name FROM categories WHERE branch_id = ? AND deleted_at IS NULL ORDER BY name`,
+        [branchId]
       )
       setCategories(rows)
     } catch { /* ignore */ }

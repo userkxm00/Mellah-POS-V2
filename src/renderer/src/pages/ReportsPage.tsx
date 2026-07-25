@@ -29,10 +29,12 @@ import {
   fetchTopSellingProducts,
   fetchInventoryValuation,
   fetchShiftAuditLogs,
+  fetchCloudMultiBranchAnalytics,
   type SalesAnalyticsSummary,
   type TopProductRow,
   type InventoryValuationSummary,
   type ShiftAuditRow,
+  type CloudBranchRevenueRow,
 } from '@/services/reportService'
 import { formatCurrency } from '@/lib/format'
 import { useToastStore } from '@/stores/toastStore'
@@ -47,6 +49,7 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
   const [topProducts, setTopProducts] = useState<TopProductRow[]>([])
   const [inventoryVal, setInventoryVal] = useState<InventoryValuationSummary | null>(null)
   const [shifts, setShifts] = useState<ShiftAuditRow[]>([])
+  const [cloudBranchData, setCloudBranchData] = useState<CloudBranchRevenueRow[]>([])
   const [dailyChartData, setDailyChartData] = useState<DailyChartPoint[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [period, setPeriod] = useState<'all' | '7d' | '30d' | '90d'>('all')
@@ -58,27 +61,28 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
     const end = new Date().toISOString().split('T')[0]
     const startDateObj = new Date()
     if (period === '7d') startDateObj.setDate(startDateObj.getDate() - 7)
-    else if (period === '30d') startDateObj.setDate(startDateObj.getDate() - 30)
-    else if (period === '90d') startDateObj.setDate(startDateObj.getDate() - 90)
-    const start = startDateObj.toISOString().split('T')[0]
-    return { start, end }
+    if (period === '30d') startDateObj.setDate(startDateObj.getDate() - 30)
+    if (period === '90d') startDateObj.setDate(startDateObj.getDate() - 90)
+    return { start: startDateObj.toISOString().split('T')[0], end }
   }, [period])
 
   const loadReports = useCallback(async () => {
     setIsLoading(true)
     try {
       const { start, end } = getPeriodDates()
-      const [salesRes, topRes, invRes, shiftRes] = await Promise.all([
+      const [salesRes, topRes, invRes, shiftRes, cloudBranchRes] = await Promise.all([
         fetchSalesAnalytics(start, end),
         fetchTopSellingProducts(10, start, end),
         fetchInventoryValuation(),
         fetchShiftAuditLogs(),
+        fetchCloudMultiBranchAnalytics(),
       ])
 
       setSalesSummary(salesRes)
       setTopProducts(topRes)
       setInventoryVal(invRes)
       setShifts(shiftRes)
+      setCloudBranchData(cloudBranchRes)
 
       let dateClause = ''
       const params: string[] = []
@@ -442,6 +446,27 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
           emptyMessage="لا توجد ورديات سابقة"
         />
       </Card>
+
+      {/* Decoupled Cloud Multi-Branch Analytics (Admin Cloud Summary) */}
+      {cloudBranchData.length > 0 && (
+        <Card padding="compact" className="overflow-hidden border border-blue-200 bg-blue-50/20">
+          <div className="px-4 py-3.5 border-b border-blue-100 bg-blue-50/50 flex items-center gap-2">
+            <BarChart2 className="w-4 h-4 text-accent" />
+            <h2 className="text-sm font-black text-text-primary">
+              لوحة تحكم المدير: مقارنة إيرادات جميع الفروع (سحابية مباشرة)
+            </h2>
+          </div>
+          <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {cloudBranchData.map((b) => (
+              <div key={b.branch_id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-1">
+                <span className="text-xs font-bold text-gray-500">{b.branch_name}</span>
+                <span className="text-lg font-black text-text-primary">{formatCurrency(b.total_revenue_dzd)}</span>
+                <span className="text-xs text-gray-400">{b.sales_count} عملية بيع مسجلة سحابياً</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }
