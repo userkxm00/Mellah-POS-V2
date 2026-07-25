@@ -44,6 +44,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const branch = result.branch as unknown as Branch | null
 
       sessionStorage.setItem(SESSION_KEY, user.id)
+      if (window.electron?.setSessionUser) {
+        await window.electron.setSessionUser(user.id)
+      }
       set({
         currentUser: user,
         currentBranch: branch,
@@ -64,6 +67,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: () => {
     sessionStorage.removeItem(SESSION_KEY)
     localStorage.removeItem(SESSION_KEY)
+    if (window.electron?.setSessionUser) {
+      window.electron.setSessionUser(null)
+    }
     set({ currentUser: null, currentBranch: null, isAuthenticated: false })
     logger.info('User logged out')
   },
@@ -74,7 +80,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Clear legacy localStorage session key to prevent cross-restart logins
       localStorage.removeItem(SESSION_KEY)
 
-      const savedUserId = sessionStorage.getItem(SESSION_KEY)
+      let savedUserId = sessionStorage.getItem(SESSION_KEY)
+      if (!savedUserId && window.electron?.getSessionUser) {
+        savedUserId = await window.electron.getSessionUser()
+        if (savedUserId) {
+          sessionStorage.setItem(SESSION_KEY, savedUserId)
+        }
+      }
+
       if (!savedUserId) {
         set({ isAuthenticated: false, isLoading: false })
         return

@@ -65,6 +65,8 @@ export interface ElectronApi {
   openModuleWindow: (moduleName: string) => Promise<void>
   verifyPin: (pin: string, userId?: string) => Promise<AuthResult | null>
   hashPin: (pin: string) => Promise<string>
+  setSessionUser: (userId: string | null) => Promise<boolean>
+  getSessionUser: () => Promise<string | null>
   getPrinters: () => Promise<PrinterInfo[]>
   printHtml: (htmlContent: string, printerName?: string) => Promise<boolean>
   openCashDrawer: (printerName?: string) => Promise<boolean>
@@ -95,6 +97,12 @@ const api: ElectronApi = {
   },
   hashPin: (pin: string): Promise<string> => {
     return ipcRenderer.invoke('auth:hash-pin', pin) as Promise<string>
+  },
+  setSessionUser: (userId: string | null): Promise<boolean> => {
+    return ipcRenderer.invoke('auth:set-session', userId) as Promise<boolean>
+  },
+  getSessionUser: (): Promise<string | null> => {
+    return ipcRenderer.invoke('auth:get-session') as Promise<string | null>
   },
   getPrinters: (): Promise<PrinterInfo[]> => {
     return ipcRenderer.invoke('printer:get-list') as Promise<PrinterInfo[]>

@@ -139,6 +139,18 @@ function registerIpcHandlers(): void {
     return null
   })
 
+  // In-memory runtime session for active application execution
+  let activeRuntimeUserId: string | null = null
+
+  ipcMain.handle('auth:set-session', (_event, userId: string | null) => {
+    activeRuntimeUserId = userId
+    return true
+  })
+
+  ipcMain.handle('auth:get-session', () => {
+    return activeRuntimeUserId
+  })
+
   // ── Hash a PIN for user creation/update ──
   // Called by the renderer when creating or editing a user.
   ipcMain.handle('auth:hash-pin', async (_event, pin: string) => {
