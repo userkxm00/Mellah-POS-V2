@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import type { UserRole } from '@/types/database'
 
 interface LocalUser {
@@ -40,6 +41,7 @@ const roleMeta: Record<UserRole, { label: string; icon: React.ReactNode; color: 
 }
 
 export function LoginPage(): React.JSX.Element {
+  const t = useLanguageStore((s) => s.t)
   const [users, setUsers] = useState<LocalUser[]>([])
   const [selectedUser, setSelectedUser] = useState<LocalUser | null>(null)
   const [pin, setPin] = useState<string>('')
@@ -58,12 +60,12 @@ export function LoginPage(): React.JSX.Element {
         )
         setUsers(rows)
       } catch {
-        addToast({ message: 'فشل تحميل قائمة المستخدمين', variant: 'error' })
+        addToast({ message: t('فشل تحميل قائمة المستخدمين'), variant: 'error' })
       } finally {
         setIsLoadingUsers(false)
       }
     })()
-  }, [addToast])
+  }, [addToast, t])
 
   // ── PIN input handlers ──
   const handleDigit = useCallback(
@@ -85,7 +87,7 @@ export function LoginPage(): React.JSX.Element {
     async (pinToSubmit?: string) => {
       const code = pinToSubmit ?? pin
       if (!code) {
-        addToast({ message: 'أدخل رمز PIN أولاً', variant: 'error' })
+        addToast({ message: t('أدخل رمز PIN أولاً'), variant: 'error' })
         return
       }
       try {
@@ -93,16 +95,16 @@ export function LoginPage(): React.JSX.Element {
           selectedUser && selectedUser.id !== '__manual__' ? selectedUser.id : undefined
         const user = await loginWithPin(code, targetUserId)
         addToast({
-          message: `مرحباً بك يا ${user.full_name}`,
+          message: `${t('مرحباً بك يا')} ${user.full_name}`,
           variant: 'success',
         })
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'رمز PIN خاطئ'
+        const msg = err instanceof Error ? t(err.message) : t('رمز PIN غير صحيح')
         addToast({ message: msg, variant: 'error' })
         setPin('')
       }
     },
-    [pin, selectedUser, loginWithPin, addToast]
+    [pin, selectedUser, loginWithPin, addToast, t]
   )
 
   const handleBackToUserPicker = useCallback(() => {
@@ -141,12 +143,12 @@ export function LoginPage(): React.JSX.Element {
             </div>
             <div>
               <h1 className="text-2xl font-black text-accent tracking-wider">MELLAH POS</h1>
-              <p className="text-xs font-bold text-text-secondary">فرع الجزائر العاصمة</p>
+              <p className="text-xs font-bold text-text-secondary">{t('الفرع الرئيسي')}</p>
             </div>
           </div>
 
           <p className="text-sm font-bold text-text-secondary mt-4 mb-8">
-            اختر حسابك لتسجيل الدخول
+            {t('اختر حسابك لتسجيل الدخول')}
           </p>
 
           {isLoadingUsers ? (
@@ -184,7 +186,7 @@ export function LoginPage(): React.JSX.Element {
                       className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${meta.color}`}
                     >
                       {meta.icon}
-                      <span>{meta.label}</span>
+                      <span>{t(meta.label)}</span>
                     </span>
 
                     {/* Arrow hint */}
@@ -197,11 +199,11 @@ export function LoginPage(): React.JSX.Element {
 
           {/* Fallback: manual PIN entry without picking user */}
           <button
-            onClick={() => setSelectedUser({ id: '__manual__', full_name: 'مستخدم آخر', role: 'cashier' })}
+            onClick={() => setSelectedUser({ id: '__manual__', full_name: t('مستخدم آخر'), role: 'cashier' })}
             className="mt-8 text-xs font-bold text-text-tertiary hover:text-accent transition-colors flex items-center gap-1"
           >
             <KeyRound className="w-3.5 h-3.5" />
-            <span>الدخول برمز PIN مباشرة بدون اختيار حساب</span>
+            <span>{t('الدخول برمز PIN مباشرة بدون اختيار حساب')}</span>
           </button>
         </div>
       </div>
@@ -231,7 +233,7 @@ export function LoginPage(): React.JSX.Element {
           onClick={handleBackToUserPicker}
           className="absolute top-5 right-5 flex items-center gap-1 text-xs font-bold text-text-tertiary hover:text-accent transition-colors"
         >
-          <span>العودة</span>
+          <span>{t('العودة')}</span>
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
 
@@ -245,10 +247,10 @@ export function LoginPage(): React.JSX.Element {
           className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border mt-1.5 ${meta.color}`}
         >
           {meta.icon}
-          <span>{meta.label}</span>
+          <span>{t(meta.label)}</span>
         </span>
 
-        <p className="text-xs text-text-secondary mt-4 mb-6">أدخل رمز PIN الخاص بك</p>
+        <p className="text-xs text-text-secondary mt-4 mb-6">{t('أدخل رمز PIN الخاص بك')}</p>
 
         {/* Masked PIN Dots */}
         <div className="flex items-center justify-center gap-3.5 mb-8 h-10 w-full">
@@ -286,7 +288,7 @@ export function LoginPage(): React.JSX.Element {
             onClick={handleClear}
             className="h-14 rounded-2xl bg-gray-100 hover:bg-gray-200 text-text-secondary font-bold text-xs border border-gray-200/80 transition-all duration-150 btn-press flex items-center justify-center"
           >
-            مسح C
+            {t('مسح C')}
           </button>
 
           {/* Zero */}
@@ -317,7 +319,7 @@ export function LoginPage(): React.JSX.Element {
           loading={isLoading}
           onClick={() => handleLogin()}
         >
-          <span>تسجيل الدخول</span>
+          <span>{t('تسجيل الدخول')}</span>
           <ArrowLeft className="w-4 h-4" />
         </Button>
       </div>

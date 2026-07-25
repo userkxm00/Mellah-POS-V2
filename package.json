@@ -78,6 +78,7 @@
     },
     "files": [
       "out/**/*",
+      "build/**/*",
       "database/migrations/**/*",
       "node_modules/sql.js/dist/sql-wasm.wasm"
     ],

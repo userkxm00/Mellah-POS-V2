@@ -188,6 +188,8 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   const isOnline = useSyncStore((s) => s.isOnline)
   const pendingCount = useSyncStore((s) => s.pendingCount)
 
+  const language = useLanguageStore((s) => s.language)
+
   // Live ticking clock
   const [timeStr, setTimeStr] = useState<string>('')
   const [dateStr, setDateStr] = useState<string>('')
@@ -195,11 +197,12 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   useEffect(() => {
     const updateTime = (): void => {
       const now = new Date()
+      const locale = language === 'fr' ? 'fr-FR' : 'ar-DZ'
       setTimeStr(
-        now.toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       )
       setDateStr(
-        now.toLocaleDateString('ar-DZ', {
+        now.toLocaleDateString(locale, {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
@@ -210,7 +213,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
     updateTime()
     const timer = setInterval(updateTime, 1000)
     return () => clearInterval(timer)
-  }, [])
+  }, [language])
 
   const [todaySalesDzd, setTodaySalesDzd] = useState<number>(0)
   const [todayTxCount, setTodayTxCount] = useState<number>(0)

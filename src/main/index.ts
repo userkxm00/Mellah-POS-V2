@@ -298,11 +298,20 @@ function registerIpcHandlers(): void {
 let mainWindow: BrowserWindow | null = null
 
 function getAppIconPath(): string {
-  const p1 = path.join(__dirname, '../../build/icon.png')
-  if (fs.existsSync(p1)) return p1
-  const p2 = path.join(app.getAppPath(), 'build/icon.png')
-  if (fs.existsSync(p2)) return p2
-  return path.join(process.cwd(), 'build/icon.png')
+  const candidates = [
+    path.join(__dirname, 'icon.ico'),
+    path.join(__dirname, 'icon.png'),
+    path.join(__dirname, '../../build/icon.ico'),
+    path.join(__dirname, '../../build/icon.png'),
+    path.join(app.getAppPath(), 'build/icon.ico'),
+    path.join(app.getAppPath(), 'build/icon.png'),
+    path.join(process.resourcesPath, 'icon.ico'),
+    path.join(process.resourcesPath, 'build/icon.ico'),
+  ]
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p
+  }
+  return path.join(__dirname, 'icon.ico')
 }
 
 function createWindow(): void {
