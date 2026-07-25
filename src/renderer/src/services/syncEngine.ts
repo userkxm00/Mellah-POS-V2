@@ -229,7 +229,18 @@ export async function pullFromSupabase(): Promise<number> {
   const lastPull = localStorage.getItem('mellah_last_pull_timestamp') ?? '1970-01-01T00:00:00.000Z'
   const now = new Date().toISOString()
 
-  const syncTables = ['branches', 'categories', 'products', 'product_variants', 'customers', 'store_settings']
+  const syncTables = [
+    'branches',
+    'categories',
+    'products',
+    'product_variants',
+    'customers',
+    'store_settings',
+    'sales',
+    'sale_items',
+    'stock_movements',
+    'returns',
+  ]
 
   for (const tableName of syncTables) {
     try {
