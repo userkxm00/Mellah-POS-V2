@@ -6,7 +6,6 @@ import {
   Search,
   Eye,
   Package,
-  Tag,
   SlidersHorizontal,
   FileText,
   AlertTriangle,

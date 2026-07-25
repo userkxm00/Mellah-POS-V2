@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 
 export function useIdleTimer(timeoutMinutes: number = 5): {
   isLocked: boolean
@@ -8,7 +8,7 @@ export function useIdleTimer(timeoutMinutes: number = 5): {
   const [isLocked, setIsLocked] = useState<boolean>(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  const resetTimer = (): void => {
+  const resetTimer = useCallback((): void => {
     if (isLocked) return
 
     if (timerRef.current) {
@@ -19,7 +19,7 @@ export function useIdleTimer(timeoutMinutes: number = 5): {
     timerRef.current = setTimeout(() => {
       setIsLocked(true)
     }, ms)
-  }
+  }, [isLocked, timeoutMinutes])
 
   useEffect(() => {
     const events = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll']
@@ -35,7 +35,7 @@ export function useIdleTimer(timeoutMinutes: number = 5): {
       events.forEach((evt) => window.removeEventListener(evt, handleUserActivity))
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [timeoutMinutes, isLocked])
+  }, [resetTimer])
 
   return {
     isLocked,

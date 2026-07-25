@@ -1,4 +1,3 @@
-import { formatCurrency } from '@/lib/format'
 
 export interface ReceiptItem {
   product_name: string

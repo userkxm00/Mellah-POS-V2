@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { ArrowRight, Edit3, Trash2, Plus, Save, X, History, Package } from 'lucide-react'
+import { ArrowRight, Edit3, Trash2, Plus, Save, X, History } from 'lucide-react'
 import { Card, Button, Input, Modal, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { formatCurrency } from '@/lib/format'

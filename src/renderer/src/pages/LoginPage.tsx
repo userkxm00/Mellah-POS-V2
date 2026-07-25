@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import {
-  Store,
   Delete,
   ArrowLeft,
   Crown,
   UserCheck,
   Briefcase,
-  ShieldCheck,
   ChevronRight,
   KeyRound
 } from 'lucide-react'
@@ -54,7 +52,7 @@ export function LoginPage(): React.JSX.Element {
 
   // Load local users on mount
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       try {
         const rows = await window.electron.db.query<LocalUser>(
           `SELECT id, full_name, role FROM users WHERE deleted_at IS NULL ORDER BY role ASC, full_name ASC`

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { ArrowRight, Plus, RotateCcw, Banknote, CreditCard, Tag } from 'lucide-react'
+import { ArrowRight, Plus, Banknote, Tag } from 'lucide-react'
 import { Card, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { formatCurrency } from '@/lib/format'

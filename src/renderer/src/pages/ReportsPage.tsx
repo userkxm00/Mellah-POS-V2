@@ -23,7 +23,6 @@ import {
   Cell
 } from 'recharts'
 import { Card, Table } from '@/components/ui'
-import { useLanguageStore } from '@/stores/languageStore'
 import type { Column } from '@/components/ui'
 import {
   fetchSalesAnalytics,
@@ -44,8 +43,6 @@ interface DailyChartPoint {
 }
 
 export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
-  const t = useLanguageStore((s) => s.t)
-  const [timeRange, setTimeRange] = useState<'today' | '7days' | '30days' | 'all'>('7days')
   const [salesSummary, setSalesSummary] = useState<SalesAnalyticsSummary | null>(null)
   const [topProducts, setTopProducts] = useState<TopProductRow[]>([])
   const [inventoryVal, setInventoryVal] = useState<InventoryValuationSummary | null>(null)
@@ -378,6 +375,7 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
                 <XAxis dataKey="day" stroke="#AEAEB2" fontSize={11} />
                 <YAxis stroke="#AEAEB2" fontSize={11} />
                 <Tooltip
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={(val: any) => [`${(Number(val) || 0).toLocaleString()} DA`, 'المبيعات']}
                   contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e5ea', fontWeight: 'bold' }}
                 />
@@ -400,6 +398,7 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
                 <XAxis dataKey="name" stroke="#AEAEB2" fontSize={11} />
                 <YAxis stroke="#AEAEB2" fontSize={11} />
                 <Tooltip
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={(val: any) => [`${(Number(val) || 0).toLocaleString()} DA`, 'المبلغ']}
                   contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e5ea', fontWeight: 'bold' }}
                 />

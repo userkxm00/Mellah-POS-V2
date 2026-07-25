@@ -93,6 +93,7 @@ describe('End-to-End Business Flow Simulation (E2E Integration Test)', () => {
     // Cashier counts 16,000 DZD in drawer (Difference = 0)
     const closingCash = 16000
     const diff = closingCash - expectedCash
+    expect(diff).toBe(0)
     db.run(`UPDATE shifts SET expected_cash_dzd = 16000, closing_cash_dzd = 16000, difference_dzd = 0, status = 'closed', closed_at = '2026-07-24T22:00:00Z' WHERE id = '${shiftId}'`)
 
     const closedShiftStmt = db.prepare(`SELECT * FROM shifts WHERE id = '${shiftId}'`)

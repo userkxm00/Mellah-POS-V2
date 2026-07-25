@@ -45,6 +45,7 @@ export async function recordAuditLog(
       [logId, userId, action, entityName, entityId || null, details, now]
     )
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.error('Failed to record audit log:', err)
   }
 }

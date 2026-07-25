@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Lock, KeyRound, ShieldAlert } from 'lucide-react'
+import { Lock, ShieldAlert } from 'lucide-react'
 import { Modal } from '@/components/ui'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'

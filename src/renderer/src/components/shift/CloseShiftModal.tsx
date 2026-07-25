@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Lock, Banknote, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { Modal, Input } from '@/components/ui'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useToastStore } from '@/stores/toastStore'

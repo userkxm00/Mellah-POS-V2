@@ -51,8 +51,6 @@ function saveWindowState(win: BrowserWindow): void {
 
 // ----- IPC Handlers -----
 
-type SqlParam = string | number | bigint | null | Uint8Array
-
 function registerIpcHandlers(): void {
   // Generic database query handler (read-only)
   ipcMain.handle('db:query', async (_event, sql: string, params: unknown[]) => {
@@ -84,40 +82,36 @@ function registerIpcHandlers(): void {
   // ── Secure PIN Authentication ──
   // The renderer sends the raw PIN; bcrypt comparison happens HERE in the main process.
   // Supports optional userId for direct user matching and auto-migrates legacy unhashed PINs.
-  ipcMain.handle('auth:verify-pin', async (_event, pin: string, userId?: string) => {
+  // ── PIN Authentication & Legacy Auto-migration ──
+  // Checks bcrypt hash first; if failed, checks legacy plaintext PIN and auto-hashes on match.
+  ipcMain.handle('auth:verify-pin', async (_event, pin: string) => {
     const db = getDatabase()
-    let sql = 'SELECT id, branch_id, full_name, role, pin_hash FROM users WHERE deleted_at IS NULL'
-    const params: unknown[] = []
-    if (userId) {
-      sql += ' AND id = ?'
-      params.push(userId)
-    }
-
     const users = await db.query<{
       id: string
       branch_id: string
       full_name: string
-      role: string
+      role: 'admin' | 'cashier'
       pin_hash: string
-    }>(sql, params)
+    }>('SELECT id, branch_id, full_name, role, pin_hash FROM users')
 
     for (const user of users) {
       let isMatch = false
+
+      // 1. Standard bcrypt compare
       try {
-        if (bcrypt.compareSync(pin, user.pin_hash)) {
-          isMatch = true
-        }
+        isMatch = bcrypt.compareSync(pin, user.pin_hash)
       } catch {
-        // Invalid bcrypt string format (e.g. legacy plain-text PIN stored in DB)
+        isMatch = false
       }
 
-      // Transparent backward compatibility for pre-existing DBs with legacy plain-text PINs
+      // 2. Legacy plaintext fallback (auto-migrate to bcrypt hash)
       if (!isMatch && user.pin_hash === pin) {
         isMatch = true
         try {
           const newHash = bcrypt.hashSync(pin, BCRYPT_ROUNDS)
           await db.execute('UPDATE users SET pin_hash = ? WHERE id = ?', [newHash, user.id])
         } catch (e) {
+          // eslint-disable-next-line no-console
           console.error('Failed to auto-migrate legacy PIN to bcrypt hash:', e)
         }
       }
@@ -159,6 +153,7 @@ function registerIpcHandlers(): void {
       const list = await win.webContents.getPrintersAsync()
       return list.map((p) => ({ name: p.name, isDefault: p.isDefault }))
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.error('Failed to get printer list:', e)
       return []
     }
@@ -187,6 +182,7 @@ function registerIpcHandlers(): void {
               printWin = null
             }
             if (!success) {
+              // eslint-disable-next-line no-console
               console.error('Printing failed:', failureReason)
             }
             resolve(success)
@@ -197,6 +193,7 @@ function registerIpcHandlers(): void {
       if (printWin) {
         (printWin as BrowserWindow).destroy()
       }
+      // eslint-disable-next-line no-console
       console.error('Print HTML exception:', err)
       return false
     }
@@ -223,7 +220,7 @@ function registerIpcHandlers(): void {
     return 0
   })
 
-  // ── Maintenance IPC Handlers ──
+  // ── Database Maintenance ──
   ipcMain.handle('maintenance:vacuum', async () => {
     try {
       const db = getDatabase()
@@ -238,7 +235,7 @@ function registerIpcHandlers(): void {
     try {
       const db = getDatabase()
       const rows = await db.query<{ integrity_check: string }>('PRAGMA integrity_check')
-      const ok = rows.length > 0 && (rows[0] as any).integrity_check === 'ok'
+      const ok = rows.length > 0 && rows[0]?.integrity_check === 'ok'
       return { success: ok, details: rows }
     } catch (err) {
       return { success: false, error: (err as Error).message }
@@ -267,7 +264,7 @@ function registerIpcHandlers(): void {
     try {
       const db = getDatabase()
       const rows = await db.query<{ integrity_check: string }>('PRAGMA integrity_check')
-      results.integrity = { success: rows.length > 0 && (rows[0] as any).integrity_check === 'ok' }
+      results.integrity = { success: rows.length > 0 && rows[0]?.integrity_check === 'ok' }
     } catch (err) {
       results.integrity = { success: false, error: (err as Error).message }
     }

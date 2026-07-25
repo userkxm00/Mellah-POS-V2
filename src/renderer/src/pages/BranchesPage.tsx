@@ -4,7 +4,6 @@ import { Card, Input, Modal, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
 import { useToastStore } from '@/stores/toastStore'
-import { useLanguageStore } from '@/stores/languageStore'
 import { recordAuditLog } from '@/services/auditLogService'
 
 interface BranchItem {
@@ -15,7 +14,6 @@ interface BranchItem {
 }
 
 export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
-  const t = useLanguageStore((s) => s.t)
   const [branches, setBranches] = useState<BranchItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)

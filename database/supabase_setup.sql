@@ -193,42 +193,110 @@ ALTER TABLE returns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE store_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
--- 4. CREATE RLS POLICIES FOR POS SYNC (Allows authenticated clients full access)
-CREATE POLICY "Allow authenticated full read" ON branches FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full write" ON branches FOR ALL USING (true);
+-- 4. HELPER FUNCTIONS FOR TENANT & ROLE-BASED RLS POLICIES
 
-CREATE POLICY "Allow authenticated full read" ON users FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full write" ON users FOR ALL USING (true);
+CREATE OR REPLACE FUNCTION current_user_branch_id()
+RETURNS UUID AS $$
+  SELECT COALESCE(
+    (auth.jwt() -> 'user_metadata' ->> 'branch_id')::UUID,
+    (auth.jwt() -> 'app_metadata' ->> 'branch_id')::UUID
+  );
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
 
-CREATE POLICY "Allow authenticated full read" ON categories FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full write" ON categories FOR ALL USING (true);
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT COALESCE(
+    (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin',
+    (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin',
+    false
+  );
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
 
-CREATE POLICY "Allow authenticated full read" ON products FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full write" ON products FOR ALL USING (true);
+-- 5. REAL TENANT-ISOLATED RLS POLICIES (AUTHENTICATED & BRANCH RESTRICTED)
 
-CREATE POLICY "Allow authenticated full read" ON product_variants FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full write" ON product_variants FOR ALL USING (true);
+-- Branches: Authenticated users view their branch, admins manage all branches
+CREATE POLICY "Branches Branch Isolation Read" ON branches 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
-CREATE POLICY "Allow authenticated full read" ON stock_movements FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full write" ON stock_movements FOR ALL USING (true);
+CREATE POLICY "Branches Admin Write" ON branches 
+  FOR ALL USING (auth.role() = 'authenticated' AND (is_admin() OR current_user_branch_id() IS NULL));
 
-CREATE POLICY "Allow authenticated full read" ON shifts FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full write" ON shifts FOR ALL USING (true);
+-- Users: View branch users, admins manage users
+CREATE POLICY "Users Branch Isolation Read" ON users 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
-CREATE POLICY "Allow authenticated full read" ON customers FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full write" ON customers FOR ALL USING (true);
+CREATE POLICY "Users Admin Write" ON users 
+  FOR ALL USING (auth.role() = 'authenticated' AND (is_admin() OR current_user_branch_id() IS NULL));
 
-CREATE POLICY "Allow authenticated full read" ON sales FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full write" ON sales FOR ALL USING (true);
+-- Categories: Branch restricted read and write
+CREATE POLICY "Categories Branch Isolation Read" ON categories 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
-CREATE POLICY "Allow authenticated full read" ON sale_items FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full write" ON sale_items FOR ALL USING (true);
+CREATE POLICY "Categories Branch Isolation Write" ON categories 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
-CREATE POLICY "Allow authenticated full read" ON returns FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full write" ON returns FOR ALL USING (true);
+-- Products: Branch restricted read and write
+CREATE POLICY "Products Branch Isolation Read" ON products 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
-CREATE POLICY "Allow authenticated full read" ON store_settings FOR SELECT USING (true);
-CREATE POLICY "Allow POLICY" ON store_settings FOR ALL USING (true);
+CREATE POLICY "Products Branch Isolation Write" ON products 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+-- Product Variants: Branch restricted read and write
+CREATE POLICY "Product Variants Branch Isolation Read" ON product_variants 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+CREATE POLICY "Product Variants Branch Isolation Write" ON product_variants 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+-- Stock Movements: Branch restricted read and write
+CREATE POLICY "Stock Movements Branch Isolation Read" ON stock_movements 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+CREATE POLICY "Stock Movements Branch Isolation Write" ON stock_movements 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+-- Shifts: Branch restricted read and write
+CREATE POLICY "Shifts Branch Isolation Read" ON shifts 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+CREATE POLICY "Shifts Branch Isolation Write" ON shifts 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+-- Customers: Branch restricted read and write
+CREATE POLICY "Customers Branch Isolation Read" ON customers 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+CREATE POLICY "Customers Branch Isolation Write" ON customers 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+-- Sales: Branch restricted read and write
+CREATE POLICY "Sales Branch Isolation Read" ON sales 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+CREATE POLICY "Sales Branch Isolation Write" ON sales 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+-- Sale Items: Branch restricted read and write
+CREATE POLICY "Sale Items Branch Isolation Read" ON sale_items 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+CREATE POLICY "Sale Items Branch Isolation Write" ON sale_items 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+-- Returns: Branch restricted read and write
+CREATE POLICY "Returns Branch Isolation Read" ON returns 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+CREATE POLICY "Returns Branch Isolation Write" ON returns 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+-- Store Settings: Branch restricted read and write
+CREATE POLICY "Store Settings Branch Isolation Read" ON store_settings 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+CREATE POLICY "Store Settings Branch Isolation Write" ON store_settings 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
 -- 5. SEED INITIAL STORE DATA
 

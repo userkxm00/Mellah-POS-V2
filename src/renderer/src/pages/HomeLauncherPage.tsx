@@ -14,8 +14,6 @@ import {
   Crown,
   Briefcase,
   UserCheck,
-  Wifi,
-  WifiOff,
   ExternalLink,
   Clock,
   Calendar,
@@ -187,7 +185,6 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   const logout = useAuthStore((s) => s.logout)
   const hasRole = useAuthStore((s) => s.hasRole)
   const isOnline = useSyncStore((s) => s.isOnline)
-  const pendingCount = useSyncStore((s) => s.pendingCount)
 
   const language = useLanguageStore((s) => s.language)
 
@@ -220,7 +217,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   const [todayTxCount, setTodayTxCount] = useState<number>(0)
 
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       try {
         const todayStr = new Date().toISOString().split('T')[0]
         const rows = await window.electron.db.query<{ total: number; count: number }>(`

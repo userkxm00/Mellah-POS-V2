@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Download, RefreshCw, CheckCircle2, AlertTriangle, X, Loader2 } from 'lucide-react'
+import { Download, RefreshCw, CheckCircle2, X, Loader2 } from 'lucide-react'
 import { useLanguageStore } from '@/stores/languageStore'
 
 interface UpdatePayload {

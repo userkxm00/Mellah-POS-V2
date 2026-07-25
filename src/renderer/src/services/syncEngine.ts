@@ -150,6 +150,9 @@ export async function processSyncQueue(): Promise<number> {
       }
     }
 
+    // Bi-directional pull from Supabase for multi-branch catalog sync
+    await pullFromSupabase()
+
     syncStore.setLastSyncedAt(now)
     await updatePendingQueueCount()
   } catch (err) {
@@ -159,6 +162,55 @@ export async function processSyncQueue(): Promise<number> {
   }
 
   return processedCount
+}
+
+/**
+ * Pull new & updated records from Supabase cloud database to local SQLite database.
+ * Enables true multi-branch synchronization so catalog updates are pulled across branches.
+ */
+export async function pullFromSupabase(): Promise<number> {
+  const hasRealSupabase =
+    import.meta.env.VITE_SUPABASE_URL &&
+    !import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
+
+  if (!hasRealSupabase) return 0
+
+  let pulledCount = 0
+  const lastPull = localStorage.getItem('mellah_last_pull_timestamp') ?? '1970-01-01T00:00:00.000Z'
+  const now = new Date().toISOString()
+
+  const syncTables = ['branches', 'categories', 'products', 'product_variants', 'customers', 'store_settings']
+
+  for (const tableName of syncTables) {
+    try {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .gt('updated_at', lastPull)
+
+      if (error || !data || data.length === 0) continue
+
+      for (const item of data) {
+        const columns = Object.keys(item)
+        const placeholders = columns.map(() => '?').join(', ')
+        const updateAssignments = columns
+          .filter((col) => col !== 'id')
+          .map((col) => `${col} = EXCLUDED.${col}`)
+          .join(', ')
+
+        const values = columns.map((col) => item[col])
+
+        const sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders}) ON CONFLICT(id) DO UPDATE SET ${updateAssignments}`
+        await window.electron.db.execute(sql, values)
+        pulledCount++
+      }
+    } catch (err) {
+      logger.error('Failed to pull table updates from Supabase', { tableName, err })
+    }
+  }
+
+  localStorage.setItem('mellah_last_pull_timestamp', now)
+  return pulledCount
 }
 
 /**

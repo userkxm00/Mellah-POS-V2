@@ -8,18 +8,13 @@ import {
   CheckCircle2,
   UserPlus,
   Lock,
-  Unlock,
   Store,
   Tag,
   Gift,
   Home,
   Pause,
-  History,
   RotateCcw,
-  Wallet,
-  Award,
-  KeyRound,
-  Printer
+  Wallet
 } from 'lucide-react'
 import { Card, Input, Modal, Button, ToastContainer } from '@/components/ui'
 import { formatCurrency } from '@/lib/format'
@@ -219,6 +214,21 @@ export function POSCheckoutPage({
 
   useBarcodeScanner({ onScan: handleBarcodeScan })
 
+  // Selected customer object & credit
+  const selectedCustomerObj = customers.find((c) => c.id === selectedCustomerId)
+
+  // Hold current cart
+  const handleHoldCart = useCallback((): void => {
+    if (cartItems.length === 0) {
+      addToast({ message: 'السلة فارغة، لا يمكن تعليقها', variant: 'error' })
+      return
+    }
+    holdCart(cartItems, selectedCustomerObj?.full_name)
+    clearCart()
+    setSelectedCustomerId(null)
+    addToast({ message: 'تم تعليق السلة الحالية بنجاح (F2) ⏸️', variant: 'info' })
+  }, [cartItems, addToast, holdCart, clearCart, selectedCustomerObj?.full_name])
+
   // Keyboard Shortcuts (F2 hold, F4 reprint, Enter checkout)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -232,9 +242,7 @@ export function POSCheckoutPage({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [cartItems])
-
-  // Filtered variants display
+  }, [cartItems, addToast, handleHoldCart])
   const filteredVariants = variants.filter((v) => {
     const matchesCategory = selectedCategoryId ? v.category_id === selectedCategoryId : true
     const q = searchQuery.trim().toLowerCase()
@@ -247,21 +255,6 @@ export function POSCheckoutPage({
 
     return matchesCategory && matchesSearch
   })
-
-  // Selected customer object & credit
-  const selectedCustomerObj = customers.find((c) => c.id === selectedCustomerId)
-
-  // Hold current cart
-  const handleHoldCart = (): void => {
-    if (cartItems.length === 0) {
-      addToast({ message: 'السلة فارغة، لا يمكن تعليقها', variant: 'error' })
-      return
-    }
-    holdCart(cartItems, selectedCustomerObj?.full_name)
-    clearCart()
-    setSelectedCustomerId(null)
-    addToast({ message: 'تم تعليق السلة الحالية بنجاح (F2) ⏸️', variant: 'info' })
-  }
 
   // Restore held cart
   const handleRestoreCart = (id: string): void => {
@@ -457,7 +450,13 @@ export function POSCheckoutPage({
             paymentMethod,
           },
           { printerName, paperWidth }
-        ).catch(() => {})
+        ).catch(() => {
+          addToast({
+            message: t('تعذرت الطباعة — تحقق من اتصال الطابعة (يمكنك إعادة الطباعة من سجل المبيعات)'),
+            variant: 'warning',
+            duration: 6000,
+          })
+        })
       }
 
       clearCart()

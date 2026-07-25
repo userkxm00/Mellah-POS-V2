@@ -1,19 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import {
-  Calendar,
   Search,
   Printer,
   Eye,
   ArrowRight,
   Receipt,
-  CheckCircle2,
   Banknote,
   CreditCard,
   Layers,
-  Filter,
   FileText,
-  Ban,
-  Tag
+  Ban
 } from 'lucide-react'
 import { Card, Input, Modal, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
@@ -195,7 +191,12 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
       },
       { printerName, paperWidth }
     )
-    addToast({ message: 'تم إرسال أمر الطباعة الحرارية بنجاح 🖨️', variant: 'success' })
+      .then(() => {
+        addToast({ message: t('تم إرسال أمر الطباعة الحرارية بنجاح 🖨️'), variant: 'success' })
+      })
+      .catch(() => {
+        addToast({ message: t('تعذرت الطباعة — تحقق من اتصال الطابعة'), variant: 'warning' })
+      })
   }
 
   const handleConfirmVoid = async (): Promise<void> => {
@@ -408,7 +409,29 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
             >
               {t('مجال تاريخ (من-إلى)')}
             </button>
+            <button
+              onClick={() => setDateFilter('by_shift')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                dateFilter === 'by_shift' ? 'bg-white text-accent shadow-sm font-black' : 'hover:text-text-primary'
+              }`}
+            >
+              {t('حسب الوردية')}
+            </button>
           </div>
+
+          {dateFilter === 'by_shift' && (
+            <select
+              value={selectedShiftId}
+              onChange={(e) => setSelectedShiftId(e.target.value)}
+              className="px-3 py-1.5 rounded-xl text-xs font-mono bg-gray-50 border border-gray-200 font-bold"
+            >
+              {shiftsList.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.opened_at.split('T')[0]} ({s.status === 'open' ? t('نشطة') : t('مغلقة')})
+                </option>
+              ))}
+            </select>
+          )}
 
           {dateFilter === 'range' && (
             <div className="flex items-center gap-2">

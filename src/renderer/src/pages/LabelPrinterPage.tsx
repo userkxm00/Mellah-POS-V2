@@ -2,18 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react'
 import {
   ArrowRight,
   Printer,
-  Barcode,
   Tag,
   Search,
-  CheckCircle2,
-  SlidersHorizontal,
   Layers,
   Sparkles
 } from 'lucide-react'
 import { Card, Input } from '@/components/ui'
 import { formatCurrency } from '@/lib/format'
 import { useToastStore } from '@/stores/toastStore'
-import { useLanguageStore } from '@/stores/languageStore'
 
 interface ProductVariantItem {
   id: string
@@ -42,7 +38,6 @@ interface CategoryItem {
 }
 
 export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
-  const t = useLanguageStore((s) => s.t)
   const [products, setProducts] = useState<ProductGroup[]>([])
   const [categories, setCategories] = useState<CategoryItem[]>([])
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)

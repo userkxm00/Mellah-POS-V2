@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { Home } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-import { useSyncStore } from '@/stores/syncStore'
 import { startBackgroundSyncLoop } from '@/services/syncEngine'
 import { SplashScreen } from '@/pages/SplashScreen'
 import { LoginPage } from '@/pages/LoginPage'

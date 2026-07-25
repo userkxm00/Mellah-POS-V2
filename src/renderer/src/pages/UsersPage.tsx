@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { ArrowRight, Plus, Trash2, Crown, Briefcase, UserCheck, Users, Edit3, KeyRound } from 'lucide-react'
+import { ArrowRight, Plus, Trash2, Crown, Briefcase, UserCheck, Edit3, KeyRound } from 'lucide-react'
 import { Card, Input, Modal, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { useToastStore } from '@/stores/toastStore'
-import { useLanguageStore } from '@/stores/languageStore'
 import { recordAuditLog } from '@/services/auditLogService'
 import type { UserRole } from '@/types/database'
 
@@ -18,7 +17,6 @@ interface UserItem {
 }
 
 export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
-  const t = useLanguageStore((s) => s.t)
   const [users, setUsers] = useState<UserItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)

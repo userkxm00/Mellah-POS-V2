@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { ArrowRight, ClipboardList, Shield, Search, User, Clock, FileText } from 'lucide-react'
+import { ArrowRight, ClipboardList, Search, User } from 'lucide-react'
 import { Card, Input, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { useToastStore } from '@/stores/toastStore'
-import { useLanguageStore } from '@/stores/languageStore'
 
 interface AuditLogRow {
   id: string
@@ -17,11 +16,10 @@ interface AuditLogRow {
 }
 
 export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
-  const t = useLanguageStore((s) => s.t)
   const [logs, setLogs] = useState<AuditLogRow[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [actionFilter, setActionFilter] = useState<string>('')
+  const [actionFilter] = useState<string>('')
 
   const addToast = useToastStore((s) => s.addToast)
 

@@ -27,7 +27,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
   session_timeout_minutes: 5,
 }
 
-export const useStoreSettingsStore = create<StoreSettingsState>((set, get) => ({
+export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
   settings: { ...DEFAULT_SETTINGS },
   loaded: false,
 

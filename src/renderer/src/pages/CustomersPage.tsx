@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { ArrowRight, Plus, Search, Users, Award, Phone, Trash2, History, Receipt, Edit3, Wallet } from 'lucide-react'
+import { ArrowRight, Plus, Search, Award, Phone, Trash2, History, Receipt, Edit3, Wallet } from 'lucide-react'
 import { Card, Input, Modal, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'

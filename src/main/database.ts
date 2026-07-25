@@ -4,6 +4,7 @@ import path from 'path'
 import fs from 'fs'
 import { seedInitialData } from './seed'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let rawDb: any = null
 let dbPath: string = ''
 
@@ -36,7 +37,9 @@ let inTransaction = false
 function persist(): void {
   if (rawDb && dbPath && !inTransaction) {
     const data = rawDb.export()
-    fs.writeFileSync(dbPath, Buffer.from(data))
+    const tempPath = `${dbPath}.tmp`
+    fs.writeFileSync(tempPath, Buffer.from(data))
+    fs.renameSync(tempPath, dbPath)
   }
 }
 
@@ -197,10 +200,12 @@ async function runMigrations(wrapper: DbWrapper): Promise<void> {
       await wrapper.execute('INSERT INTO _migrations (name) VALUES (?)', [file])
       await wrapper.exec('COMMIT')
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('MIGRATION FAILED:', file, error)
       try {
         await wrapper.exec('ROLLBACK')
       } catch (rollbackErr) {
+        // eslint-disable-next-line no-console
         console.error('ROLLBACK FAILED:', rollbackErr)
       }
       throw error
