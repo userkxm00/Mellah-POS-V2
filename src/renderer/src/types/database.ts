@@ -6,7 +6,7 @@
 // ----- Enum-like union types -----
 
 export type UserRole = 'admin' | 'manager' | 'cashier'
-export type PaymentMethod = 'cash' | 'card' | 'mixed'
+export type PaymentMethod = 'cash' | 'card' | 'mixed' | 'credit'
 export type SaleStatus = 'completed' | 'refunded' | 'partial_refund'
 export type ShiftStatus = 'open' | 'closed'
 export type StockMovementType = 'sale' | 'restock' | 'adjustment' | 'return'

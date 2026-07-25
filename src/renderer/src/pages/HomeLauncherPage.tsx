@@ -21,7 +21,8 @@ import {
   ShieldCheck,
   Zap,
   RefreshCw,
-  Wrench
+  Wrench,
+  Truck
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
@@ -93,6 +94,15 @@ const tiles: LauncherTile[] = [
     description: 'إضافة السلع والمقاسات والألوان',
     icon: <Package className="w-8 h-8" />,
     iconBg: 'bg-success text-white',
+    roles: ['admin', 'manager'],
+    inWindow: false,
+  },
+  {
+    id: 'suppliers',
+    label: 'الموردين والديون',
+    description: 'فواتير الشراء وديون السلع (Fournisseurs)',
+    icon: <Truck className="w-8 h-8" />,
+    iconBg: 'bg-[#FF9500] text-white',
     roles: ['admin', 'manager'],
     inWindow: false,
   },

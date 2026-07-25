@@ -8,6 +8,7 @@ import { POSCheckoutPage } from '@/pages/POSCheckoutPage'
 import { SalesHistoryPage } from '@/pages/SalesHistoryPage'
 import { ReturnsPage } from '@/pages/ReturnsPage'
 import { CustomersPage } from '@/pages/CustomersPage'
+import { SuppliersPage } from '@/pages/SuppliersPage'
 import { LabelPrinterPage } from '@/pages/LabelPrinterPage'
 import { ProductsPage } from '@/pages/ProductsPage'
 import { ReportsPage } from '@/pages/ReportsPage'
@@ -29,6 +30,7 @@ const SECONDARY_MODULES = new Set([
   'history',
   'returns',
   'customers',
+  'suppliers',
   'labels',
   'products',
   'reports',
@@ -120,6 +122,9 @@ export function App(): React.JSX.Element {
         {secondaryModule === 'history' && <SalesHistoryPage onBack={() => window.close()} />}
         {secondaryModule === 'returns' && <ReturnsPage onBack={() => window.close()} />}
         {secondaryModule === 'customers' && <CustomersPage onBack={() => window.close()} />}
+        {secondaryModule === 'suppliers' && hasRole(['admin', 'manager']) && (
+          <SuppliersPage onBack={() => window.close()} />
+        )}
         {secondaryModule === 'labels' && <LabelPrinterPage onBack={() => window.close()} />}
         {secondaryModule === 'products' && hasRole(['admin', 'manager']) && (
           <ProductsPage onNavigateToPos={() => {}} />

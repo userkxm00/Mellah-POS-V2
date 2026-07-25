@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Search,
   ShoppingCart,
@@ -124,6 +124,7 @@ export function POSCheckoutPage({
 
   // Change Calculator (Amount Tendered)
   const [tenderedCashInput, setTenderedCashInput] = useState<string>('')
+  const [creditDepositInput, setCreditDepositInput] = useState<string>('')
 
   // Held Carts Modal
   const [isHeldModalOpen, setIsHeldModalOpen] = useState<boolean>(false)
@@ -213,6 +214,8 @@ export function POSCheckoutPage({
       setIsLoadingVariants(false)
     }
   }, [addToast])
+
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadData()
@@ -437,6 +440,8 @@ export function POSCheckoutPage({
     setIsProcessingSale(true)
     try {
       const custObj = customers.find((c) => c.id === selectedCustomerId)
+      const creditDepositVal = parseFloat(creditDepositInput) || 0
+
       const res = await processSale(
         cartItems,
         paymentMethod,
@@ -444,7 +449,8 @@ export function POSCheckoutPage({
         selectedCustomerId,
         cashAmountDzd,
         cardAmountDzd,
-        discountDzd
+        discountDzd,
+        creditDepositVal
       )
 
       // Deduct used store credit if applied
@@ -508,14 +514,45 @@ export function POSCheckoutPage({
       clearCart()
       setSelectedCustomerId(null)
       setTenderedCashInput('')
+      setCreditDepositInput('')
       await loadData()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'فشل تسجيل عملية البيع'
-      addToast({ message: msg, variant: 'error' })
     } finally {
       setIsProcessingSale(false)
     }
   }
+
+  // Keyboard Shortcuts (F2: Search Focus, F4: Cash Drawer, F12: Finish Sale, ESC: Clear Cart)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F2') {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+        addToast({ message: '⚡ F2: تم التوجيه لبحث المنتجات والباركود', variant: 'info', duration: 1500 })
+      } else if (e.key === 'F4') {
+        e.preventDefault()
+        const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
+        window.electron?.openCashDrawer(printerName).then(() => {
+          addToast({ message: '💵 F4: تم إرسال أمر فتح درج النقود', variant: 'success', duration: 1500 })
+        }).catch(() => {})
+      } else if (e.key === 'Escape') {
+        if (!isMixedModalOpen && !isHeldModalOpen && !isManagerPinOpen) {
+          if (cartItems.length > 0) {
+            clearCart()
+            addToast({ message: '⚡ ESC: تم تفريغ السلة', variant: 'info', duration: 1500 })
+          }
+        }
+      } else if (e.key === 'F12') {
+        e.preventDefault()
+        if (cartItems.length > 0 && !isProcessingSale) {
+          handleCompleteSale()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartItems, isProcessingSale, isMixedModalOpen, isHeldModalOpen, isManagerPinOpen, addToast, clearCart])
 
   const cartSubtotal = getSubtotal()
   const cartTotal = getTotal()
@@ -629,7 +666,8 @@ export function POSCheckoutPage({
           {/* Search Bar & Category Filters */}
           <div className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-ambient-sm flex flex-col gap-3">
             <Input
-              placeholder={t('ابحث باسم المنتج، اللون، المقاس، أو امسح الباركود...')}
+              ref={searchInputRef}
+              placeholder={t('ابحث باسم المنتج، اللون، المقاس، أو امسح الباركود... (F2)')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-gray-50/80 border-gray-200 text-sm focus:bg-white"
@@ -878,21 +916,21 @@ export function POSCheckoutPage({
           {/* Payment & Checkout Options Area */}
           <div className="p-4 border-t border-gray-200/80 bg-gray-50/50 space-y-3">
             {/* Payment Method Tabs */}
-            <div className="grid grid-cols-3 gap-2">
-              {(['cash', 'card', 'mixed'] as PaymentMethod[]).map((pm) => (
+            <div className="grid grid-cols-4 gap-1.5">
+              {(['cash', 'card', 'mixed', 'credit'] as PaymentMethod[]).map((pm) => (
                 <button
                   key={pm}
                   onClick={() => {
                     setPaymentMethod(pm)
                     if (pm === 'mixed') setIsMixedModalOpen(true)
                   }}
-                  className={`py-2 rounded-xl text-xs font-extrabold transition-all btn-press ${
+                  className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition-all btn-press ${
                     paymentMethod === pm
                       ? 'bg-accent text-white shadow-ambient-sm'
                       : 'bg-white border border-gray-200 text-text-secondary hover:bg-gray-100'
                   }`}
                 >
-                  {t(pm === 'cash' ? '💵 نقد' : pm === 'card' ? '💳 CIB' : '🔀 مزدوج')}
+                  {pm === 'cash' ? '💵 نقد' : pm === 'card' ? '💳 CIB' : pm === 'mixed' ? '🔀 مزدوج' : '📖 كريدي'}
                 </button>
               ))}
             </div>
@@ -915,6 +953,34 @@ export function POSCheckoutPage({
                     <span>{t('الباقي للزبون (Change):')}</span>
                     <span className="text-sm font-extrabold">{formatCurrency(changeDzd)}</span>
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* Credit Payment Input (Initial Deposit & Remaining Debt) */}
+            {paymentMethod === 'credit' && cartItems.length > 0 && (
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-2 select-none">
+                <div className="flex items-center justify-between text-xs font-bold text-amber-900">
+                  <span>المدفوع حاصلاً (تسقيع / عربون):</span>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="0 دج"
+                    value={creditDepositInput}
+                    onChange={(e) => setCreditDepositInput(e.target.value)}
+                    className="w-24 px-2 py-1 text-left font-black text-amber-900 bg-white border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-amber-100/80 border border-amber-300 text-xs font-black text-amber-900">
+                  <span>المبلغ المتبقي كدين (Dette):</span>
+                  <span className="text-sm font-extrabold text-red-600">
+                    {formatCurrency(Math.max(0, cartTotal - (parseFloat(creditDepositInput) || 0)))}
+                  </span>
+                </div>
+                {!selectedCustomerId && (
+                  <p className="text-[10px] font-bold text-red-600 animate-pulse">
+                    ⚠️ تذكير: يجب اختيار أو إضافة زبون لتسجيل الدين في حسابه!
+                  </p>
                 )}
               </div>
             )}

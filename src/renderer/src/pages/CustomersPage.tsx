@@ -13,15 +13,26 @@ interface CustomerItem {
   phone: string | null
   loyalty_points: number
   store_credit_balance: number
+  total_debt_dzd: number
   created_at: string
   total_spent_dzd: number
   total_sales_count: number
+}
+
+interface CustomerPaymentRow {
+  id: string
+  amount_dzd: number
+  payment_method: string
+  notes: string | null
+  created_at: string
 }
 
 interface CustomerSaleRow {
   id: string
   created_at: string
   total_dzd: number
+  paid_amount_dzd?: number
+  remaining_debt_dzd?: number
   payment_method: string
 }
 
@@ -34,7 +45,15 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
 
   const [selectedTimelineCustomer, setSelectedTimelineCustomer] = useState<CustomerItem | null>(null)
   const [customerSalesHistory, setCustomerSalesHistory] = useState<CustomerSaleRow[]>([])
+  const [customerPaymentsHistory, setCustomerPaymentsHistory] = useState<CustomerPaymentRow[]>([])
   const [isTimelineLoading, setIsTimelineLoading] = useState<boolean>(false)
+
+  // Debt Repayment Modal state
+  const [payingDebtCustomer, setPayingDebtCustomer] = useState<CustomerItem | null>(null)
+  const [repayAmountDzd, setRepayAmountDzd] = useState<string>('')
+  const [repayMethod, setRepayMethod] = useState<'cash' | 'card'>('cash')
+  const [repayNotes, setRepayNotes] = useState<string>('')
+  const [isRepaying, setIsRepaying] = useState<boolean>(false)
 
   const [fullName, setFullName] = useState<string>('')
   const [phone, setPhone] = useState<string>('')
@@ -55,6 +74,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         SELECT 
           c.id, c.full_name, c.phone, c.loyalty_points, 
           COALESCE(c.store_credit_balance, 0) as store_credit_balance,
+          COALESCE(c.total_debt_dzd, 0) as total_debt_dzd,
           c.created_at,
           COALESCE(SUM(s.total_dzd), 0) as total_spent_dzd,
           COUNT(s.id) as total_sales_count
@@ -62,11 +82,11 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         LEFT JOIN sales s ON s.customer_id = c.id AND s.status = 'completed' AND s.deleted_at IS NULL
         WHERE c.deleted_at IS NULL
         GROUP BY c.id
-        ORDER BY total_spent_dzd DESC
+        ORDER BY total_debt_dzd DESC, total_spent_dzd DESC
       `)
       setCustomers(rows)
     } catch {
-      addToast({ message: 'فشل تحميل قائمة الزبائن', variant: 'error' })
+      addToast({ message: 'فشل تحميل قائمة الزبائن والديون', variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -155,20 +175,69 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     )
   })
 
+  const handleRepayDebt = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault()
+    if (!payingDebtCustomer) return
+    const amount = parseFloat(repayAmountDzd)
+    if (!amount || amount <= 0) {
+      addToast({ message: 'يرجى كتابة مبلغ تسديد صحيح', variant: 'error' })
+      return
+    }
+
+    setIsRepaying(true)
+    try {
+      const paymentId = generateUUID()
+      const now = new Date().toISOString()
+
+      await window.electron.db.transaction([
+        {
+          sql: `INSERT INTO customer_payments (id, branch_id, customer_id, amount_dzd, payment_method, notes, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          params: [paymentId, DEFAULT_BRANCH_ID, payingDebtCustomer.id, amount, repayMethod, repayNotes.trim() || null, now],
+        },
+        {
+          sql: `UPDATE customers 
+                SET total_debt_dzd = MAX(0, COALESCE(total_debt_dzd, 0) - ?), updated_at = ? 
+                WHERE id = ?`,
+          params: [amount, now, payingDebtCustomer.id],
+        },
+      ])
+
+      addToast({ message: `تم تسديد مبلغ ${amount.toLocaleString('ar-DZ')} دج لـ ${payingDebtCustomer.full_name} بنجاح! 💵`, variant: 'success' })
+      setPayingDebtCustomer(null)
+      setRepayAmountDzd('')
+      setRepayNotes('')
+      await loadCustomers()
+    } catch {
+      addToast({ message: 'فشل تسجيل عملية تسديد الدين', variant: 'error' })
+    } finally {
+      setIsRepaying(false)
+    }
+  }
+
   const handleOpenTimeline = async (customer: CustomerItem): Promise<void> => {
     setSelectedTimelineCustomer(customer)
     setIsTimelineLoading(true)
     try {
-      const rows = await window.electron.db.query<CustomerSaleRow>(
-        `SELECT id, created_at, total_dzd, payment_method 
+      const salesRows = await window.electron.db.query<CustomerSaleRow>(
+        `SELECT id, created_at, total_dzd, paid_amount_dzd, remaining_debt_dzd, payment_method 
          FROM sales 
          WHERE customer_id = ? AND status = 'completed' AND deleted_at IS NULL
          ORDER BY created_at DESC`,
         [customer.id]
       )
-      setCustomerSalesHistory(rows)
+      setCustomerSalesHistory(salesRows)
+
+      const paymentRows = await window.electron.db.query<CustomerPaymentRow>(
+        `SELECT id, amount_dzd, payment_method, notes, created_at 
+         FROM customer_payments 
+         WHERE customer_id = ?
+         ORDER BY created_at DESC`,
+        [customer.id]
+      ).catch(() => [])
+      setCustomerPaymentsHistory(paymentRows)
     } catch {
-      addToast({ message: 'فشل تحميل سجل مشتريات الزبون', variant: 'error' })
+      addToast({ message: 'فشل تحميل سجل مشتريات وتسديدات الزبون', variant: 'error' })
     } finally {
       setIsTimelineLoading(false)
     }
@@ -217,6 +286,30 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
           <Phone className="w-3.5 h-3.5 text-text-tertiary" />
           <span>{row.phone ?? 'غير مسجل'}</span>
         </span>
+      ),
+    },
+    {
+      key: 'total_debt_dzd',
+      header: 'الديون المستحقة (Dette)',
+      render: (row) => (
+        row.total_debt_dzd > 0 ? (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-100 text-red-700 border border-red-200 text-xs font-black">
+              <span>{row.total_debt_dzd.toLocaleString('ar-DZ')} دج</span>
+            </span>
+            <button
+              onClick={() => {
+                setPayingDebtCustomer(row)
+                setRepayAmountDzd(String(row.total_debt_dzd))
+              }}
+              className="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black transition-all btn-press shadow-sm"
+            >
+              تسديد
+            </button>
+          </div>
+        ) : (
+          <span className="text-xs text-emerald-600 font-extrabold">خالي من الديون ✅</span>
+        )
       ),
     },
     {
@@ -357,59 +450,156 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         </form>
       </Modal>
 
-      {/* Customer Purchase History Timeline Modal */}
+      {/* Customer Purchase History & Statement Timeline Modal */}
       <Modal
         isOpen={Boolean(selectedTimelineCustomer)}
         onClose={() => setSelectedTimelineCustomer(null)}
-        title={`📜 السجل الزمني لمشتريات الزبون — ${selectedTimelineCustomer?.full_name ?? ''}`}
+        title={`📜 كشف حساب وجميع معاملات الزبون — ${selectedTimelineCustomer?.full_name ?? ''}`}
         size="lg"
       >
         <div className="space-y-4">
-          <div className="p-4 bg-accent/5 border border-accent/20 rounded-2xl flex items-center justify-between">
+          <div className="p-4 bg-accent/5 border border-accent/20 rounded-2xl grid grid-cols-3 gap-3 text-center">
             <div>
-              <p className="text-xs text-text-tertiary font-bold">إجمالي المشتريات التراكمي</p>
-              <p className="currency text-accent font-black text-xl">
+              <p className="text-[11px] text-text-tertiary font-bold">إجمالي المشتريات التراكمي</p>
+              <p className="currency text-accent font-black text-base">
                 {selectedTimelineCustomer?.total_spent_dzd.toLocaleString('ar-DZ')} دج
               </p>
             </div>
-            <div className="text-left">
-              <p className="text-xs text-text-tertiary font-bold">عدد الفواتير والعمليات</p>
-              <p className="text-text-primary font-black text-lg">
+            <div>
+              <p className="text-[11px] text-text-tertiary font-bold">الدين المستحق الحالي</p>
+              <p className={`font-black text-base ${(selectedTimelineCustomer?.total_debt_dzd ?? 0) > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                {(selectedTimelineCustomer?.total_debt_dzd ?? 0).toLocaleString('ar-DZ')} دج
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] text-text-tertiary font-bold">عدد الفواتير والعمليات</p>
+              <p className="text-text-primary font-black text-base">
                 {selectedTimelineCustomer?.total_sales_count} زيارات
               </p>
             </div>
           </div>
 
-          <div className="max-h-80 overflow-y-auto space-y-2.5 pr-1">
-            {isTimelineLoading ? (
-              <p className="text-xs text-center py-6 text-text-tertiary font-bold">جاري تحميل سجل المشتريات...</p>
-            ) : customerSalesHistory.length === 0 ? (
-              <p className="text-xs text-center py-6 text-text-tertiary font-bold">لا توجد عمليات مبيعات سابقة لهذا الزبون.</p>
-            ) : (
-              customerSalesHistory.map((sale) => (
-                <div key={sale.id} className="p-3.5 bg-gray-50 border border-gray-200/80 rounded-xl flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-white border border-gray-200 text-text-secondary">
-                      <Receipt className="w-4 h-4" />
+          {/* Sales History List */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-black text-text-primary">فواتير المبيعات:</h3>
+            <div className="max-h-52 overflow-y-auto space-y-2 pr-1">
+              {isTimelineLoading ? (
+                <p className="text-xs text-center py-4 text-text-tertiary font-bold">جاري تحميل السجل...</p>
+              ) : customerSalesHistory.length === 0 ? (
+                <p className="text-xs text-center py-4 text-text-tertiary font-bold">لا توجد عمليات مبيعات سابقة لهذا الزبون.</p>
+              ) : (
+                customerSalesHistory.map((sale) => (
+                  <div key={sale.id} className="p-3 bg-gray-50 border border-gray-200/80 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-white border border-gray-200 text-text-secondary">
+                        <Receipt className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="font-mono text-xs font-bold text-text-primary">فاتورة ID: #{sale.id.slice(0, 8)}</p>
+                        <p className="text-[11px] text-text-tertiary font-mono">
+                          {new Date(sale.created_at).toLocaleString('ar-DZ')}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-mono text-xs font-bold text-text-primary">فاتورة ID: #{sale.id.slice(0, 8)}</p>
-                      <p className="text-[11px] text-text-tertiary font-mono">
-                        {new Date(sale.created_at).toLocaleString('ar-DZ')}
-                      </p>
+                    <div className="text-left">
+                      <p className="currency font-black text-accent text-xs">{sale.total_dzd.toLocaleString('ar-DZ')} دج</p>
+                      {sale.remaining_debt_dzd && sale.remaining_debt_dzd > 0 ? (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                          دين متبقي: {sale.remaining_debt_dzd.toLocaleString('ar-DZ')} دج
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-text-secondary">
+                          {sale.payment_method === 'cash' ? 'نقداً' : sale.payment_method === 'card' ? 'بطاقة CIB' : sale.payment_method === 'credit' ? 'كريدي' : 'مزدوج'}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="text-left">
-                    <p className="currency font-black text-accent text-sm">{sale.total_dzd.toLocaleString('ar-DZ')} دج</p>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-text-secondary">
-                      {sale.payment_method === 'cash' ? 'نقداً' : sale.payment_method === 'card' ? 'بطاقة CIB' : 'مزدوج'}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
+
+          {/* Payments History List */}
+          {customerPaymentsHistory.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-gray-200">
+              <h3 className="text-xs font-black text-emerald-800">دفوعات تسديد الديون المنسوبة:</h3>
+              <div className="max-h-40 overflow-y-auto space-y-2 pr-1">
+                {customerPaymentsHistory.map((p) => (
+                  <div key={p.id} className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-black text-emerald-900">تسديد مبلغ: {p.amount_dzd.toLocaleString('ar-DZ')} دج</p>
+                      <p className="text-[10px] text-emerald-700 font-mono">{new Date(p.created_at).toLocaleString('ar-DZ')} ({p.payment_method === 'cash' ? 'نقداً' : 'بطاقة'})</p>
+                    </div>
+                    {p.notes && <p className="text-[10px] text-emerald-800 font-semibold">{p.notes}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+      </Modal>
+
+      {/* Pay Debt Modal */}
+      <Modal
+        isOpen={Boolean(payingDebtCustomer)}
+        onClose={() => setPayingDebtCustomer(null)}
+        title={`💵 تسديد دين الزبون — ${payingDebtCustomer?.full_name ?? ''}`}
+      >
+        <form onSubmit={handleRepayDebt} className="space-y-4">
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between text-xs text-red-900 font-bold">
+            <span>إجمالي الدين المستحق حالياً:</span>
+            <span className="text-sm font-black text-red-700">
+              {(payingDebtCustomer?.total_debt_dzd ?? 0).toLocaleString('ar-DZ')} دج
+            </span>
+          </div>
+
+          <Input
+            label="المبلغ المسدد (دج)"
+            type="number"
+            min={1}
+            max={payingDebtCustomer?.total_debt_dzd ?? 999999}
+            value={repayAmountDzd}
+            onChange={(e) => setRepayAmountDzd(e.target.value)}
+            required
+            autoFocus
+          />
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-text-primary">طريقة التسديد</label>
+            <select
+              value={repayMethod}
+              onChange={(e) => setRepayMethod(e.target.value as 'cash' | 'card')}
+              className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+              <option value="cash">💵 نقداً (Cash)</option>
+              <option value="card">💳 بطاقة CIB / الذهبية</option>
+            </select>
+          </div>
+
+          <Input
+            label="ملاحظات التسديد (اختياري)"
+            placeholder="مثال: دفعة جزئية عن مشتريات الأسبوع"
+            value={repayNotes}
+            onChange={(e) => setRepayNotes(e.target.value)}
+          />
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="submit"
+              disabled={isRepaying}
+              className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-ambient"
+            >
+              {isRepaying ? 'جاري التسجيل...' : 'تأكيد وحفظ تسديد الدين'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPayingDebtCustomer(null)}
+              className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-xs font-bold"
+            >
+              إلغاء
+            </button>
+          </div>
+        </form>
       </Modal>
 
       {/* Edit Customer Modal */}

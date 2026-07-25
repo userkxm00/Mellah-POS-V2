@@ -20,10 +20,15 @@ export async function processSale(
   customerId?: string | null,
   mixedCashDzd?: number | null,
   mixedCardDzd?: number | null,
-  discountDzd?: number
+  discountDzd?: number,
+  creditDepositDzd?: number | null
 ): Promise<CreateSaleResult> {
   if (items.length === 0) {
     throw new Error('السلة فارغة')
+  }
+
+  if (paymentMethod === 'credit' && !customerId) {
+    throw new Error('يجب تحديد الزبون عند البيع بالتقسيط / الكريدي')
   }
 
   // Resolve dynamic cashier and branch IDs
@@ -57,17 +62,32 @@ export async function processSale(
   const discountVal = Math.min(subtotalDzd, Math.max(0, discountDzd ?? 0))
   const totalDzd = subtotalDzd - discountVal
 
-  // Calculate mixed payment split amounts
-  const cashPaid = paymentMethod === 'cash' ? totalDzd : paymentMethod === 'card' ? 0 : (mixedCashDzd ?? totalDzd / 2)
-  const cardPaid = paymentMethod === 'card' ? totalDzd : paymentMethod === 'cash' ? 0 : (mixedCardDzd ?? totalDzd / 2)
+  // Calculate payment split amounts & debt
+  let cashPaid = 0
+  let cardPaid = 0
+  let paidAmountDzd = totalDzd
+  let remainingDebtDzd = 0
+
+  if (paymentMethod === 'cash') {
+    cashPaid = totalDzd
+  } else if (paymentMethod === 'card') {
+    cardPaid = totalDzd
+  } else if (paymentMethod === 'mixed') {
+    cashPaid = mixedCashDzd ?? totalDzd / 2
+    cardPaid = mixedCardDzd ?? totalDzd / 2
+  } else if (paymentMethod === 'credit') {
+    paidAmountDzd = Math.min(totalDzd, Math.max(0, creditDepositDzd ?? 0))
+    remainingDebtDzd = totalDzd - paidAmountDzd
+    cashPaid = paidAmountDzd
+  }
 
   const operations: Array<{ sql: string; params: unknown[] }> = []
 
-  // 1. Insert Sales Record (includes discount & subtotal for reporting)
+  // 1. Insert Sales Record (includes debt tracking fields)
   operations.push({
     sql: `INSERT INTO sales 
-          (id, branch_id, shift_id, cashier_id, customer_id, subtotal_dzd, discount_dzd, total_dzd, cash_amount_dzd, card_amount_dzd, payment_method, status, created_at, updated_at) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?)`,
+          (id, branch_id, shift_id, cashier_id, customer_id, subtotal_dzd, discount_dzd, total_dzd, cash_amount_dzd, card_amount_dzd, paid_amount_dzd, remaining_debt_dzd, payment_method, status, created_at, updated_at) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?)`,
     params: [
       saleId,
       branchId,
@@ -79,21 +99,25 @@ export async function processSale(
       totalDzd,
       cashPaid,
       cardPaid,
+      paidAmountDzd,
+      remainingDebtDzd,
       paymentMethod,
       now,
       now,
     ],
   })
 
-  // 1b. Update Customer Loyalty Points if customer selected (1 point per 100 DZD)
+  // 1b. Update Customer Loyalty Points and Total Debt Balance
   if (customerId) {
     const pointsEarned = Math.floor(totalDzd / 100)
-    if (pointsEarned > 0) {
-      operations.push({
-        sql: `UPDATE customers SET loyalty_points = loyalty_points + ?, updated_at = ? WHERE id = ?`,
-        params: [pointsEarned, now, customerId],
-      })
-    }
+    operations.push({
+      sql: `UPDATE customers 
+            SET loyalty_points = loyalty_points + ?, 
+                total_debt_dzd = COALESCE(total_debt_dzd, 0) + ?, 
+                updated_at = ? 
+            WHERE id = ?`,
+      params: [pointsEarned, remainingDebtDzd, now, customerId],
+    })
   }
 
   // 2. Insert Sale Items & Stock Movements (Ledger entries)
