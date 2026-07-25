@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import { Store } from 'lucide-react'
 
 interface SplashScreenProps {
   onFinished: () => void
@@ -30,8 +29,22 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
 
       <div className="splash-logo flex flex-col items-center gap-5 relative">
         {/* Logo icon */}
-        <div className="w-24 h-24 rounded-[28px] bg-accent flex items-center justify-center shadow-ambient-lg">
-          <Store className="w-12 h-12 text-white" />
+        <div className="w-24 h-24 rounded-[28px] bg-[#0A6EDB] flex items-center justify-center shadow-ambient-lg border border-white/20">
+          <svg
+            className="w-14 h-14 text-white"
+            viewBox="0 0 512 512"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M140,342 L140,178 L256,292 L372,178 L372,342"
+              fill="none"
+              stroke="#FFFFFF"
+              strokeWidth="46"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
 
         {/* Brand name */}
