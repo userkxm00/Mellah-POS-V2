@@ -80,6 +80,47 @@ export async function checkRealConnectivity(): Promise<boolean> {
   }
 }
 
+import { useAuthStore } from '@/stores/authStore'
+import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+
+/**
+ * Ensures the Electron app establishes an authenticated Supabase session.
+ * Uses Supabase Anonymous Auth with branch_id in user_metadata so RLS policies pass with role = 'authenticated'.
+ */
+export async function ensureSupabaseAuth(): Promise<boolean> {
+  const hasRealSupabase =
+    import.meta.env.VITE_SUPABASE_URL &&
+    !import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
+
+  if (!hasRealSupabase) return false
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) return true
+
+    const activeBranch = useAuthStore.getState().currentBranch
+    const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+
+    const { data, error } = await supabase.auth.signInAnonymously({
+      options: {
+        data: {
+          branch_id: branchId,
+        },
+      },
+    })
+
+    if (error) {
+      logger.error('Failed to establish Supabase Anonymous Auth session', error)
+      return false
+    }
+
+    return !!data.session
+  } catch (err) {
+    logger.error('Error ensuring Supabase Auth', err)
+    return false
+  }
+}
+
 /**
  * Background queue processor.
  * Pushes pending sync_queue entries in chronological order.
@@ -97,19 +138,26 @@ export async function processSyncQueue(): Promise<number> {
   let processedCount = 0
 
   try {
+    const hasRealSupabase =
+      import.meta.env.VITE_SUPABASE_URL &&
+      !import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
+
+    if (hasRealSupabase) {
+      await ensureSupabaseAuth()
+    }
+
     const pendingEntries = await window.electron.db.query<SyncQueueEntry>(
       `SELECT * FROM sync_queue WHERE synced_at IS NULL ORDER BY created_at ASC LIMIT 50`
     )
 
     if (pendingEntries.length === 0) {
+      // Bi-directional pull check even if push queue is empty
+      await pullFromSupabase()
       syncStore.setSyncing(false)
       return 0
     }
 
     const now = new Date().toISOString()
-    const hasRealSupabase =
-      import.meta.env.VITE_SUPABASE_URL &&
-      !import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
 
     for (const entry of pendingEntries) {
       try {
@@ -174,6 +222,8 @@ export async function pullFromSupabase(): Promise<number> {
     !import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
 
   if (!hasRealSupabase) return 0
+
+  await ensureSupabaseAuth()
 
   let pulledCount = 0
   const lastPull = localStorage.getItem('mellah_last_pull_timestamp') ?? '1970-01-01T00:00:00.000Z'
