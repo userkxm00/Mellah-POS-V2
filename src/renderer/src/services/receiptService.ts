@@ -27,15 +27,46 @@ export interface ReceiptPrintOptions {
   paperWidth?: '80mm' | '58mm'
 }
 
-export async function printThermalReceipt(
+export function generateBarcodeSvg(barcodeText: string): string {
+  return `<svg viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 40px;">
+    <rect width="200" height="60" fill="#ffffff" />
+    <g fill="#000000">
+      <rect x="10" y="5" width="4" height="40" />
+      <rect x="18" y="5" width="2" height="40" />
+      <rect x="24" y="5" width="6" height="40" />
+      <rect x="34" y="5" width="2" height="40" />
+      <rect x="40" y="5" width="4" height="40" />
+      <rect x="48" y="5" width="8" height="40" />
+      <rect x="60" y="5" width="2" height="40" />
+      <rect x="66" y="5" width="4" height="40" />
+      <rect x="74" y="5" width="6" height="40" />
+      <rect x="84" y="5" width="2" height="40" />
+      <rect x="90" y="5" width="4" height="40" />
+      <rect x="98" y="5" width="2" height="40" />
+      <rect x="104" y="5" width="6" height="40" />
+      <rect x="114" y="5" width="4" height="40" />
+      <rect x="122" y="5" width="2" height="40" />
+      <rect x="128" y="5" width="8" height="40" />
+      <rect x="140" y="5" width="2" height="40" />
+      <rect x="146" y="5" width="4" height="40" />
+      <rect x="154" y="5" width="6" height="40" />
+      <rect x="164" y="5" width="2" height="40" />
+      <rect x="172" y="5" width="6" height="40" />
+      <rect x="182" y="5" width="4" height="40" />
+    </g>
+    <text x="100" y="55" font-family="monospace" font-size="11" font-weight="bold" text-anchor="middle" fill="#000000">${barcodeText}</text>
+  </svg>`
+}
+
+export function buildReceiptHtml(
   data: ReceiptData,
   options?: ReceiptPrintOptions
-): Promise<boolean> {
+): string {
   const paperWidth = options?.paperWidth ?? '80mm'
   const bodyWidth = paperWidth === '58mm' ? '54mm' : '78mm'
   const fontSize = paperWidth === '58mm' ? '10px' : '11px'
 
-  const receiptHtml = `
+  return `
     <!DOCTYPE html>
     <html dir="rtl" lang="ar">
     <head>
@@ -143,16 +174,16 @@ export async function printThermalReceipt(
         <p>${data.footerText ?? 'شكراً لزيارتكم! البضاعة المباعة ترجع أو تبدل خلال 7 أيام مع إحضار الفاتورة.'}</p>
         <p style="font-family: monospace; font-size: 8px; margin-top: 4px;">MELLAH POS — System Generated</p>
       </div>
-
-      <script>
-        window.onload = function() {
-          window.print();
-          setTimeout(function() { window.close(); }, 500);
-        };
-      </script>
     </body>
     </html>
   `
+}
+
+export async function printThermalReceipt(
+  data: ReceiptData,
+  options?: ReceiptPrintOptions
+): Promise<boolean> {
+  const receiptHtml = buildReceiptHtml(data, options)
 
   if (window.electron?.printHtml) {
     return await window.electron.printHtml(receiptHtml, options?.printerName)

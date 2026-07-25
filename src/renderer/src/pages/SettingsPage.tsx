@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { ArrowRight, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText } from 'lucide-react'
-import { Card, Input, Modal } from '@/components/ui'
+import { ArrowRight, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode } from 'lucide-react'
+import { Card, Input, Modal, Button } from '@/components/ui'
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { exportDatabaseBackup, importDatabaseBackup } from '@/services/backupService'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore, type Language } from '@/stores/languageStore'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
-import { printThermalReceipt } from '@/services/receiptService'
+import { printThermalReceipt, buildReceiptHtml, generateBarcodeSvg } from '@/services/receiptService'
 
 export interface PrinterInfo {
   name: string
@@ -35,6 +35,11 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
   const [autoPrint, setAutoPrint] = useState<boolean>(
     localStorage.getItem('mellah_auto_print') === 'true'
   )
+
+  // Preview Modals State
+  const [isReceiptPreviewOpen, setIsReceiptPreviewOpen] = useState<boolean>(false)
+  const [isBarcodePreviewOpen, setIsBarcodePreviewOpen] = useState<boolean>(false)
+  const [labelSize, setLabelSize] = useState<'40x30' | '50x25'>('40x30')
 
   const [isSaving, setIsSaving] = useState<boolean>(false)
   const [isExporting, setIsExporting] = useState<boolean>(false)
@@ -335,6 +340,26 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsReceiptPreviewOpen(true)}
+                className="py-3 rounded-2xl bg-blue-50 border border-blue-200 text-accent hover:bg-blue-100 text-xs font-extrabold transition-all btn-press flex items-center justify-center gap-1.5"
+              >
+                <Eye className="w-4 h-4" />
+                <span>👁️ معاينة الفاتورة الحرارية (Preview)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsBarcodePreviewOpen(true)}
+                className="py-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 text-xs font-extrabold transition-all btn-press flex items-center justify-center gap-1.5"
+              >
+                <Barcode className="w-4 h-4" />
+                <span>🏷️ معاينة ملصق الباركود (Preview)</span>
+              </button>
+            </div>
+
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"
@@ -453,10 +478,253 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
             <button
               onClick={handleConfirmRestore}
               disabled={isImporting}
-              className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-xs font-bold text-white shadow-ambient transition-all btn-press"
+              className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-ambient"
             >
-              {isImporting ? 'جاري الاسترجاع...' : 'تأكيد واسترجاع البيانات الآن'}
+              {isImporting ? 'جاري الاسترجاع...' : 'تأكيد الاسترجاع والبدء'}
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 🧾 Thermal Receipt Live Preview Modal */}
+      <Modal
+        isOpen={isReceiptPreviewOpen}
+        onClose={() => setIsReceiptPreviewOpen(false)}
+        title="معاينة شكل الفاتورة الحرارية (Live Thermal Receipt Preview)"
+        size="lg"
+      >
+        <div className="space-y-4 select-none">
+          <div className="flex items-center justify-between bg-gray-100 p-3 rounded-2xl">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-extrabold text-text-primary">عرض الورق المحدد:</span>
+              <span className="px-2.5 py-1 rounded-lg bg-accent text-white text-xs font-black">{paperWidth}</span>
+            </div>
+            <p className="text-xs text-text-secondary font-semibold">
+              هذه معاينة دقيقة لشكل وتنسيق الفاتورة كما ستخرج من الطابعة الحرارية
+            </p>
+          </div>
+
+          {/* Receipt Canvas Container */}
+          <div className="flex justify-center p-6 bg-gray-200/60 rounded-2xl overflow-y-auto max-h-[500px]">
+            <div
+              className={`bg-white shadow-2xl p-4 font-mono text-black transition-all ${
+                paperWidth === '58mm' ? 'w-[240px] text-[10px]' : 'w-[320px] text-[11px]'
+              }`}
+              style={{ minHeight: '400px' }}
+            >
+              {/* Receipt Content */}
+              <div className="text-center space-y-1 pb-3 border-b border-dashed border-black">
+                <h2 className="text-base font-black uppercase tracking-wider">{storeName || 'بوتيك الملاح للملابس'}</h2>
+                <p className="text-[9px] text-gray-700">{storeAddress || 'الجزائر العاصمة، حي حسيبة بن بوعلي'}</p>
+                {storePhone && <p className="text-[9px] text-gray-700">هاتف: {storePhone}</p>}
+              </div>
+
+              <div className="py-2 text-[9px] space-y-0.5 border-b border-dashed border-black">
+                <div className="flex justify-between">
+                  <span>وصل رقم: <b>#INV-2026-0042</b></span>
+                  <span>التاريخ: {new Date().toLocaleTimeString('ar-DZ')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>الكاشير: <b>أحمد المدير</b></span>
+                  <span>الزبون: <b>محمد العماري</b></span>
+                </div>
+              </div>
+
+              <table className="w-full my-2 text-[9px] text-right border-b border-black pb-2">
+                <thead>
+                  <tr className="border-b border-black">
+                    <th className="py-1">المنتج</th>
+                    <th className="py-1 text-center">الكمية</th>
+                    <th className="py-1 text-left">السعر (DA)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  <tr>
+                    <td className="py-1">
+                      <div className="font-bold">قميص قطني فاخر</div>
+                      <div className="text-[8px] text-gray-600">L / أزرق</div>
+                    </td>
+                    <td className="py-1 text-center font-bold">2</td>
+                    <td className="py-1 text-left font-bold">7,000</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1">
+                      <div className="font-bold">بنطلون جينز كلاسيك</div>
+                      <div className="text-[8px] text-gray-600">42 / أسود</div>
+                    </td>
+                    <td className="py-1 text-center font-bold">1</td>
+                    <td className="py-1 text-left font-bold">5,800</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="py-1 text-[10px] space-y-1">
+                <div className="flex justify-between">
+                  <span>المجموع الفرعي:</span>
+                  <span>12,800 DA</span>
+                </div>
+                <div className="flex justify-between text-red-600 font-bold">
+                  <span>الخصم الممنوح:</span>
+                  <span>-800 DA</span>
+                </div>
+                <div className="flex justify-between font-black text-sm pt-1 border-t border-b border-black my-1">
+                  <span>الإجمالي النهائي:</span>
+                  <span>12,000 DA</span>
+                </div>
+                <div className="flex justify-between text-[9px]">
+                  <span>طريقة الدفع:</span>
+                  <span className="font-bold">نقداً (Cash)</span>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-dashed border-black text-center space-y-2">
+                <div dangerouslySetInnerHTML={{ __html: generateBarcodeSvg('200010042890') }} />
+                <p className="text-[8px] leading-tight text-gray-700">
+                  {footerText || 'شكراً لزيارتكم، البضاعة المباعة ترجع أو تبدل خلال 7 أيام مع إحضار الفاتورة.'}
+                </p>
+                <p className="text-[7px] text-gray-400">MELLAH POS — Verified Receipt</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button variant="secondary" onClick={() => setIsReceiptPreviewOpen(false)} className="flex-1">
+              إغلاق المعاينة
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                const sampleData = {
+                  storeName: storeName || 'بوتيك الملاح للملابس',
+                  branchAddress: storeAddress || 'الجزائر العاصمة، حي حسيبة بن بوعلي',
+                  receiptId: 'INV-2026-0042',
+                  date: new Date().toISOString(),
+                  cashierName: 'أحمد المدير',
+                  customerName: 'محمد العماري',
+                  items: [
+                    { product_name: 'قميص قطني فاخر', size: 'L', color: 'أزرق', quantity: 2, unit_price: 3500 },
+                    { product_name: 'بنطلون جينز كلاسيك', size: '42', color: 'أسود', quantity: 1, unit_price: 5800 },
+                  ],
+                  subtotalDzd: 12800,
+                  discountDzd: 800,
+                  totalDzd: 12000,
+                  paymentMethod: 'cash',
+                  footerText: footerText,
+                }
+                const html = buildReceiptHtml(sampleData, { paperWidth })
+                if (window.electron?.printHtml) {
+                  window.electron.printHtml(html, selectedPrinter)
+                } else {
+                  const pWin = window.open('', '_blank')
+                  if (pWin) {
+                    pWin.document.write(html)
+                    pWin.document.close()
+                  }
+                }
+              }}
+              className="flex-1 flex items-center justify-center gap-2"
+            >
+              <Printer className="w-4 h-4" />
+              <span>طباعة تجريبية / تصدير PDF</span>
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 🏷️ Barcode Sticker Live Preview Modal */}
+      <Modal
+        isOpen={isBarcodePreviewOpen}
+        onClose={() => setIsBarcodePreviewOpen(false)}
+        title="معاينة ملصق الباركود (Live Barcode Sticker Preview)"
+        size="md"
+      >
+        <div className="space-y-4 select-none">
+          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 p-3 rounded-2xl">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-extrabold text-amber-900">حجم الملصق:</span>
+              <select
+                value={labelSize}
+                onChange={(e) => setLabelSize(e.target.value as '40x30' | '50x25')}
+                className="px-2.5 py-1 rounded-lg bg-white border border-amber-300 text-xs font-black text-amber-900"
+              >
+                <option value="40x30">40 مم × 30 مم (قياسي)</option>
+                <option value="50x25">50 مم × 25 مم (عريض)</option>
+              </select>
+            </div>
+            <p className="text-xs text-amber-800 font-semibold">
+              معاينة ملصق السعر المطبوع للمنتج
+            </p>
+          </div>
+
+          {/* Sticker Preview Container */}
+          <div className="flex justify-center p-8 bg-gray-200/60 rounded-2xl">
+            <div
+              className={`bg-white shadow-2xl p-3 border-2 border-dashed border-gray-400 rounded-xl flex flex-col justify-between items-center text-center text-black font-sans transition-all ${
+                labelSize === '50x25' ? 'w-[280px] h-[140px]' : 'w-[240px] h-[160px]'
+              }`}
+            >
+              <div className="w-full border-b border-gray-200 pb-1">
+                <span className="text-[10px] font-black uppercase text-gray-800 tracking-wider block truncate">
+                  {storeName || 'MELLAH STORE'}
+                </span>
+                <h3 className="text-xs font-black text-black truncate">قميص قطني فاخر</h3>
+                <span className="text-[9px] font-bold text-gray-600 block">الحجم: L | اللون: أزرق</span>
+              </div>
+
+              <div className="w-full my-1" dangerouslySetInnerHTML={{ __html: generateBarcodeSvg('200010042890') }} />
+
+              <div className="w-full border-t border-gray-200 pt-1 flex justify-between items-center px-1">
+                <span className="text-[9px] font-mono text-gray-500">SKU-7890</span>
+                <span className="text-xs font-black text-black">3,500 DA</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button variant="secondary" onClick={() => setIsBarcodePreviewOpen(false)} className="flex-1">
+              إغلاق المعاينة
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                const stickerHtml = `
+                  <!DOCTYPE html>
+                  <html dir="rtl" lang="ar">
+                  <head>
+                    <meta charset="UTF-8" />
+                    <title>ملصق باركود - قميص قطني فاخر</title>
+                    <style>
+                      @page { size: ${labelSize === '50x25' ? '50mm 25mm' : '40mm 30mm'}; margin: 0; }
+                      body { margin: 0; padding: 4px; font-family: system-ui, sans-serif; text-align: center; font-size: 10px; color: #000; }
+                      .title { font-size: 9px; font-weight: 900; }
+                      .prod { font-size: 11px; font-weight: 900; margin: 2px 0; }
+                      .price { font-size: 12px; font-weight: 900; margin-top: 2px; }
+                    </style>
+                  </head>
+                  <body>
+                    <div class="title">${storeName || 'MELLAH STORE'}</div>
+                    <div class="prod">قميص قطني فاخر (L / أزرق)</div>
+                    ${generateBarcodeSvg('200010042890')}
+                    <div class="price">3,500 DA</div>
+                    <script>window.onload = function() { window.print(); window.close(); };</script>
+                  </body>
+                  </html>
+                `
+                if (window.electron?.printHtml) {
+                  window.electron.printHtml(stickerHtml, selectedPrinter)
+                } else {
+                  const pWin = window.open('', '_blank')
+                  if (pWin) {
+                    pWin.document.write(stickerHtml)
+                    pWin.document.close()
+                  }
+                }
+              }}
+              className="flex-1 flex items-center justify-center gap-2"
+            >
+              <Printer className="w-4 h-4" />
+              <span>طباعة ملصق تجريبي / PDF</span>
+            </Button>
           </div>
         </div>
       </Modal>
