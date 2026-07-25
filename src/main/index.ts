@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, nativeImage } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import bcrypt from 'bcryptjs'
@@ -297,25 +297,30 @@ function registerIpcHandlers(): void {
 
 let mainWindow: BrowserWindow | null = null
 
-function getAppIconPath(): string {
+function getAppNativeIcon(): Electron.NativeImage {
   const candidates = [
-    path.join(__dirname, 'icon.ico'),
     path.join(__dirname, 'icon.png'),
-    path.join(__dirname, '../../build/icon.ico'),
+    path.join(__dirname, 'icon.ico'),
     path.join(__dirname, '../../build/icon.png'),
-    path.join(app.getAppPath(), 'build/icon.ico'),
+    path.join(__dirname, '../../build/icon.ico'),
     path.join(app.getAppPath(), 'build/icon.png'),
+    path.join(app.getAppPath(), 'build/icon.ico'),
+    path.join(process.resourcesPath, 'icon.png'),
     path.join(process.resourcesPath, 'icon.ico'),
-    path.join(process.resourcesPath, 'build/icon.ico'),
+    path.join(process.resourcesPath, 'build/icon.png'),
   ]
   for (const p of candidates) {
-    if (fs.existsSync(p)) return p
+    if (fs.existsSync(p)) {
+      const img = nativeImage.createFromPath(p)
+      if (!img.isEmpty()) return img
+    }
   }
-  return path.join(__dirname, 'icon.ico')
+  return nativeImage.createEmpty()
 }
 
 function createWindow(): void {
   const state = loadWindowState()
+  const appIcon = getAppNativeIcon()
 
   mainWindow = new BrowserWindow({
     width: state.width,
@@ -330,14 +335,21 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     title: 'MELLAH POS',
-    icon: getAppIconPath(),
+    icon: appIcon.isEmpty() ? undefined : appIcon,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,
     },
   })
 
+  if (!appIcon.isEmpty()) {
+    mainWindow.setIcon(appIcon)
+  }
+
   mainWindow.on('ready-to-show', () => {
+    if (mainWindow && !appIcon.isEmpty()) {
+      mainWindow.setIcon(appIcon)
+    }
     if (state.isMaximized) {
       mainWindow?.maximize()
     }
@@ -385,6 +397,8 @@ const moduleWindowTitles: Record<string, string> = {
 }
 
 function createModuleWindow(moduleName: string): void {
+  const appIcon = getAppNativeIcon()
+
   const moduleWin = new BrowserWindow({
     width: 1100,
     height: 750,
@@ -395,12 +409,16 @@ function createModuleWindow(moduleName: string): void {
     minimizable: true,
     autoHideMenuBar: true,
     title: moduleWindowTitles[moduleName] ?? `${moduleName} — MELLAH POS`,
-    icon: getAppIconPath(),
+    icon: appIcon.isEmpty() ? undefined : appIcon,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,
     },
   })
+
+  if (!appIcon.isEmpty()) {
+    moduleWin.setIcon(appIcon)
+  }
 
   // Load the same renderer but with a query parameter indicating the module
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
