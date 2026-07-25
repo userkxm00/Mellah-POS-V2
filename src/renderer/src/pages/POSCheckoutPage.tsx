@@ -472,6 +472,7 @@ export function POSCheckoutPage({
 
       // Auto-Thermal Printing
       const paperWidth = (localStorage.getItem('mellah_paper_width') as '80mm' | '58mm') ?? '80mm'
+      const receiptLanguage = (localStorage.getItem('mellah_receipt_language') as 'ar' | 'fr' | 'en') ?? 'ar'
 
       if (autoPrintReceipt) {
         const currentUser = useAuthStore.getState().currentUser
@@ -494,7 +495,7 @@ export function POSCheckoutPage({
             totalDzd: res.totalDzd,
             paymentMethod,
           },
-          { printerName, paperWidth }
+          { printerName, paperWidth, language: receiptLanguage }
         ).catch(() => {
           addToast({
             message: t('تعذرت الطباعة — تحقق من اتصال الطابعة (يمكنك إعادة الطباعة من سجل المبيعات)'),

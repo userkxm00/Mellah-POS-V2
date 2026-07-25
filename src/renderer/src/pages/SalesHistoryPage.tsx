@@ -168,6 +168,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
   const handleReprintReceipt = (sale: SaleRow, items: SaleItemDetail[]): void => {
     const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
     const paperWidth = (localStorage.getItem('mellah_paper_width') as '80mm' | '58mm') ?? '80mm'
+    const receiptLanguage = (localStorage.getItem('mellah_receipt_language') as 'ar' | 'fr' | 'en') ?? 'ar'
 
     printThermalReceipt(
       {
@@ -189,7 +190,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
         totalDzd: sale.total_dzd,
         paymentMethod: sale.payment_method,
       },
-      { printerName, paperWidth }
+      { printerName, paperWidth, language: receiptLanguage }
     )
       .then(() => {
         addToast({ message: t('تم إرسال أمر الطباعة الحرارية بنجاح 🖨️'), variant: 'success' })

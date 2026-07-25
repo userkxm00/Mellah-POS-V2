@@ -22,9 +22,98 @@ export interface ReceiptData {
   footerText?: string
 }
 
+export type ReceiptLanguage = 'ar' | 'fr' | 'en'
+
 export interface ReceiptPrintOptions {
   printerName?: string
   paperWidth?: '80mm' | '58mm'
+  language?: ReceiptLanguage
+}
+
+export const RECEIPT_TRANSLATIONS: Record<ReceiptLanguage, {
+  receiptTitle: string
+  receiptNo: string
+  date: string
+  cashier: string
+  customer: string
+  item: string
+  qty: string
+  price: string
+  subtotal: string
+  discount: string
+  total: string
+  paymentMethod: string
+  cash: string
+  card: string
+  split: string
+  dir: 'rtl' | 'ltr'
+  alignStart: string
+  alignEnd: string
+  defaultFooter: string
+}> = {
+  ar: {
+    receiptTitle: 'فاتورة مبيعات',
+    receiptNo: 'رقم الفاتورة',
+    date: 'التاريخ',
+    cashier: 'الكاشير',
+    customer: 'الزبون',
+    item: 'المنتج',
+    qty: 'الكمية',
+    price: 'السعر (DA)',
+    subtotal: 'المجموع الفرعي',
+    discount: 'الخصم الممنوح',
+    total: 'الإجمالي النهائي',
+    paymentMethod: 'طريقة الدفع',
+    cash: 'نقداً',
+    card: 'بطاقة CIB',
+    split: 'مزدوج',
+    dir: 'rtl',
+    alignStart: 'right',
+    alignEnd: 'left',
+    defaultFooter: 'شكراً لزيارتكم! البضاعة المباعة ترجع أو تبدل خلال 7 أيام مع إحضار الفاتورة.',
+  },
+  fr: {
+    receiptTitle: 'TICKET DE CAISSE',
+    receiptNo: 'Ticket N°',
+    date: 'Date',
+    cashier: 'Caissier',
+    customer: 'Client',
+    item: 'Article',
+    qty: 'Qté',
+    price: 'Prix (DA)',
+    subtotal: 'Sous-Total',
+    discount: 'Remise Accordée',
+    total: 'TOTAL NET',
+    paymentMethod: 'Mode de Paiement',
+    cash: 'Espèces',
+    card: 'Carte CIB',
+    split: 'Mixte',
+    dir: 'ltr',
+    alignStart: 'left',
+    alignEnd: 'right',
+    defaultFooter: 'Merci pour votre visite! Les articles peuvent être échangés sous 7 jours sur présentation du ticket.',
+  },
+  en: {
+    receiptTitle: 'SALES RECEIPT',
+    receiptNo: 'Receipt #',
+    date: 'Date',
+    cashier: 'Cashier',
+    customer: 'Customer',
+    item: 'Item',
+    qty: 'Qty',
+    price: 'Price (DA)',
+    subtotal: 'Subtotal',
+    discount: 'Discount',
+    total: 'NET TOTAL',
+    paymentMethod: 'Payment Method',
+    cash: 'Cash',
+    card: 'CIB Card',
+    split: 'Split',
+    dir: 'ltr',
+    alignStart: 'left',
+    alignEnd: 'right',
+    defaultFooter: 'Thank you for shopping! Items can be returned or exchanged within 7 days with valid receipt.',
+  },
 }
 
 export function generateBarcodeSvg(barcodeText: string): string {
@@ -63,15 +152,18 @@ export function buildReceiptHtml(
   options?: ReceiptPrintOptions
 ): string {
   const paperWidth = options?.paperWidth ?? '80mm'
+  const lang: ReceiptLanguage = options?.language ?? (localStorage.getItem('mellah_receipt_language') as ReceiptLanguage) ?? 'ar'
+  const t = RECEIPT_TRANSLATIONS[lang] || RECEIPT_TRANSLATIONS.ar
+
   const bodyWidth = paperWidth === '58mm' ? '54mm' : '78mm'
   const fontSize = paperWidth === '58mm' ? '10px' : '11px'
 
   return `
     <!DOCTYPE html>
-    <html dir="rtl" lang="ar">
+    <html dir="${t.dir}" lang="${lang}">
     <head>
       <meta charset="UTF-8" />
-      <title>فاتورة مبيعات - ${data.receiptId}</title>
+      <title>${t.receiptTitle} - ${data.receiptId}</title>
       <style>
         @page {
           size: ${paperWidth} auto;
@@ -85,18 +177,18 @@ export function buildReceiptHtml(
           font-size: ${fontSize};
           color: #000;
           line-height: 1.3;
-          direction: rtl;
+          direction: ${t.dir};
         }
         .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .text-left { text-align: left; }
+        .text-start { text-align: ${t.alignStart}; }
+        .text-end { text-align: ${t.alignEnd}; }
         .bold { font-weight: bold; }
         .title { font-size: ${paperWidth === '58mm' ? '14px' : '16px'}; font-weight: 900; margin-bottom: 2px; }
         .subtitle { font-size: 9px; color: #333; margin-bottom: 6px; }
         .divider { border-bottom: 1px dashed #000; margin: 5px 0; }
         .info-row { display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 2px; }
         .items-table { width: 100%; border-collapse: collapse; margin: 6px 0; }
-        .items-table th { text-align: right; font-size: 9px; border-bottom: 1px solid #000; padding-bottom: 2px; }
+        .items-table th { text-align: ${t.alignStart}; font-size: 9px; border-bottom: 1px solid #000; padding-bottom: 2px; }
         .items-table td { font-size: 9px; padding: 3px 0; vertical-align: top; }
         .total-box { font-size: 13px; font-weight: 900; display: flex; justify-content: space-between; margin: 6px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0; }
         .footer { font-size: 8px; text-align: center; margin-top: 8px; color: #444; }
@@ -111,12 +203,12 @@ export function buildReceiptHtml(
       <div class="divider"></div>
 
       <div class="info-row">
-        <span>رقم الفاتورة: <b>${data.receiptId.slice(0, 8)}</b></span>
-        <span>التاريخ: ${new Date(data.date).toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' })}</span>
+        <span>${t.receiptNo}: <b>#${data.receiptId.slice(0, 8)}</b></span>
+        <span>${t.date}: ${new Date(data.date).toLocaleTimeString(lang === 'ar' ? 'ar-DZ' : 'fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
       </div>
       <div class="info-row">
-        <span>الكاشير: <b>${data.cashierName}</b></span>
-        ${data.customerName ? `<span>الزبون: <b>${data.customerName}</b></span>` : ''}
+        <span>${t.cashier}: <b>${data.cashierName}</b></span>
+        ${data.customerName ? `<span>${t.customer}: <b>${data.customerName}</b></span>` : ''}
       </div>
 
       <div class="divider"></div>
@@ -124,9 +216,9 @@ export function buildReceiptHtml(
       <table class="items-table">
         <thead>
           <tr>
-            <th style="width: 50%">المنتج</th>
-            <th style="width: 15%" class="text-center">الكمية</th>
-            <th style="width: 35%" class="text-left">السعر (DA)</th>
+            <th style="width: 50%">${t.item}</th>
+            <th style="width: 15%" class="text-center">${t.qty}</th>
+            <th style="width: 35%" class="text-end">${t.price}</th>
           </tr>
         </thead>
         <tbody>
@@ -134,12 +226,12 @@ export function buildReceiptHtml(
             .map(
               (item) => `
             <tr>
-              <td>
+              <td class="text-start">
                 <div class="bold">${item.product_name}</div>
                 ${item.size || item.color ? `<div style="font-size: 8px; color: #555;">${item.size ?? ''} ${item.color ?? ''}</div>` : ''}
               </td>
               <td class="text-center bold">${item.quantity}</td>
-              <td class="text-left bold">${(item.quantity * item.unit_price).toLocaleString()}</td>
+              <td class="text-end bold">${(item.quantity * item.unit_price).toLocaleString()}</td>
             </tr>
           `
             )
@@ -149,30 +241,30 @@ export function buildReceiptHtml(
 
       ${data.discountDzd && data.discountDzd > 0 ? `
         <div class="info-row" style="font-size: 10px;">
-          <span>المجموع الفرعي:</span>
+          <span>${t.subtotal}:</span>
           <span>${(data.subtotalDzd ?? (data.totalDzd + data.discountDzd)).toLocaleString()} DA</span>
         </div>
         <div class="info-row" style="font-size: 10px; color: #b91c1c;">
-          <span>الخصم الممنوح:</span>
+          <span>${t.discount}:</span>
           <span>-${data.discountDzd.toLocaleString()} DA</span>
         </div>
       ` : ''}
 
       <div class="total-box">
-        <span>الإجمالي النهائي:</span>
+        <span>${t.total}:</span>
         <span>${data.totalDzd.toLocaleString()} DA</span>
       </div>
 
       <div class="info-row">
-        <span>طريقة الدفع:</span>
-        <span class="bold">${data.paymentMethod === 'cash' ? 'نقداً' : data.paymentMethod === 'card' ? 'بطاقة CIB' : 'مزدوج'}</span>
+        <span>${t.paymentMethod}:</span>
+        <span class="bold">${data.paymentMethod === 'cash' ? t.cash : data.paymentMethod === 'card' ? t.card : t.split}</span>
       </div>
 
       <div class="divider"></div>
 
       <div class="footer">
-        <p>${data.footerText ?? 'شكراً لزيارتكم! البضاعة المباعة ترجع أو تبدل خلال 7 أيام مع إحضار الفاتورة.'}</p>
-        <p style="font-family: monospace; font-size: 8px; margin-top: 4px;">MELLAH POS — System Generated</p>
+        <p>${data.footerText ?? t.defaultFooter}</p>
+        <p style="font-family: monospace; font-size: 8px; margin-top: 4px;">MELLAH POS — Verified Receipt</p>
       </div>
     </body>
     </html>

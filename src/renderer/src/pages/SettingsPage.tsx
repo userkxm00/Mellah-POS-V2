@@ -6,7 +6,7 @@ import { exportDatabaseBackup, importDatabaseBackup } from '@/services/backupSer
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore, type Language } from '@/stores/languageStore'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
-import { printThermalReceipt, buildReceiptHtml, generateBarcodeSvg } from '@/services/receiptService'
+import { printThermalReceipt, buildReceiptHtml, generateBarcodeSvg, type ReceiptLanguage, RECEIPT_TRANSLATIONS } from '@/services/receiptService'
 
 export interface PrinterInfo {
   name: string
@@ -24,13 +24,16 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
   const setLanguageStore = useLanguageStore((s) => s.setLanguage)
   const t = useLanguageStore((s) => s.t)
 
-  // Printer settings
+  // Printer & Receipt settings
   const [printers, setPrinters] = useState<PrinterInfo[]>([])
   const [selectedPrinter, setSelectedPrinter] = useState<string>(
     localStorage.getItem('mellah_printer_name') ?? ''
   )
   const [paperWidth, setPaperWidth] = useState<'80mm' | '58mm'>(
     (localStorage.getItem('mellah_paper_width') as '80mm' | '58mm') ?? '80mm'
+  )
+  const [receiptLanguage, setReceiptLanguage] = useState<ReceiptLanguage>(
+    (localStorage.getItem('mellah_receipt_language') as ReceiptLanguage) ?? 'ar'
   )
   const [autoPrint, setAutoPrint] = useState<boolean>(
     localStorage.getItem('mellah_auto_print') === 'true'
@@ -114,6 +117,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
 
       localStorage.setItem('mellah_printer_name', selectedPrinter)
       localStorage.setItem('mellah_paper_width', paperWidth)
+      localStorage.setItem('mellah_receipt_language', receiptLanguage)
       localStorage.setItem('mellah_auto_print', String(autoPrint))
 
       // Refresh store settings in Zustand store
@@ -145,7 +149,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
           totalDzd: 7500,
           paymentMethod: 'cash',
         },
-        { printerName: selectedPrinter || undefined, paperWidth }
+        { printerName: selectedPrinter || undefined, paperWidth, language: receiptLanguage }
       )
       addToast({ message: 'تم إرسال أمر الطباعة التجريبية! 🖨️', variant: 'success' })
     } catch {
@@ -326,18 +330,31 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                 </select>
               </div>
 
-              <div className="flex items-center gap-2 pt-6">
-                <input
-                  type="checkbox"
-                  id="autoPrintCheck"
-                  checked={autoPrint}
-                  onChange={(e) => setAutoPrint(e.target.checked)}
-                  className="w-4 h-4 rounded text-accent focus:ring-accent accent-accent cursor-pointer"
-                />
-                <label htmlFor="autoPrintCheck" className="text-xs font-bold text-text-primary cursor-pointer">
-                  طباعة الفاتورة تلقائياً فور إنهاء عملية البيع
-                </label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-text-primary">لغة طباعة الفاتورة (Receipt Language)</label>
+                <select
+                  value={receiptLanguage}
+                  onChange={(e) => setReceiptLanguage(e.target.value as ReceiptLanguage)}
+                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                >
+                  <option value="ar">🇩🇿 العربية (Arabic - RTL)</option>
+                  <option value="fr">🇫🇷 Français (French - LTR)</option>
+                  <option value="en">🇬🇧 English (English - LTR)</option>
+                </select>
               </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="autoPrintCheck"
+                checked={autoPrint}
+                onChange={(e) => setAutoPrint(e.target.checked)}
+                className="w-4 h-4 rounded text-accent focus:ring-accent accent-accent cursor-pointer"
+              />
+              <label htmlFor="autoPrintCheck" className="text-xs font-bold text-text-primary cursor-pointer">
+                طباعة الفاتورة تلقائياً فور إنهاء عملية البيع
+              </label>
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-2">
@@ -495,96 +512,58 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
       >
         <div className="space-y-4 select-none">
           <div className="flex items-center justify-between bg-gray-100 p-3 rounded-2xl">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-extrabold text-text-primary">عرض الورق المحدد:</span>
-              <span className="px-2.5 py-1 rounded-lg bg-accent text-white text-xs font-black">{paperWidth}</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-extrabold text-text-primary">عرض الورق:</span>
+                <span className="px-2.5 py-1 rounded-lg bg-accent text-white text-xs font-black">{paperWidth}</span>
+              </div>
+
+              <div className="flex items-center gap-1.5 border-r border-gray-300 pr-3">
+                <span className="text-xs font-extrabold text-text-primary">لغة الفاتورة:</span>
+                <select
+                  value={receiptLanguage}
+                  onChange={(e) => setReceiptLanguage(e.target.value as ReceiptLanguage)}
+                  className="px-2.5 py-1 rounded-lg bg-white border border-gray-300 text-xs font-black text-text-primary"
+                >
+                  <option value="ar">🇩🇿 العربية (Arabic)</option>
+                  <option value="fr">🇫🇷 Français (French)</option>
+                  <option value="en">🇬🇧 English (English)</option>
+                </select>
+              </div>
             </div>
-            <p className="text-xs text-text-secondary font-semibold">
-              هذه معاينة دقيقة لشكل وتنسيق الفاتورة كما ستخرج من الطابعة الحرارية
+            <p className="text-xs text-text-secondary font-semibold hidden md:block">
+              معاينة مطابقة 100% للشكل المطبوع
             </p>
           </div>
 
           {/* Receipt Canvas Container */}
           <div className="flex justify-center p-6 bg-gray-200/60 rounded-2xl overflow-y-auto max-h-[500px]">
-            <div
-              className={`bg-white shadow-2xl p-4 font-mono text-black transition-all ${
-                paperWidth === '58mm' ? 'w-[240px] text-[10px]' : 'w-[320px] text-[11px]'
+            <iframe
+              title="Receipt Preview"
+              srcDoc={buildReceiptHtml(
+                {
+                  storeName: storeName || 'MELLAH BOUTIQUE',
+                  branchAddress: storeAddress || 'الجزائر العاصمة، حي حسيبة بن بوعلي',
+                  receiptId: 'INV-2026-0042',
+                  date: new Date().toISOString(),
+                  cashierName: 'أحمد المدير',
+                  customerName: 'Jean Dupont / محمد العماري',
+                  items: [
+                    { product_name: 'قميص قطني فاخر / Chemise Coton', size: 'L', color: 'Bleu/أزرق', quantity: 2, unit_price: 3500 },
+                    { product_name: 'بنطلون جينز / Jean Classic', size: '42', color: 'Noir/أسود', quantity: 1, unit_price: 5800 },
+                  ],
+                  subtotalDzd: 12800,
+                  discountDzd: 800,
+                  totalDzd: 12000,
+                  paymentMethod: 'cash',
+                  footerText: footerText || RECEIPT_TRANSLATIONS[receiptLanguage].defaultFooter,
+                },
+                { paperWidth, language: receiptLanguage }
+              )}
+              className={`bg-white shadow-2xl transition-all border-0 ${
+                paperWidth === '58mm' ? 'w-[260px] h-[450px]' : 'w-[340px] h-[480px]'
               }`}
-              style={{ minHeight: '400px' }}
-            >
-              {/* Receipt Content */}
-              <div className="text-center space-y-1 pb-3 border-b border-dashed border-black">
-                <h2 className="text-base font-black uppercase tracking-wider">{storeName || 'بوتيك الملاح للملابس'}</h2>
-                <p className="text-[9px] text-gray-700">{storeAddress || 'الجزائر العاصمة، حي حسيبة بن بوعلي'}</p>
-                {storePhone && <p className="text-[9px] text-gray-700">هاتف: {storePhone}</p>}
-              </div>
-
-              <div className="py-2 text-[9px] space-y-0.5 border-b border-dashed border-black">
-                <div className="flex justify-between">
-                  <span>وصل رقم: <b>#INV-2026-0042</b></span>
-                  <span>التاريخ: {new Date().toLocaleTimeString('ar-DZ')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>الكاشير: <b>أحمد المدير</b></span>
-                  <span>الزبون: <b>محمد العماري</b></span>
-                </div>
-              </div>
-
-              <table className="w-full my-2 text-[9px] text-right border-b border-black pb-2">
-                <thead>
-                  <tr className="border-b border-black">
-                    <th className="py-1">المنتج</th>
-                    <th className="py-1 text-center">الكمية</th>
-                    <th className="py-1 text-left">السعر (DA)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  <tr>
-                    <td className="py-1">
-                      <div className="font-bold">قميص قطني فاخر</div>
-                      <div className="text-[8px] text-gray-600">L / أزرق</div>
-                    </td>
-                    <td className="py-1 text-center font-bold">2</td>
-                    <td className="py-1 text-left font-bold">7,000</td>
-                  </tr>
-                  <tr>
-                    <td className="py-1">
-                      <div className="font-bold">بنطلون جينز كلاسيك</div>
-                      <div className="text-[8px] text-gray-600">42 / أسود</div>
-                    </td>
-                    <td className="py-1 text-center font-bold">1</td>
-                    <td className="py-1 text-left font-bold">5,800</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <div className="py-1 text-[10px] space-y-1">
-                <div className="flex justify-between">
-                  <span>المجموع الفرعي:</span>
-                  <span>12,800 DA</span>
-                </div>
-                <div className="flex justify-between text-red-600 font-bold">
-                  <span>الخصم الممنوح:</span>
-                  <span>-800 DA</span>
-                </div>
-                <div className="flex justify-between font-black text-sm pt-1 border-t border-b border-black my-1">
-                  <span>الإجمالي النهائي:</span>
-                  <span>12,000 DA</span>
-                </div>
-                <div className="flex justify-between text-[9px]">
-                  <span>طريقة الدفع:</span>
-                  <span className="font-bold">نقداً (Cash)</span>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-dashed border-black text-center space-y-2">
-                <div dangerouslySetInnerHTML={{ __html: generateBarcodeSvg('200010042890') }} />
-                <p className="text-[8px] leading-tight text-gray-700">
-                  {footerText || 'شكراً لزيارتكم، البضاعة المباعة ترجع أو تبدل خلال 7 أيام مع إحضار الفاتورة.'}
-                </p>
-                <p className="text-[7px] text-gray-400">MELLAH POS — Verified Receipt</p>
-              </div>
-            </div>
+            />
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -595,23 +574,23 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
               variant="primary"
               onClick={() => {
                 const sampleData = {
-                  storeName: storeName || 'بوتيك الملاح للملابس',
+                  storeName: storeName || 'MELLAH BOUTIQUE',
                   branchAddress: storeAddress || 'الجزائر العاصمة، حي حسيبة بن بوعلي',
                   receiptId: 'INV-2026-0042',
                   date: new Date().toISOString(),
                   cashierName: 'أحمد المدير',
-                  customerName: 'محمد العماري',
+                  customerName: 'Jean Dupont / محمد العماري',
                   items: [
-                    { product_name: 'قميص قطني فاخر', size: 'L', color: 'أزرق', quantity: 2, unit_price: 3500 },
-                    { product_name: 'بنطلون جينز كلاسيك', size: '42', color: 'أسود', quantity: 1, unit_price: 5800 },
+                    { product_name: 'قميص قطني فاخر / Chemise Coton', size: 'L', color: 'Bleu/أزرق', quantity: 2, unit_price: 3500 },
+                    { product_name: 'بنطلون جينز / Jean Classic', size: '42', color: 'Noir/أسود', quantity: 1, unit_price: 5800 },
                   ],
                   subtotalDzd: 12800,
                   discountDzd: 800,
                   totalDzd: 12000,
                   paymentMethod: 'cash',
-                  footerText: footerText,
+                  footerText: footerText || RECEIPT_TRANSLATIONS[receiptLanguage].defaultFooter,
                 }
-                const html = buildReceiptHtml(sampleData, { paperWidth })
+                const html = buildReceiptHtml(sampleData, { paperWidth, language: receiptLanguage })
                 if (window.electron?.printHtml) {
                   window.electron.printHtml(html, selectedPrinter)
                 } else {
