@@ -1,6 +1,6 @@
 {
   "name": "mellah-pos",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MELLAH POS — Professional offline-first Point-of-Sale for Algerian retail stores",
   "main": "./out/main/index.js",
   "repository": {
