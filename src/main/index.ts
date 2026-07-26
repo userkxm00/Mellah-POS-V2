@@ -272,7 +272,29 @@ function registerIpcHandlers(): void {
   // ── File-Based Database Backup System ──
 
   const DEFAULT_BACKUP_DIR = path.join(app.getPath('userData'), 'backups')
+  const BACKUP_CONFIG_FILE = path.join(app.getPath('userData'), 'backup-config.json')
   const MAX_BACKUPS = 14
+
+  function loadBackupConfig(): { customDir: string | null } {
+    try {
+      if (fs.existsSync(BACKUP_CONFIG_FILE)) {
+        return JSON.parse(fs.readFileSync(BACKUP_CONFIG_FILE, 'utf-8'))
+      }
+    } catch { /* corrupted config — use default */ }
+    return { customDir: null }
+  }
+
+  function saveBackupConfig(config: { customDir: string | null }): void {
+    fs.writeFileSync(BACKUP_CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8')
+  }
+
+  function getActiveBackupDir(): string {
+    const config = loadBackupConfig()
+    if (config.customDir && fs.existsSync(config.customDir)) {
+      return config.customDir
+    }
+    return DEFAULT_BACKUP_DIR
+  }
 
   function ensureBackupDir(dir: string): void {
     if (!fs.existsSync(dir)) {
@@ -299,7 +321,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('backup:run-auto', async () => {
     try {
       const db = getDatabase()
-      const backupDir = DEFAULT_BACKUP_DIR
+      const backupDir = getActiveBackupDir()
       ensureBackupDir(backupDir)
 
       const tables = [
@@ -333,7 +355,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('backup:get-info', () => {
     try {
-      const backupDir = DEFAULT_BACKUP_DIR
+      const backupDir = getActiveBackupDir()
       ensureBackupDir(backupDir)
 
       const files = fs.readdirSync(backupDir)
@@ -351,12 +373,43 @@ function registerIpcHandlers(): void {
         totalSizeBytes: files.reduce((sum, f) => sum + f.size, 0),
       }
     } catch {
-      return { backupDir: DEFAULT_BACKUP_DIR, backupCount: 0, latestBackup: null, totalSizeBytes: 0 }
+      const dir = getActiveBackupDir()
+      return { backupDir: dir, backupCount: 0, latestBackup: null, totalSizeBytes: 0 }
     }
   })
 
   ipcMain.handle('backup:get-dir', () => {
-    return DEFAULT_BACKUP_DIR
+    return getActiveBackupDir()
+  })
+
+  ipcMain.handle('backup:set-dir', async (_event, customDir: string | null) => {
+    try {
+      if (customDir) {
+        // Validate the directory exists or can be created
+        ensureBackupDir(customDir)
+        // Test write access
+        const testFile = path.join(customDir, '.mellah-write-test')
+        fs.writeFileSync(testFile, 'test', 'utf-8')
+        fs.unlinkSync(testFile)
+      }
+      saveBackupConfig({ customDir })
+      return { success: true, activeDir: getActiveBackupDir() }
+    } catch (err) {
+      return { success: false, error: (err as Error).message }
+    }
+  })
+
+  ipcMain.handle('backup:pick-folder', async () => {
+    if (!mainWindow) return { cancelled: true }
+    const result = await (await import('electron')).dialog.showOpenDialog(mainWindow, {
+      title: 'اختر مجلد النسخ الاحتياطي',
+      properties: ['openDirectory', 'createDirectory'],
+      buttonLabel: 'اختيار هذا المجلد',
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { cancelled: true }
+    }
+    return { cancelled: false, folderPath: result.filePaths[0] }
   })
 
   // ── Database Maintenance ──

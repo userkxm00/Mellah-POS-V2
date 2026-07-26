@@ -69,10 +69,23 @@ export interface BackupInfo {
   totalSizeBytes: number
 }
 
+export interface BackupSetDirResult {
+  success: boolean
+  activeDir?: string
+  error?: string
+}
+
+export interface BackupPickFolderResult {
+  cancelled: boolean
+  folderPath?: string
+}
+
 export interface BackupApi {
   runAuto: () => Promise<BackupResult>
   getInfo: () => Promise<BackupInfo>
   getDir: () => Promise<string>
+  setDir: (customDir: string | null) => Promise<BackupSetDirResult>
+  pickFolder: () => Promise<BackupPickFolderResult>
 }
 
 export interface AppInfoApi {
@@ -177,6 +190,12 @@ const api: ElectronApi = {
     },
     getDir: (): Promise<string> => {
       return ipcRenderer.invoke('backup:get-dir') as Promise<string>
+    },
+    setDir: (customDir: string | null): Promise<BackupSetDirResult> => {
+      return ipcRenderer.invoke('backup:set-dir', customDir) as Promise<BackupSetDirResult>
+    },
+    pickFolder: (): Promise<BackupPickFolderResult> => {
+      return ipcRenderer.invoke('backup:pick-folder') as Promise<BackupPickFolderResult>
     },
   },
   appInfo: {

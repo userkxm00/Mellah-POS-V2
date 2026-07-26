@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { ArrowRight, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode } from 'lucide-react'
+import { ArrowRight, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode, FolderOpen, RefreshCw, HardDrive } from 'lucide-react'
 import { Card, Input, Modal, Button } from '@/components/ui'
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { exportDatabaseBackup, importDatabaseBackup } from '@/services/backupService'
@@ -53,6 +53,12 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
   const fileInputRef = useRef<HTMLInputElement>(null)
   const addToast = useToastStore((s) => s.addToast)
 
+  // Backup directory state
+  const [backupDir, setBackupDir] = useState<string>('')
+  const [backupCount, setBackupCount] = useState<number>(0)
+  const [lastBackupTime, setLastBackupTime] = useState<string | null>(null)
+  const [isChangingDir, setIsChangingDir] = useState<boolean>(false)
+
   // Fetch printers and store settings
   const loadSettings = useCallback(async () => {
     try {
@@ -95,6 +101,22 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
   useEffect(() => {
     loadSettings()
   }, [loadSettings])
+
+  // Load backup directory info
+  const loadBackupInfo = useCallback(async () => {
+    try {
+      const info = await window.electron.backup.getInfo()
+      setBackupDir(info.backupDir)
+      setBackupCount(info.backupCount)
+      if (info.latestBackup) {
+        setLastBackupTime(new Date(info.latestBackup.time).toLocaleString('ar-DZ'))
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    loadBackupInfo()
+  }, [loadBackupInfo])
 
   const handleSave = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
@@ -419,6 +441,73 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
               <Database className="w-4 h-4" />
               <span>تصدير نسخة احتياطية الآن</span>
             </button>
+          </Card>
+
+          {/* Backup Directory Configuration */}
+          <Card className="p-6 space-y-4 border border-blue-200 bg-blue-50/30">
+            <h2 className="text-sm font-black text-blue-900 flex items-center gap-2 pb-2 border-b border-blue-200">
+              <HardDrive className="w-4 h-4 text-blue-600" />
+              <span>مجلد النسخ الاحتياطي التلقائي</span>
+            </h2>
+
+            <div className="space-y-2">
+              <div className="p-3 rounded-xl bg-white border border-blue-100">
+                <p className="text-[11px] text-text-tertiary font-semibold mb-1">المسار الحالي:</p>
+                <p className="text-xs text-text-primary font-bold break-all font-mono leading-relaxed" dir="ltr">{backupDir || '...'}</p>
+              </div>
+
+              {backupCount > 0 && (
+                <div className="flex items-center gap-3 text-[11px] font-semibold text-blue-800">
+                  <span>📁 {backupCount} نسخة محفوظة</span>
+                  {lastBackupTime && <span>🕐 آخر نسخة: {lastBackupTime}</span>}
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] text-blue-700 leading-relaxed font-semibold">
+              يمكنك توجيه النسخ لمجلد خارجي (USB، Google Drive، OneDrive) لحماية البيانات حتى لو تعطل الجهاز.
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  setIsChangingDir(true)
+                  try {
+                    const picked = await window.electron.backup.pickFolder()
+                    if (!picked.cancelled && picked.folderPath) {
+                      const result = await window.electron.backup.setDir(picked.folderPath)
+                      if (result.success) {
+                        addToast({ message: `تم تغيير مجلد النسخ: ${result.activeDir}`, variant: 'success' })
+                        loadBackupInfo()
+                      } else {
+                        addToast({ message: `فشل: ${result.error}`, variant: 'error' })
+                      }
+                    }
+                  } catch { addToast({ message: 'فشل فتح اختيار المجلد', variant: 'error' }) }
+                  finally { setIsChangingDir(false) }
+                }}
+                disabled={isChangingDir}
+                className="flex-1 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-ambient transition-all btn-press flex items-center justify-center gap-2"
+              >
+                <FolderOpen className="w-4 h-4" />
+                <span>{isChangingDir ? 'جاري...' : 'اختر مجلد خارجي'}</span>
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const result = await window.electron.backup.setDir(null)
+                    if (result.success) {
+                      addToast({ message: 'تم الرجوع للمجلد الافتراضي ✅', variant: 'success' })
+                      loadBackupInfo()
+                    }
+                  } catch { addToast({ message: 'فشل الرجوع للمجلد الافتراضي', variant: 'error' }) }
+                }}
+                className="py-3 px-4 rounded-2xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-text-secondary transition-all btn-press flex items-center justify-center gap-1"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>افتراضي</span>
+              </button>
+            </div>
           </Card>
 
           <Card className="p-6 space-y-4 border border-amber-200 bg-amber-50/40">
