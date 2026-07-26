@@ -355,6 +355,9 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('backup:get-info', () => {
     try {
+      const config = loadBackupConfig()
+      const configuredDir = config.customDir
+      const isCustomMissing = Boolean(configuredDir && !fs.existsSync(configuredDir))
       const backupDir = getActiveBackupDir()
       ensureBackupDir(backupDir)
 
@@ -368,13 +371,23 @@ function registerIpcHandlers(): void {
 
       return {
         backupDir,
+        configuredDir,
+        isCustomMissing,
         backupCount: files.length,
         latestBackup: files[0] ?? null,
         totalSizeBytes: files.reduce((sum, f) => sum + f.size, 0),
       }
     } catch {
+      const config = loadBackupConfig()
       const dir = getActiveBackupDir()
-      return { backupDir: dir, backupCount: 0, latestBackup: null, totalSizeBytes: 0 }
+      return {
+        backupDir: dir,
+        configuredDir: config.customDir,
+        isCustomMissing: Boolean(config.customDir && !fs.existsSync(config.customDir)),
+        backupCount: 0,
+        latestBackup: null,
+        totalSizeBytes: 0,
+      }
     }
   })
 

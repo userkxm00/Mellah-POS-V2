@@ -64,6 +64,8 @@ export interface BackupResult {
 
 export interface BackupInfo {
   backupDir: string
+  configuredDir: string | null
+  isCustomMissing: boolean
   backupCount: number
   latestBackup: { name: string; size: number; time: number } | null
   totalSizeBytes: number
