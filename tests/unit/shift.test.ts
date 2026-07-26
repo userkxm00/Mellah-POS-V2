@@ -18,9 +18,12 @@ describe('Shift & Cash Drawer Management (Phase 2)', () => {
     db.exec('PRAGMA journal_mode = WAL')
     db.exec('PRAGMA foreign_keys = ON')
 
-    const migrationPath = path.join(process.cwd(), 'database', 'migrations', '0001_init.sql')
-    const sql = fs.readFileSync(migrationPath, 'utf-8')
-    db.exec(sql)
+    const migrationsDir = path.join(process.cwd(), 'database', 'migrations')
+    const migrationFiles = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort()
+    for (const file of migrationFiles) {
+      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8')
+      db.exec(sql)
+    }
 
     // Insert dummy branch & user
     db.prepare("INSERT INTO branches (id, name) VALUES (?, 'Test Branch')").run(branchId)
@@ -141,5 +144,60 @@ describe('Shift & Cash Drawer Management (Phase 2)', () => {
     const diff = physical - expected
 
     expect(diff).toBe(-200) // Shortage
+  })
+
+  it('correctly includes mixed sales, credit cash portions, and customer debt cash repayments in expected cash', () => {
+    const shiftId = 's-mixed-credit'
+    const openingCash = 10000
+
+    db.prepare(
+      "INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status, opened_at) VALUES (?, ?, ?, ?, 'open', datetime('now'))"
+    ).run(shiftId, branchId, cashierId, openingCash)
+
+    // Sale 1: Mixed payment — 10000 Total (6000 Cash, 4000 Card)
+    db.prepare(
+      "INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, card_amount_dzd, payment_method, status) VALUES ('sale-m1', ?, ?, ?, 10000, 6000, 4000, 'mixed', 'completed')"
+    ).run(branchId, shiftId, cashierId)
+
+    // Sale 2: Credit payment — 15000 Total (5000 Paid Cash upfront, 10000 Debt)
+    db.prepare(
+      "INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, remaining_debt_dzd, payment_method, status) VALUES ('sale-cr1', ?, ?, ?, 15000, 5000, 10000, 'credit', 'completed')"
+    ).run(branchId, shiftId, cashierId)
+
+    // Dummy customer for foreign key constraint
+    db.prepare("INSERT INTO customers (id, branch_id, full_name) VALUES ('cust-1', ?, 'Test Customer')").run(branchId)
+
+    // Customer Debt Repayment: 3000 Cash paid during this shift
+    db.prepare(
+      "INSERT INTO customer_payments (id, branch_id, shift_id, customer_id, amount_dzd, payment_method) VALUES ('cp-1', ?, ?, 'cust-1', 3000, 'cash')"
+    ).run(branchId, shiftId)
+
+    // Query sales physical cash: cash sales (total_dzd) + mixed/credit cash (COALESCE(cash_amount_dzd, paid_amount_dzd, 0))
+    const salesCashRow = db.prepare(`
+      SELECT SUM(
+        CASE 
+          WHEN payment_method = 'cash' THEN total_dzd
+          WHEN payment_method IN ('mixed', 'credit') THEN COALESCE(cash_amount_dzd, paid_amount_dzd, 0)
+          ELSE 0 
+        END
+      ) as sales_cash
+      FROM sales 
+      WHERE shift_id = ? AND status = 'completed'
+    `).get(shiftId) as { sales_cash: number }
+
+    // Query customer payments cash
+    const debtCashRow = db.prepare(`
+      SELECT SUM(amount_dzd) as debt_cash
+      FROM customer_payments
+      WHERE shift_id = ? AND payment_method = 'cash'
+    `).get(shiftId) as { debt_cash: number }
+
+    const salesCash = salesCashRow.sales_cash ?? 0 // 6000 + 5000 = 11000
+    const debtCash = debtCashRow.debt_cash ?? 0   // 3000
+    const totalExpected = openingCash + salesCash + debtCash // 10000 + 11000 + 3000 = 24000
+
+    expect(salesCash).toBe(11000)
+    expect(debtCash).toBe(3000)
+    expect(totalExpected).toBe(24000)
   })
 })

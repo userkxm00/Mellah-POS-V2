@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, nativeImage } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, nativeImage, Menu } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import bcrypt from 'bcryptjs'
@@ -385,6 +385,7 @@ function createWindow(): void {
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,
+      devTools: is.dev,
     },
   })
 
@@ -459,6 +460,7 @@ function createModuleWindow(moduleName: string): void {
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,
+      devTools: is.dev,
     },
   })
 
@@ -484,6 +486,9 @@ function createModuleWindow(moduleName: string): void {
 // ----- App lifecycle -----
 
 app.whenReady().then(async () => {
+  // Disable default Electron application menu to prevent F12 DevTools conflict
+  Menu.setApplicationMenu(null)
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.mellah.pos')
 

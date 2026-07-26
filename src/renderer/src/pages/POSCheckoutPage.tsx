@@ -533,7 +533,9 @@ export function POSCheckoutPage({
         const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
         window.electron?.openCashDrawer(printerName).then(() => {
           addToast({ message: '💵 F4: تم إرسال أمر فتح درج النقود', variant: 'success', duration: 1500 })
-        }).catch(() => {})
+        }).catch((err) => {
+          addToast({ message: '⚠️ تعذر فتح درج النقود: ' + ((err as Error)?.message || 'تأكد من توصيل الطابعة/الدرج'), variant: 'warning', duration: 3000 })
+        })
       } else if (e.key === 'Escape') {
         if (!isMixedModalOpen && !isHeldModalOpen && !isManagerPinOpen) {
           if (cartItems.length > 0) {

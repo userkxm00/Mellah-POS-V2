@@ -17,6 +17,7 @@ import { BranchesPage } from '@/pages/BranchesPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { AuditLogPage } from '@/pages/AuditLogPage'
 import { MaintenancePage } from '@/pages/MaintenancePage'
+import { initAutoBackupScheduler } from '@/services/backupService'
 import { ToastContainer } from '@/components/ui'
 import { FirstRunWizardModal } from '@/components/setup/FirstRunWizardModal'
 import { SessionLockModal } from '@/components/auth/SessionLockModal'
@@ -68,7 +69,11 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     checkAuthSession()
     const stopSyncLoop = startBackgroundSyncLoop()
-    return () => stopSyncLoop()
+    const stopAutoBackup = initAutoBackupScheduler()
+    return () => {
+      stopSyncLoop()
+      stopAutoBackup()
+    }
   }, [checkAuthSession])
 
   // Handle navigation from the launcher
