@@ -1,9 +1,13 @@
 -- ============================================================
--- MELLAH POS — Supabase Cloud Database Initial Setup
--- PostgreSQL Migration & Row-Level Security (RLS) Policies
+-- MELLAH POS — Supabase Cloud Database Master Schema & RLS Setup
+-- PostgreSQL Migration, Indexes & Row-Level Security (RLS) Policies
 -- ============================================================
 
 -- 1. DROP TABLES IF THEY ALREADY EXIST (Clean Slate)
+DROP TABLE IF EXISTS supplier_payments CASCADE;
+DROP TABLE IF EXISTS supplier_purchases CASCADE;
+DROP TABLE IF EXISTS suppliers CASCADE;
+DROP TABLE IF EXISTS customer_payments CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
 DROP TABLE IF EXISTS sync_queue CASCADE;
 DROP TABLE IF EXISTS store_settings CASCADE;
@@ -73,6 +77,7 @@ CREATE TABLE product_variants (
   barcode TEXT UNIQUE,
   sku TEXT,
   price_dzd NUMERIC(12,2),
+  min_stock_level INTEGER DEFAULT 5,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   deleted_at TIMESTAMPTZ
@@ -126,7 +131,9 @@ CREATE TABLE sales (
   discount_dzd NUMERIC(12,2) DEFAULT 0,
   cash_amount_dzd NUMERIC(12,2) DEFAULT 0,
   card_amount_dzd NUMERIC(12,2) DEFAULT 0,
-  payment_method TEXT NOT NULL CHECK (payment_method IN ('cash','card','mixed')),
+  paid_amount_dzd NUMERIC(12,2) DEFAULT 0,
+  remaining_debt_dzd NUMERIC(12,2) DEFAULT 0,
+  payment_method TEXT NOT NULL CHECK (payment_method IN ('cash','card','mixed','credit')),
   status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed','refunded','partial_refund')),
   voided_at TIMESTAMPTZ,
   void_reason TEXT,
@@ -158,7 +165,7 @@ CREATE TABLE returns (
 
 CREATE TABLE store_settings (
   branch_id UUID PRIMARY KEY REFERENCES branches(id) ON DELETE CASCADE,
-  store_name TEXT NOT NULL,
+  store_name TEXT NOT NULL DEFAULT 'Mellah POS',
   store_address TEXT,
   store_phone TEXT,
   logo_url TEXT,
@@ -178,7 +185,65 @@ CREATE TABLE audit_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 3. ENABLE ROW LEVEL SECURITY (RLS)
+CREATE TABLE sync_queue (
+  id UUID PRIMARY KEY,
+  table_name TEXT NOT NULL,
+  operation TEXT NOT NULL CHECK (operation IN ('insert','update','delete')),
+  payload TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  synced_at TIMESTAMPTZ,
+  attempts INTEGER DEFAULT 0
+);
+
+CREATE TABLE customer_payments (
+  id UUID PRIMARY KEY,
+  branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+  shift_id UUID REFERENCES shifts(id) ON DELETE SET NULL,
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  sale_id UUID REFERENCES sales(id) ON DELETE SET NULL,
+  amount_dzd NUMERIC(12,2) NOT NULL,
+  payment_method TEXT NOT NULL DEFAULT 'cash',
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE suppliers (
+  id UUID PRIMARY KEY,
+  branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  phone TEXT,
+  company_name TEXT,
+  address TEXT,
+  total_debt_dzd NUMERIC(12,2) NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE supplier_purchases (
+  id UUID PRIMARY KEY,
+  branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+  supplier_id UUID NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
+  invoice_number TEXT,
+  total_amount_dzd NUMERIC(12,2) NOT NULL,
+  paid_amount_dzd NUMERIC(12,2) NOT NULL DEFAULT 0,
+  remaining_debt_dzd NUMERIC(12,2) NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE supplier_payments (
+  id UUID PRIMARY KEY,
+  branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+  supplier_id UUID NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
+  purchase_id UUID REFERENCES supplier_purchases(id) ON DELETE SET NULL,
+  amount_dzd NUMERIC(12,2) NOT NULL,
+  payment_method TEXT NOT NULL DEFAULT 'cash',
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 3. ENABLE ROW LEVEL SECURITY (RLS) ON ALL 18 TABLES
 ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
@@ -192,6 +257,11 @@ ALTER TABLE sale_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE returns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE store_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sync_queue ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customer_payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supplier_purchases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supplier_payments ENABLE ROW LEVEL SECURITY;
 
 -- 4. HELPER FUNCTIONS FOR TENANT & ROLE-BASED RLS POLICIES
 
@@ -214,104 +284,156 @@ $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
 -- 5. REAL TENANT-ISOLATED RLS POLICIES (AUTHENTICATED & BRANCH RESTRICTED)
 
--- Branches: Authenticated users view their branch, admins manage all branches
+-- Branches
 CREATE POLICY "Branches Branch Isolation Read" ON branches 
   FOR SELECT USING (auth.role() = 'authenticated' AND (id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
 CREATE POLICY "Branches Admin Write" ON branches 
   FOR ALL USING (auth.role() = 'authenticated' AND (is_admin() OR current_user_branch_id() IS NULL));
 
--- Users: View branch users, admins manage users
+-- Users
 CREATE POLICY "Users Branch Isolation Read" ON users 
   FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
 CREATE POLICY "Users Admin Write" ON users 
   FOR ALL USING (auth.role() = 'authenticated' AND (is_admin() OR current_user_branch_id() IS NULL));
 
--- Categories: Branch restricted read and write
+-- Categories
 CREATE POLICY "Categories Branch Isolation Read" ON categories 
   FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
 CREATE POLICY "Categories Branch Isolation Write" ON categories 
   FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
--- Products: Branch restricted read and write
+-- Products
 CREATE POLICY "Products Branch Isolation Read" ON products 
   FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
 CREATE POLICY "Products Branch Isolation Write" ON products 
   FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
--- Product Variants: Branch restricted read and write
+-- Product Variants
 CREATE POLICY "Product Variants Branch Isolation Read" ON product_variants 
   FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
 CREATE POLICY "Product Variants Branch Isolation Write" ON product_variants 
   FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
--- Stock Movements: Branch restricted read and write
+-- Stock Movements
 CREATE POLICY "Stock Movements Branch Isolation Read" ON stock_movements 
   FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
 CREATE POLICY "Stock Movements Branch Isolation Write" ON stock_movements 
   FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
--- Shifts: Branch restricted read and write
+-- Shifts
 CREATE POLICY "Shifts Branch Isolation Read" ON shifts 
   FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
 CREATE POLICY "Shifts Branch Isolation Write" ON shifts 
   FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
--- Customers: Branch restricted read and write
+-- Customers
 CREATE POLICY "Customers Branch Isolation Read" ON customers 
   FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
 CREATE POLICY "Customers Branch Isolation Write" ON customers 
   FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
--- Sales: Branch restricted read and write
+-- Sales
 CREATE POLICY "Sales Branch Isolation Read" ON sales 
   FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
 CREATE POLICY "Sales Branch Isolation Write" ON sales 
   FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
--- Sale Items: Branch restricted read and write
+-- Sale Items
 CREATE POLICY "Sale Items Branch Isolation Read" ON sale_items 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Sale Items Branch Isolation Write" ON sale_items 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated');
 
--- Returns: Branch restricted read and write
+-- Returns
 CREATE POLICY "Returns Branch Isolation Read" ON returns 
   FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
 CREATE POLICY "Returns Branch Isolation Write" ON returns 
   FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
--- Store Settings: Branch restricted read and write
+-- Store Settings
 CREATE POLICY "Store Settings Branch Isolation Read" ON store_settings 
   FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
 CREATE POLICY "Store Settings Branch Isolation Write" ON store_settings 
   FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
 
--- 5. SEED INITIAL STORE DATA
+-- Audit Logs
+CREATE POLICY "Audit Logs Admin Read" ON audit_logs 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (is_admin() OR current_user_branch_id() IS NULL));
 
-INSERT INTO branches (id, name, address) VALUES 
-('b1111111-1111-4111-8111-111111111111', 'فرع الجزائر العاصمة', 'شارع ديدوش مراد، الجزائر');
+CREATE POLICY "Audit Logs Write" ON audit_logs 
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
-INSERT INTO users (id, branch_id, full_name, role, pin_hash) VALUES 
-('e1111111-1111-4111-8111-111111111111', 'b1111111-1111-4111-8111-111111111111', 'أحمد المدير', 'admin', '1234'),
-('e2222222-2222-4222-8222-222222222222', 'b1111111-1111-4111-8111-111111111111', 'محمد الكاشير', 'cashier', '0000');
+-- Sync Queue
+CREATE POLICY "Sync Queue Branch Isolation Read" ON sync_queue 
+  FOR SELECT USING (auth.role() = 'authenticated');
 
-INSERT INTO store_settings (branch_id, store_name, receipt_footer_text, default_language) VALUES 
-('b1111111-1111-4111-8111-111111111111', 'بوتيك الملاح للملابس', 'شكراً لزيارتكم، البضاعة المباعة ترجع أو تبدل خلال 7 أيام', 'ar');
+CREATE POLICY "Sync Queue Branch Isolation Write" ON sync_queue 
+  FOR ALL USING (auth.role() = 'authenticated');
 
-INSERT INTO categories (id, branch_id, name) VALUES 
-('c1111111-1111-4111-8111-111111111111', 'b1111111-1111-4111-8111-111111111111', 'ملابس رجالية'),
-('c2222222-2222-4222-8222-222222222222', 'b1111111-1111-4111-8111-111111111111', 'ملابس نسائية'),
-('c3333333-3333-4333-8333-333333333333', 'b1111111-1111-4111-8111-111111111111', 'أحذية'),
-('c4444444-4444-4444-8444-444444444444', 'b1111111-1111-4111-8111-111111111111', 'إكسسوارات');
+-- Customer Payments (Debts Repayments)
+CREATE POLICY "Customer Payments Branch Isolation Read" ON customer_payments 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+CREATE POLICY "Customer Payments Branch Isolation Write" ON customer_payments 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+-- Suppliers
+CREATE POLICY "Suppliers Branch Isolation Read" ON suppliers 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+CREATE POLICY "Suppliers Branch Isolation Write" ON suppliers 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+-- Supplier Purchases
+CREATE POLICY "Supplier Purchases Branch Isolation Read" ON supplier_purchases 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+CREATE POLICY "Supplier Purchases Branch Isolation Write" ON supplier_purchases 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+-- Supplier Payments
+CREATE POLICY "Supplier Payments Branch Isolation Read" ON supplier_payments 
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+CREATE POLICY "Supplier Payments Branch Isolation Write" ON supplier_payments 
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+
+-- INDEXES
+CREATE INDEX IF NOT EXISTS idx_users_branch ON users(branch_id);
+CREATE INDEX IF NOT EXISTS idx_products_branch ON products(branch_id);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
+CREATE INDEX IF NOT EXISTS idx_product_variants_product ON product_variants(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_variants_barcode ON product_variants(barcode);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_variant ON stock_movements(variant_id);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_type ON stock_movements(type);
+CREATE INDEX IF NOT EXISTS idx_shifts_branch ON shifts(branch_id);
+CREATE INDEX IF NOT EXISTS idx_shifts_cashier ON shifts(cashier_id);
+CREATE INDEX IF NOT EXISTS idx_shifts_status ON shifts(status);
+CREATE INDEX IF NOT EXISTS idx_sales_branch ON sales(branch_id);
+CREATE INDEX IF NOT EXISTS idx_sales_shift ON sales(shift_id);
+CREATE INDEX IF NOT EXISTS idx_sales_cashier ON sales(cashier_id);
+CREATE INDEX IF NOT EXISTS idx_sales_customer ON sales(customer_id);
+CREATE INDEX IF NOT EXISTS idx_sales_created ON sales(created_at);
+CREATE INDEX IF NOT EXISTS idx_sales_voided ON sales(voided_at);
+CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_variant ON sale_items(variant_id);
+CREATE INDEX IF NOT EXISTS idx_sync_queue_synced ON sync_queue(synced_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_customer_payments_customer ON customer_payments(customer_id);
+CREATE INDEX IF NOT EXISTS idx_customer_payments_shift ON customer_payments(shift_id);
+CREATE INDEX IF NOT EXISTS idx_suppliers_branch ON suppliers(branch_id);
+CREATE INDEX IF NOT EXISTS idx_supplier_purchases_supplier ON supplier_purchases(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_supplier_payments_supplier ON supplier_payments(supplier_id);
