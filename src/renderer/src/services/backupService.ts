@@ -1,3 +1,13 @@
+/**
+ * Mellah POS — File-Based Database Backup Service
+ *
+ * Backups are written as real JSON files to disk via the Main Process (Node fs).
+ * Default location: {userData}/backups/mellah-pos-backup-{ISO date}.json
+ * Retention: last 14 daily backups (older ones auto-deleted).
+ *
+ * Manual export/import still uses browser download/upload for portability.
+ */
+
 export const ALL_BACKUP_TABLES = [
   'branches',
   'users',
@@ -18,7 +28,10 @@ export const ALL_BACKUP_TABLES = [
   'supplier_payments',
 ]
 
-export async function exportDatabaseBackup(isAutoBackup = false): Promise<string> {
+/**
+ * Manual export: dumps all 17 tables to a JSON file downloaded by the browser.
+ */
+export async function exportDatabaseBackup(): Promise<string> {
   try {
     const dateStr = new Date().toISOString().replace(/[:.]/g, '-')
     const backupFileName = `mellah-pos-backup-${dateStr}.json`
@@ -35,14 +48,6 @@ export async function exportDatabaseBackup(isAutoBackup = false): Promise<string
     }
 
     const jsonString = JSON.stringify(backupData, null, 2)
-
-    if (isAutoBackup) {
-      // Store automated backup payload in local storage for auto-recovery
-      localStorage.setItem('mellah_auto_backup_latest', jsonString)
-      localStorage.setItem('mellah_last_auto_backup_timestamp', new Date().toISOString())
-      return 'auto_backup_saved'
-    }
-
     const blob = new Blob([jsonString], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
 
@@ -58,6 +63,9 @@ export async function exportDatabaseBackup(isAutoBackup = false): Promise<string
   }
 }
 
+/**
+ * Manual import: restores all tables from a user-uploaded JSON string.
+ */
 export async function importDatabaseBackup(jsonString: string): Promise<number> {
   let backupData: Record<string, Record<string, unknown>[]>
   try {
@@ -108,28 +116,38 @@ export async function importDatabaseBackup(jsonString: string): Promise<number> 
 }
 
 /**
- * Initializes background auto-backup task.
- * Automatically runs a full database backup snapshot once every 24 hours.
+ * Initializes background auto-backup scheduler.
+ * Runs a file-based backup via Main Process IPC once every 24 hours.
+ * Backup files are written to {userData}/backups/ with 14-day rotation.
  */
 export function initAutoBackupScheduler(): () => void {
-  const checkAndRunAutoBackup = () => {
-    const lastBackup = localStorage.getItem('mellah_last_auto_backup_timestamp')
-    const now = Date.now()
-    const ONE_DAY_MS = 24 * 60 * 60 * 1000
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
-    if (!lastBackup || now - new Date(lastBackup).getTime() >= ONE_DAY_MS) {
-      exportDatabaseBackup(true).catch((err) => {
-        // eslint-disable-next-line no-console
-        console.warn('Auto backup background task warning:', err)
-      })
+  const checkAndRunAutoBackup = async (): Promise<void> => {
+    try {
+      const info = await window.electron.backup.getInfo()
+
+      // Skip if last backup was less than 24h ago
+      if (info.latestBackup && Date.now() - info.latestBackup.time < ONE_DAY_MS) {
+        return
+      }
+
+      await window.electron.backup.runAuto()
+    } catch {
+      // Silently fail — non-critical background task
     }
   }
 
-  // Initial check on boot
-  checkAndRunAutoBackup()
+  // Initial check on boot (after a short delay to let the app initialize)
+  const bootTimeout = setTimeout(() => {
+    checkAndRunAutoBackup()
+  }, 10_000)
 
   // Periodic check every 4 hours
   const intervalId = setInterval(checkAndRunAutoBackup, 4 * 60 * 60 * 1000)
 
-  return () => clearInterval(intervalId)
+  return () => {
+    clearTimeout(bootTimeout)
+    clearInterval(intervalId)
+  }
 }

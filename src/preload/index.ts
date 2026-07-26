@@ -55,6 +55,26 @@ export interface MaintenanceApi {
   runFull: () => Promise<Record<string, MaintenanceResult>>
 }
 
+export interface BackupResult {
+  success: boolean
+  filePath?: string
+  fileName?: string
+  error?: string
+}
+
+export interface BackupInfo {
+  backupDir: string
+  backupCount: number
+  latestBackup: { name: string; size: number; time: number } | null
+  totalSizeBytes: number
+}
+
+export interface BackupApi {
+  runAuto: () => Promise<BackupResult>
+  getInfo: () => Promise<BackupInfo>
+  getDir: () => Promise<string>
+}
+
 export interface AppInfoApi {
   getVersion: () => Promise<string>
   getDbSize: () => Promise<number>
@@ -72,6 +92,7 @@ export interface ElectronApi {
   openCashDrawer: (printerName?: string) => Promise<boolean>
   updater: UpdaterApi
   maintenance: MaintenanceApi
+  backup: BackupApi
   appInfo: AppInfoApi
 }
 
@@ -145,6 +166,17 @@ const api: ElectronApi = {
     },
     runFull: (): Promise<Record<string, MaintenanceResult>> => {
       return ipcRenderer.invoke('maintenance:run-full') as Promise<Record<string, MaintenanceResult>>
+    },
+  },
+  backup: {
+    runAuto: (): Promise<BackupResult> => {
+      return ipcRenderer.invoke('backup:run-auto') as Promise<BackupResult>
+    },
+    getInfo: (): Promise<BackupInfo> => {
+      return ipcRenderer.invoke('backup:get-info') as Promise<BackupInfo>
+    },
+    getDir: (): Promise<string> => {
+      return ipcRenderer.invoke('backup:get-dir') as Promise<string>
     },
   },
   appInfo: {

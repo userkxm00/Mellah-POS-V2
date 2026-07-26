@@ -269,6 +269,96 @@ function registerIpcHandlers(): void {
     return 0
   })
 
+  // ── File-Based Database Backup System ──
+
+  const DEFAULT_BACKUP_DIR = path.join(app.getPath('userData'), 'backups')
+  const MAX_BACKUPS = 14
+
+  function ensureBackupDir(dir: string): void {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
+    }
+  }
+
+  function rotateOldBackups(dir: string): void {
+    try {
+      const files = fs.readdirSync(dir)
+        .filter(f => f.startsWith('mellah-pos-backup-') && f.endsWith('.json'))
+        .map(f => ({ name: f, time: fs.statSync(path.join(dir, f)).mtimeMs }))
+        .sort((a, b) => b.time - a.time) // newest first
+
+      // Delete backups beyond MAX_BACKUPS
+      for (let i = MAX_BACKUPS; i < files.length; i++) {
+        try {
+          fs.unlinkSync(path.join(dir, files[i].name))
+        } catch { /* ignore individual delete failures */ }
+      }
+    } catch { /* directory might not exist yet */ }
+  }
+
+  ipcMain.handle('backup:run-auto', async () => {
+    try {
+      const db = getDatabase()
+      const backupDir = DEFAULT_BACKUP_DIR
+      ensureBackupDir(backupDir)
+
+      const tables = [
+        'branches', 'users', 'categories', 'products', 'product_variants',
+        'stock_movements', 'shifts', 'sales', 'sale_items', 'returns',
+        'customers', 'store_settings', 'audit_logs', 'customer_payments',
+        'suppliers', 'supplier_purchases', 'supplier_payments',
+      ]
+
+      const backupData: Record<string, unknown[]> = {}
+      for (const table of tables) {
+        try {
+          backupData[table] = await db.query(`SELECT * FROM ${table}`)
+        } catch { /* table might not exist */ }
+      }
+
+      const dateStr = new Date().toISOString().replace(/[:.]/g, '-')
+      const fileName = `mellah-pos-backup-${dateStr}.json`
+      const filePath = path.join(backupDir, fileName)
+
+      fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), 'utf-8')
+
+      // Rotate old backups
+      rotateOldBackups(backupDir)
+
+      return { success: true, filePath, fileName }
+    } catch (err) {
+      return { success: false, error: (err as Error).message }
+    }
+  })
+
+  ipcMain.handle('backup:get-info', () => {
+    try {
+      const backupDir = DEFAULT_BACKUP_DIR
+      ensureBackupDir(backupDir)
+
+      const files = fs.readdirSync(backupDir)
+        .filter(f => f.startsWith('mellah-pos-backup-') && f.endsWith('.json'))
+        .map(f => {
+          const stats = fs.statSync(path.join(backupDir, f))
+          return { name: f, size: stats.size, time: stats.mtimeMs }
+        })
+        .sort((a, b) => b.time - a.time)
+
+      return {
+        backupDir,
+        backupCount: files.length,
+        latestBackup: files[0] ?? null,
+        totalSizeBytes: files.reduce((sum, f) => sum + f.size, 0),
+      }
+    } catch {
+      return { backupDir: DEFAULT_BACKUP_DIR, backupCount: 0, latestBackup: null, totalSizeBytes: 0 }
+    }
+  })
+
+  ipcMain.handle('backup:get-dir', () => {
+    return DEFAULT_BACKUP_DIR
+  })
+
   // ── Database Maintenance ──
   ipcMain.handle('maintenance:vacuum', async () => {
     try {
