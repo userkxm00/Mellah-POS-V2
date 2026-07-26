@@ -1,6 +1,6 @@
 -- ============================================================
 -- MELLAH POS — Supabase Cloud Database Master Schema & RLS Setup
--- PostgreSQL Migration, Indexes & Row-Level Security (RLS) Policies
+-- PostgreSQL Migration, Indexes & Fail-Closed RLS Policies
 -- ============================================================
 
 -- 1. DROP TABLES IF THEY ALREADY EXIST (Clean Slate)
@@ -282,70 +282,70 @@ RETURNS BOOLEAN AS $$
   );
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
--- 5. REAL TENANT-ISOLATED RLS POLICIES (AUTHENTICATED & BRANCH RESTRICTED)
+-- 5. STRICT FAIL-CLOSED TENANT-ISOLATED RLS POLICIES (AUTHENTICATED & BRANCH RESTRICTED)
 
 -- Branches
 CREATE POLICY "Branches Branch Isolation Read" ON branches 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Branches Admin Write" ON branches 
-  FOR ALL USING (auth.role() = 'authenticated' AND (is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND is_admin());
 
 -- Users
 CREATE POLICY "Users Branch Isolation Read" ON users 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Users Admin Write" ON users 
-  FOR ALL USING (auth.role() = 'authenticated' AND (is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND is_admin());
 
 -- Categories
 CREATE POLICY "Categories Branch Isolation Read" ON categories 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Categories Branch Isolation Write" ON categories 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 -- Products
 CREATE POLICY "Products Branch Isolation Read" ON products 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Products Branch Isolation Write" ON products 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 -- Product Variants
 CREATE POLICY "Product Variants Branch Isolation Read" ON product_variants 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Product Variants Branch Isolation Write" ON product_variants 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 -- Stock Movements
 CREATE POLICY "Stock Movements Branch Isolation Read" ON stock_movements 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Stock Movements Branch Isolation Write" ON stock_movements 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 -- Shifts
 CREATE POLICY "Shifts Branch Isolation Read" ON shifts 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Shifts Branch Isolation Write" ON shifts 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 -- Customers
 CREATE POLICY "Customers Branch Isolation Read" ON customers 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Customers Branch Isolation Write" ON customers 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 -- Sales
 CREATE POLICY "Sales Branch Isolation Read" ON sales 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Sales Branch Isolation Write" ON sales 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 -- Sale Items
 CREATE POLICY "Sale Items Branch Isolation Read" ON sale_items 
@@ -356,21 +356,21 @@ CREATE POLICY "Sale Items Branch Isolation Write" ON sale_items
 
 -- Returns
 CREATE POLICY "Returns Branch Isolation Read" ON returns 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Returns Branch Isolation Write" ON returns 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 -- Store Settings
 CREATE POLICY "Store Settings Branch Isolation Read" ON store_settings 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Store Settings Branch Isolation Write" ON store_settings 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 -- Audit Logs
 CREATE POLICY "Audit Logs Admin Read" ON audit_logs 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND is_admin());
 
 CREATE POLICY "Audit Logs Write" ON audit_logs 
   FOR INSERT WITH CHECK (auth.role() = 'authenticated');
@@ -384,33 +384,33 @@ CREATE POLICY "Sync Queue Branch Isolation Write" ON sync_queue
 
 -- Customer Payments (Debts Repayments)
 CREATE POLICY "Customer Payments Branch Isolation Read" ON customer_payments 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Customer Payments Branch Isolation Write" ON customer_payments 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 -- Suppliers
 CREATE POLICY "Suppliers Branch Isolation Read" ON suppliers 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Suppliers Branch Isolation Write" ON suppliers 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 -- Supplier Purchases
 CREATE POLICY "Supplier Purchases Branch Isolation Read" ON supplier_purchases 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Supplier Purchases Branch Isolation Write" ON supplier_purchases 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 -- Supplier Payments
 CREATE POLICY "Supplier Payments Branch Isolation Read" ON supplier_payments 
-  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR SELECT USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
 CREATE POLICY "Supplier Payments Branch Isolation Write" ON supplier_payments 
-  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin() OR current_user_branch_id() IS NULL));
+  FOR ALL USING (auth.role() = 'authenticated' AND (branch_id = current_user_branch_id() OR is_admin()));
 
--- INDEXES
+-- 6. INDEXES
 CREATE INDEX IF NOT EXISTS idx_users_branch ON users(branch_id);
 CREATE INDEX IF NOT EXISTS idx_products_branch ON products(branch_id);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
