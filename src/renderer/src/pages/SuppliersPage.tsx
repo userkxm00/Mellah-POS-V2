@@ -78,10 +78,16 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     setIsLoading(true)
     try {
       const rows = await window.electron.db.query<SupplierItem>(`
-        SELECT id, name, phone, company_name, address, COALESCE(total_debt_dzd, 0) as total_debt_dzd, notes, created_at
-        FROM suppliers
-        WHERE branch_id = ?
-        ORDER BY total_debt_dzd DESC, name ASC
+        SELECT 
+          s.id, s.name, s.phone, s.company_name, s.address, 
+          (
+            COALESCE((SELECT SUM(sp.remaining_debt_dzd) FROM supplier_purchases sp WHERE sp.supplier_id = s.id), 0) -
+            COALESCE((SELECT SUM(pay.amount_dzd) FROM supplier_payments pay WHERE pay.supplier_id = s.id), 0)
+          ) as total_debt_dzd,
+          s.notes, s.created_at
+        FROM suppliers s
+        WHERE s.branch_id = ?
+        ORDER BY total_debt_dzd DESC, s.name ASC
       `, [DEFAULT_BRANCH_ID]).catch(() => [])
       setSuppliers(rows)
     } catch {
@@ -143,19 +149,11 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       const purchaseId = generateUUID()
       const now = new Date().toISOString()
 
-      await window.electron.db.transaction([
-        {
-          sql: `INSERT INTO supplier_purchases (id, branch_id, supplier_id, invoice_number, total_amount_dzd, paid_amount_dzd, remaining_debt_dzd, notes, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          params: [purchaseId, DEFAULT_BRANCH_ID, purchasingSupplier.id, invoiceNo.trim() || null, total, paid, remainingDebt, purchaseNotes.trim() || null, now],
-        },
-        {
-          sql: `UPDATE suppliers 
-                SET total_debt_dzd = COALESCE(total_debt_dzd, 0) + ?, updated_at = ? 
-                WHERE id = ?`,
-          params: [remainingDebt, now, purchasingSupplier.id],
-        },
-      ])
+      await window.electron.db.execute(
+        `INSERT INTO supplier_purchases (id, branch_id, supplier_id, invoice_number, total_amount_dzd, paid_amount_dzd, remaining_debt_dzd, notes, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [purchaseId, DEFAULT_BRANCH_ID, purchasingSupplier.id, invoiceNo.trim() || null, total, paid, remainingDebt, purchaseNotes.trim() || null, now]
+      )
 
       addToast({ message: `تم تسجيل فاتورة الشراء وتحديث ديون المورد ${purchasingSupplier.name}! 📦`, variant: 'success' })
       setPurchasingSupplier(null)
@@ -185,19 +183,11 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       const paymentId = generateUUID()
       const now = new Date().toISOString()
 
-      await window.electron.db.transaction([
-        {
-          sql: `INSERT INTO supplier_payments (id, branch_id, supplier_id, amount_dzd, payment_method, notes, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          params: [paymentId, DEFAULT_BRANCH_ID, repayingSupplier.id, amount, repayMethod, repayNotes.trim() || null, now],
-        },
-        {
-          sql: `UPDATE suppliers 
-                SET total_debt_dzd = MAX(0, COALESCE(total_debt_dzd, 0) - ?), updated_at = ? 
-                WHERE id = ?`,
-          params: [amount, now, repayingSupplier.id],
-        },
-      ])
+      await window.electron.db.execute(
+        `INSERT INTO supplier_payments (id, branch_id, supplier_id, amount_dzd, payment_method, notes, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [paymentId, DEFAULT_BRANCH_ID, repayingSupplier.id, amount, repayMethod, repayNotes.trim() || null, now]
+      )
 
       addToast({ message: `تم تسجيل تسديد مستحقات المورد ${repayingSupplier.name} بمبلغ ${amount.toLocaleString('ar-DZ')} دج! 💵`, variant: 'success' })
       setRepayingSupplier(null)

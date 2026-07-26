@@ -174,3 +174,51 @@ export interface ShiftSummary extends Shift {
   total_sales_amount: number
   cashier_name: string
 }
+
+export interface CustomerPayment {
+  id: string
+  branch_id: string
+  shift_id: string | null
+  customer_id: string
+  sale_id: string | null
+  amount_dzd: number
+  payment_method: 'cash' | 'card'
+  notes: string | null
+  created_at: string
+}
+
+export interface Supplier {
+  id: string
+  branch_id: string
+  name: string
+  phone: string | null
+  company_name: string | null
+  address: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SupplierPurchase {
+  id: string
+  branch_id: string
+  supplier_id: string
+  invoice_number: string | null
+  total_amount_dzd: number
+  paid_amount_dzd: number
+  remaining_debt_dzd: number
+  notes: string | null
+  created_at: string
+}
+
+export interface SupplierPayment {
+  id: string
+  branch_id: string
+  supplier_id: string
+  purchase_id: string | null
+  amount_dzd: number
+  payment_method: 'cash' | 'card'
+  notes: string | null
+  created_at: string
+}
+

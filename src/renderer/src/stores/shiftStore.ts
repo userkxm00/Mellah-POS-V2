@@ -105,18 +105,34 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
 
     set({ isLoading: true, error: null })
     try {
-      // 1. Calculate cash sales for this shift
+      // 1. Calculate actual physical cash collected from sales during this shift
       const salesRows = await window.electron.db.query<{ total_cash_sales: number | null }>(
-        `SELECT SUM(total_dzd) as total_cash_sales 
+        `SELECT SUM(
+           CASE 
+             WHEN payment_method = 'cash' THEN total_dzd 
+             WHEN payment_method IN ('mixed', 'credit') THEN COALESCE(cash_amount_dzd, paid_amount_dzd, 0) 
+             ELSE 0 
+           END
+         ) as total_cash_sales 
          FROM sales 
-         WHERE shift_id = ? AND payment_method IN ('cash', 'mixed') AND status = 'completed'`,
+         WHERE shift_id = ? AND status = 'completed' AND deleted_at IS NULL`,
         [currentShift.id]
       )
 
       const cashSalesTotal = salesRows[0]?.total_cash_sales ?? 0
 
-      // 2. Expected cash = Opening cash + Cash Sales
-      const expectedCash = currentShift.opening_cash_dzd + cashSalesTotal
+      // 1b. Calculate cash debt repayments collected from customers during this shift
+      const repaymentRows = await window.electron.db.query<{ total_repayments: number | null }>(
+        `SELECT SUM(amount_dzd) as total_repayments 
+         FROM customer_payments 
+         WHERE shift_id = ? AND payment_method = 'cash'`,
+        [currentShift.id]
+      ).catch(() => [{ total_repayments: 0 }])
+
+      const cashRepaymentsTotal = repaymentRows[0]?.total_repayments ?? 0
+
+      // 2. Expected cash = Opening cash + Cash Sales + Cash Debt Repayments
+      const expectedCash = currentShift.opening_cash_dzd + cashSalesTotal + cashRepaymentsTotal
 
       // 3. Difference = Closing cash - Expected cash
       const difference = closingCashDzd - expectedCash

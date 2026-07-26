@@ -107,16 +107,15 @@ export async function processSale(
     ],
   })
 
-  // 1b. Update Customer Loyalty Points and Total Debt Balance
+  // 1b. Update Customer Loyalty Points
   if (customerId) {
     const pointsEarned = Math.floor(totalDzd / 100)
     operations.push({
       sql: `UPDATE customers 
             SET loyalty_points = loyalty_points + ?, 
-                total_debt_dzd = COALESCE(total_debt_dzd, 0) + ?, 
                 updated_at = ? 
             WHERE id = ?`,
-      params: [pointsEarned, remainingDebtDzd, now, customerId],
+      params: [pointsEarned, now, customerId],
     })
   }
 

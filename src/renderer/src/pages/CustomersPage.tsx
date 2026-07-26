@@ -3,7 +3,7 @@ import { ArrowRight, Plus, Search, Award, Phone, Trash2, History, Receipt, Edit3
 import { Card, Input, Modal, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
-import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+import { DEFAULT_BRANCH_ID, useShiftStore } from '@/stores/shiftStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
 
@@ -65,6 +65,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
   const [editPhone, setEditPhone] = useState<string>('')
   const [isEditSaving, setIsEditSaving] = useState<boolean>(false)
 
+  const activeShift = useShiftStore((s) => s.activeShift)
   const addToast = useToastStore((s) => s.addToast)
 
   const loadCustomers = useCallback(async () => {
@@ -74,7 +75,10 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         SELECT 
           c.id, c.full_name, c.phone, c.loyalty_points, 
           COALESCE(c.store_credit_balance, 0) as store_credit_balance,
-          COALESCE(c.total_debt_dzd, 0) as total_debt_dzd,
+          (
+            COALESCE((SELECT SUM(s.remaining_debt_dzd) FROM sales s WHERE s.customer_id = c.id AND s.status = 'completed' AND s.deleted_at IS NULL), 0) -
+            COALESCE((SELECT SUM(cp.amount_dzd) FROM customer_payments cp WHERE cp.customer_id = c.id), 0)
+          ) as total_debt_dzd,
           c.created_at,
           COALESCE(SUM(s.total_dzd), 0) as total_spent_dzd,
           COUNT(s.id) as total_sales_count
@@ -189,19 +193,11 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       const paymentId = generateUUID()
       const now = new Date().toISOString()
 
-      await window.electron.db.transaction([
-        {
-          sql: `INSERT INTO customer_payments (id, branch_id, customer_id, amount_dzd, payment_method, notes, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          params: [paymentId, DEFAULT_BRANCH_ID, payingDebtCustomer.id, amount, repayMethod, repayNotes.trim() || null, now],
-        },
-        {
-          sql: `UPDATE customers 
-                SET total_debt_dzd = MAX(0, COALESCE(total_debt_dzd, 0) - ?), updated_at = ? 
-                WHERE id = ?`,
-          params: [amount, now, payingDebtCustomer.id],
-        },
-      ])
+      await window.electron.db.execute(
+        `INSERT INTO customer_payments (id, branch_id, shift_id, customer_id, amount_dzd, payment_method, notes, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [paymentId, DEFAULT_BRANCH_ID, activeShift?.id || null, payingDebtCustomer.id, amount, repayMethod, repayNotes.trim() || null, now]
+      )
 
       addToast({ message: `تم تسديد مبلغ ${amount.toLocaleString('ar-DZ')} دج لـ ${payingDebtCustomer.full_name} بنجاح! 💵`, variant: 'success' })
       setPayingDebtCustomer(null)
