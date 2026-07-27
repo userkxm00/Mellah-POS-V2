@@ -541,34 +541,34 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
                     ? t('نقداً')
                     : selectedSale.payment_method === 'card'
                       ? t('بطاقة CIB')
-                      : `${t('مزدوج')} (${selectedSale.cash_amount_dzd ?? 0} دج نقد + ${selectedSale.card_amount_dzd ?? 0} دج كارت)`}
+                      : `${t('مزدوج')} (${selectedSale.cash_amount_dzd ?? 0} ${t('دج نقد')} + ${selectedSale.card_amount_dzd ?? 0} ${t('دج كارت')})`}
                 </p>
               </div>
             </div>
 
             {selectedSale.status === 'voided' && (
               <div className="p-3 bg-danger/10 border border-danger/20 rounded-xl text-xs text-danger font-bold">
-                🚫 {t('فواتير ملغاة')}. السبب: {selectedSale.void_reason ?? 'بدون سبب مذكور'}
+                🚫 {t('فواتير ملغاة')}. {t('السبب:')} {selectedSale.void_reason ?? t('بدون سبب مذكور')}
               </div>
             )}
 
             {/* Itemized Table */}
-            <div className="border border-gray-200/80 rounded-2xl overflow-hidden">
+            <div className="border border-gray-200/80 dark:border-slate-800 rounded-2xl overflow-hidden">
               <table className="w-full text-right text-xs">
-                <thead className="bg-gray-50 border-b border-gray-200/80 font-bold text-text-secondary">
+                <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200/80 dark:border-slate-800 font-bold text-text-secondary dark:text-slate-300">
                   <tr>
                     <th className="p-3">{t('المنتج')}</th>
-                    <th className="p-3 text-center">{t('الكمية المرتجعة')}</th>
-                    <th className="p-3 text-left">{t('مبلغ الفاتورة')}</th>
+                    <th className="p-3 text-center">{t('الكمية')}</th>
+                    <th className="p-3 text-left">{t('المبلغ')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                   {saleItems.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50/50">
-                      <td className="p-3 font-bold text-text-primary">
+                    <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/50">
+                      <td className="p-3 font-bold text-text-primary dark:text-slate-100">
                         {item.product_name}
                         {(item.size || item.color) && (
-                          <span className="block text-[11px] font-medium text-text-tertiary">
+                          <span className="block text-[11px] font-medium text-text-tertiary dark:text-slate-400">
                             {item.size ? `${t('مقاس:')} ${item.size}` : ''} {item.color ? `${t('لون:')} ${t(item.color)}` : ''}
                           </span>
                         )}
@@ -584,9 +584,9 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
             </div>
 
             {/* Subtotal & Discount display */}
-            <div className="p-3 bg-gray-50 rounded-xl space-y-1.5 text-xs font-semibold">
+            <div className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl space-y-1.5 text-xs font-semibold">
               {selectedSale.subtotal_dzd && selectedSale.subtotal_dzd > selectedSale.total_dzd && (
-                <div className="flex justify-between text-text-tertiary">
+                <div className="flex justify-between text-text-tertiary dark:text-slate-400">
                   <span>{t('المجموع الفرعي:')}</span>
                   <span>{formatCurrency(selectedSale.subtotal_dzd)}</span>
                 </div>
@@ -597,7 +597,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
                   <span>-{formatCurrency(selectedSale.discount_dzd)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-base font-black text-accent pt-1 border-t border-gray-200">
+              <div className="flex justify-between text-base font-black text-accent pt-1 border-t border-gray-200 dark:border-slate-700">
                 <span>{t('المبلغ النهائي المستحق:')}</span>
                 <span>{formatCurrency(selectedSale.total_dzd)}</span>
               </div>
@@ -611,7 +611,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
                   className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-danger/10 hover:bg-danger/20 text-danger text-xs font-bold transition-all"
                 >
                   <Ban className="w-4 h-4" />
-                  <span>إلغاء الفاتورة (Void)</span>
+                  <span>{t('إلغاء الفاتورة (Void)')}</span>
                 </button>
               ) : (
                 <span className="text-xs font-bold text-danger">الفاتورة ملغاة بالفعل</span>

@@ -25,7 +25,7 @@ export function Card({
 }: CardProps): React.JSX.Element {
   const baseStyles = glass
     ? 'glass-card'
-    : 'bg-white dark:bg-slate-800 rounded-3xl border border-gray-200/80 dark:border-slate-700/80 shadow-layered-sm'
+    : 'bg-white dark:bg-slate-900/90 rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-layered-sm'
 
   return (
     <div

@@ -294,6 +294,24 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
 
         {/* Settings Content Panels */}
         <form onSubmit={handleSave} className="md:col-span-3 space-y-5">
+          {/* Top Persistent Save Action Bar */}
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-sm sticky top-0 z-10">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-success animate-pulse" />
+              <span className="text-xs font-bold text-text-secondary dark:text-slate-400">
+                {t('جاهز لحفظ الإعدادات في جميع التبويبات')}
+              </span>
+            </div>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="py-2.5 px-6 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-extrabold shadow-hero-glow transition-all btn-press flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              <span>{isSaving ? t('جاري الحفظ...') : t('حفظ الإعدادات')}</span>
+            </button>
+          </div>
+
           {activeTab === 'store' && (
             <Card className="p-6 space-y-4 border border-gray-200/80 dark:border-slate-800 animate-scale-in">
               <h2 className="text-sm font-black text-text-primary dark:text-slate-100 flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">

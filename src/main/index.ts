@@ -153,7 +153,7 @@ function registerIpcHandlers(): void {
 
   // ── App Relaunch IPC Handler for Language Change ──
   ipcMain.handle('app:relaunch', () => {
-    app.relaunch()
+    app.relaunch({ execPath: process.execPath, args: process.argv.slice(1) })
     app.exit(0)
   })
 
@@ -540,7 +540,7 @@ function createWindow(): void {
     resizable: true,
     maximizable: true,
     minimizable: true,
-    show: false,
+    show: true,
     autoHideMenuBar: true,
     title: 'MELLAH POS',
     icon: appIcon.isEmpty() ? undefined : appIcon,
@@ -555,15 +555,9 @@ function createWindow(): void {
     mainWindow.setIcon(appIcon)
   }
 
-  mainWindow.on('ready-to-show', () => {
-    if (mainWindow && !appIcon.isEmpty()) {
-      mainWindow.setIcon(appIcon)
-    }
-    if (state.isMaximized) {
-      mainWindow?.maximize()
-    }
-    mainWindow?.show()
-  })
+  if (state.isMaximized) {
+    mainWindow.maximize()
+  }
 
   // Save window state on close
   mainWindow.on('close', () => {
@@ -662,16 +656,20 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // ⚡ FAST STARTUP: Create window immediately so splash screen displays instantly
+  // ⚡ INSTANT STARTUP: Create window immediately so HTML/React splash paints instantly (<30ms)
   createWindow()
 
   // Initialize database in background while splash screen is visible
-  await initDatabase()
-
-  // Initialize auto-updater (production only)
-  if (!is.dev && mainWindow) {
-    initAutoUpdater(mainWindow)
-  }
+  initDatabase()
+    .then(() => {
+      if (!is.dev && mainWindow) {
+        initAutoUpdater(mainWindow)
+      }
+    })
+    .catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('Database init error:', err)
+    })
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

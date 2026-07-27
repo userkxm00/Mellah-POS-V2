@@ -385,6 +385,13 @@ const frDictionary: Record<string, string> = {
   'المبلغ الأولي في الصندوق (DA)': 'Fond de caisse initial (DZD)',
   'أدخل مبلغ بداية اليوم': 'Entrez le montant initial',
   'تأكيد وفتح الصندوق': 'Confirmer et ouvrir la caisse',
+  'جاهز لحفظ الإعدادات في جميع التبويبات': 'Prêt à enregistrer dans tous les onglets',
+  'جاري الحفظ...': 'Enregistrement en cours...',
+  'دج نقد': 'DZD espèces',
+  'دج كارت': 'DZD carte',
+  'بدون سبب مذكور': 'Aucune raison spécifiée',
+  'طريقة الدفع:': 'Mode de paiement :',
+  'السبب:': 'Raison :',
 }
 
 interface LanguageState {

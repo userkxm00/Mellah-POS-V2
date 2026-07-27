@@ -46,9 +46,20 @@
     animation-delay: 4s;
   }
 
-  /* Dark Mode Base Surface */
+  /* Dark Mode Base Surface & Form Elements */
   html.dark body {
     @apply bg-[#0F172A] text-slate-100;
+  }
+
+  html.dark select,
+  html.dark option {
+    background-color: #1E293B !important;
+    color: #F8FAFC !important;
+  }
+
+  html.dark input,
+  html.dark textarea {
+    color-scheme: dark;
   }
 
   /* Text Contrast Hierarchy Tokens */
