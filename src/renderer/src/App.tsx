@@ -19,6 +19,8 @@ import { AuditLogPage } from '@/pages/AuditLogPage'
 import { MaintenancePage } from '@/pages/MaintenancePage'
 import { initAutoBackupScheduler } from '@/services/backupService'
 import { ToastContainer } from '@/components/ui'
+import { CommandPalette } from '@/components/ui/CommandPalette'
+import { KeyboardShortcutsModal } from '@/components/ui/KeyboardShortcutsModal'
 import { FirstRunWizardModal } from '@/components/setup/FirstRunWizardModal'
 import { SessionLockModal } from '@/components/auth/SessionLockModal'
 import { useIdleTimer } from '@/hooks/useIdleTimer'
@@ -42,10 +44,6 @@ const SECONDARY_MODULES = new Set([
   'maintenance',
 ])
 
-/**
- * Detects if this renderer instance was opened as a secondary module window.
- * The main process passes `?module=xxx` when creating module windows.
- */
 function getSecondaryModule(): string | null {
   const params = new URLSearchParams(window.location.search)
   return params.get('module')
@@ -60,6 +58,8 @@ export function App(): React.JSX.Element {
 
   const [showSplash, setShowSplash] = useState(true)
   const [currentPage, setCurrentPage] = useState<InWindowRoute>('launcher')
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
 
   const { isLocked, unlockSession } = useIdleTimer(5)
 
@@ -76,15 +76,52 @@ export function App(): React.JSX.Element {
     }
   }, [checkAuthSession])
 
-  // Handle navigation from the launcher
+  // Handle navigation from launcher / command palette
   const handleLauncherNavigate = useCallback((moduleId: string) => {
+    if (moduleId.startsWith('/')) {
+      const cleanRoute = moduleId.replace('/', '')
+      if (cleanRoute === 'pos') setCurrentPage('pos')
+      else if (cleanRoute === 'launcher') setCurrentPage('launcher')
+      else if (SECONDARY_MODULES.has(cleanRoute)) {
+        window.electron.openModuleWindow(cleanRoute)
+      }
+      return
+    }
+
     if (SECONDARY_MODULES.has(moduleId)) {
-      // Open in a new Electron BrowserWindow via IPC
       window.electron.openModuleWindow(moduleId)
     } else {
-      // Navigate in-window
       setCurrentPage(moduleId as InWindowRoute)
     }
+  }, [])
+
+  // Global Keyboard Shortcuts Listener for Ctrl+K and ?
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Command Palette: Ctrl+K or Cmd+K
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setIsCommandPaletteOpen((prev) => !prev)
+        return
+      }
+
+      // Keyboard Shortcuts Overlay: ? (outside input fields)
+      if (e.key === '?' || (e.shiftKey && e.key === '?')) {
+        const target = e.target as HTMLElement
+        const isInput =
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable
+
+        if (!isInput) {
+          e.preventDefault()
+          setIsShortcutsModalOpen((prev) => !prev)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   const goHome = useCallback(() => {
@@ -99,10 +136,10 @@ export function App(): React.JSX.Element {
   // ── Loading state ──
   if (isLoading && !secondaryModule) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#F2F2F7]">
-        <div className="flex flex-col items-center gap-4 bg-white/80 p-8 rounded-3xl shadow-ambient border border-white backdrop-blur-xl">
+      <div className="h-screen w-screen flex items-center justify-center bg-[#F4F5F9] dark:bg-[#0F172A]">
+        <div className="flex flex-col items-center gap-4 bg-white/80 dark:bg-slate-800/80 p-8 rounded-3xl shadow-hero-glow border border-white/60 dark:border-slate-700/60 backdrop-blur-xl">
           <div className="animate-spin rounded-full h-10 w-10 border-3 border-accent border-t-transparent" />
-          <p className="text-sm font-bold text-text-secondary">جاري التحقق من الجلسة...</p>
+          <p className="text-sm font-bold text-[#6B7A8D] dark:text-slate-300">جاري التحقق من الجلسة...</p>
         </div>
       </div>
     )
@@ -123,7 +160,7 @@ export function App(): React.JSX.Element {
   // ════════════════════════════════════════════
   if (secondaryModule) {
     return (
-      <div className="h-screen w-screen overflow-auto bg-[#F2F2F7]">
+      <div className="h-screen w-screen overflow-auto bg-[#F4F5F9] dark:bg-[#0F172A]">
         {secondaryModule === 'history' && <SalesHistoryPage onBack={() => window.close()} />}
         {secondaryModule === 'returns' && <ReturnsPage onBack={() => window.close()} />}
         {secondaryModule === 'customers' && <CustomersPage onBack={() => window.close()} />}
@@ -152,6 +189,15 @@ export function App(): React.JSX.Element {
         {secondaryModule === 'maintenance' && hasRole(['admin']) && (
           <MaintenancePage onBack={() => window.close()} />
         )}
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          onNavigate={handleLauncherNavigate}
+        />
+        <KeyboardShortcutsModal
+          isOpen={isShortcutsModalOpen}
+          onClose={() => setIsShortcutsModalOpen(false)}
+        />
         <ToastContainer />
       </div>
     )
@@ -165,6 +211,15 @@ export function App(): React.JSX.Element {
       <>
         <HomeLauncherPage onNavigate={handleLauncherNavigate} />
         <FirstRunWizardModal />
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          onNavigate={handleLauncherNavigate}
+        />
+        <KeyboardShortcutsModal
+          isOpen={isShortcutsModalOpen}
+          onClose={() => setIsShortcutsModalOpen(false)}
+        />
         <ToastContainer />
       </>
     )
@@ -172,7 +227,7 @@ export function App(): React.JSX.Element {
 
   // In-window pages (POS, history, returns, customers, labels)
   return (
-    <div className="relative h-screen w-screen overflow-hidden flex flex-col bg-[#F2F2F7]">
+    <div className="relative h-screen w-screen overflow-hidden flex flex-col bg-[#F4F5F9] dark:bg-[#0F172A]">
       <main className="flex-1 overflow-auto page-enter">
         {currentPage === 'pos' && <POSCheckoutPage onNavigateToHome={goHome} />}
         {currentPage === 'history' && <SalesHistoryPage onBack={goHome} />}
@@ -182,6 +237,15 @@ export function App(): React.JSX.Element {
       </main>
       <FirstRunWizardModal />
       <SessionLockModal isOpen={isLocked} onUnlock={unlockSession} />
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={handleLauncherNavigate}
+      />
+      <KeyboardShortcutsModal
+        isOpen={isShortcutsModalOpen}
+        onClose={() => setIsShortcutsModalOpen(false)}
+      />
       <ToastContainer />
     </div>
   )

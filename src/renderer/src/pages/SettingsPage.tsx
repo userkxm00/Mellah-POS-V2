@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { ArrowRight, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode, FolderOpen, RefreshCw, HardDrive } from 'lucide-react'
+import { ArrowRight, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode, FolderOpen, RefreshCw, HardDrive, Moon, Sun, Volume2, VolumeX } from 'lucide-react'
 import { Card, Input, Modal, Button } from '@/components/ui'
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { exportDatabaseBackup, importDatabaseBackup } from '@/services/backupService'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore, type Language } from '@/stores/languageStore'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
+import { useThemeStore } from '@/stores/themeStore'
+import { soundService } from '@/services/soundService'
 import { printThermalReceipt, buildReceiptHtml, generateBarcodeSvg, type ReceiptLanguage, RECEIPT_TRANSLATIONS } from '@/services/receiptService'
 
 export interface PrinterInfo {
@@ -23,6 +25,13 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
   const currentLang = useLanguageStore((s) => s.language)
   const setLanguageStore = useLanguageStore((s) => s.setLanguage)
   const t = useLanguageStore((s) => s.t)
+
+  const theme = useThemeStore((s) => s.theme)
+  const setTheme = useThemeStore((s) => s.setTheme)
+  const soundEnabled = useThemeStore((s) => s.soundEnabled)
+  const setSoundEnabled = useThemeStore((s) => s.setSoundEnabled)
+  const soundVolume = useThemeStore((s) => s.soundVolume)
+  const setSoundVolume = useThemeStore((s) => s.setSoundVolume)
 
   // Printer & Receipt settings
   const [printers, setPrinters] = useState<PrinterInfo[]>([])
@@ -316,6 +325,98 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                   onChange={(e) => setSessionTimeout(parseInt(e.target.value) || 5)}
                   className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
                 />
+              </div>
+            </div>
+          </Card>
+
+          {/* Appearance & Sound Settings Card */}
+          <Card className="p-6 space-y-4 border border-gray-200/80 dark:border-slate-700/80">
+            <h2 className="text-sm font-black text-[#1C2B3A] dark:text-slate-100 flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
+              <Sun className="w-4 h-4 text-accent" />
+              <span>المظهر الخارجي والمؤثرات الصوتية (Theme & Sound)</span>
+            </h2>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* Theme Mode Toggle */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200 flex items-center gap-1.5">
+                  <Moon className="w-3.5 h-3.5 text-accent" />
+                  <span>وضع الشاشة (Light / Dark)</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-slate-800 rounded-2xl border border-gray-200/80 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setTheme('light')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      theme === 'light'
+                        ? 'bg-white text-accent shadow-layered-sm font-black'
+                        : 'text-[#6B7A8D] dark:text-slate-400 hover:text-[#1C2B3A]'
+                    }`}
+                  >
+                    <Sun className="w-3.5 h-3.5" />
+                    <span>فاتح (Light)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme('dark')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      theme === 'dark'
+                        ? 'bg-slate-900 text-amber-400 shadow-layered-sm font-black'
+                        : 'text-[#6B7A8D] dark:text-slate-400 hover:text-[#1C2B3A]'
+                    }`}
+                  >
+                    <Moon className="w-3.5 h-3.5" />
+                    <span>داكن (Dark)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Sound Controls */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Volume2 className="w-3.5 h-3.5 text-accent" />
+                    <span>أصوات الكاشير (Web Audio)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => soundService.playSuccess()}
+                    className="text-[10px] text-accent font-bold hover:underline"
+                  >
+                    🔊 تجربة الصوت
+                  </button>
+                </label>
+                <div className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-slate-800/60 rounded-2xl border border-gray-200/80 dark:border-slate-700/80">
+                  <button
+                    type="button"
+                    onClick={() => setSoundEnabled(!soundEnabled)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      soundEnabled
+                        ? 'bg-success/10 text-success border border-success/30'
+                        : 'bg-gray-200 dark:bg-slate-700 text-[#6B7A8D] dark:text-slate-400'
+                    }`}
+                  >
+                    {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                    <span>{soundEnabled ? 'مفعل' : 'صامت'}</span>
+                  </button>
+
+                  {soundEnabled && (
+                    <div className="flex-1 flex items-center gap-2 pr-1">
+                      <input
+                        type="range"
+                        min="0.05"
+                        max="1"
+                        step="0.05"
+                        value={soundVolume}
+                        onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
+                        className="flex-1 accent-accent cursor-pointer h-1.5"
+                      />
+                      <span className="text-[10px] font-mono font-bold text-[#6B7A8D] dark:text-slate-400">
+                        {Math.round(soundVolume * 100)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </Card>

@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   UserPlus,
   Lock,
-  Store,
   Tag,
   Gift,
   Home,
@@ -18,6 +17,9 @@ import {
   Printer
 } from 'lucide-react'
 import { Card, Input, Modal, Button, ToastContainer } from '@/components/ui'
+import { CountUpNumber } from '@/components/ui/CountUpNumber'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { soundService } from '@/services/soundService'
 import { formatCurrency } from '@/lib/format'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
@@ -231,16 +233,19 @@ export function POSCheckoutPage({
       if (match) {
         try {
           addItem(match, match.product_name, match.default_price)
+          soundService.playScan()
           addToast({
             message: `تم إضافة ${match.product_name} (${match.size ?? ''} ${match.color ?? ''})`,
             variant: 'success',
             duration: 2000,
           })
         } catch (err) {
+          soundService.playError()
           const msg = err instanceof Error ? err.message : 'عفواً تعذر إضافة المنتج'
           addToast({ message: msg, variant: 'error' })
         }
       } else {
+        soundService.playError()
         addToast({
           message: `الباركود [${scannedBarcode}] غير موجود في القاعدة`,
           variant: 'warning',
@@ -464,6 +469,7 @@ export function POSCheckoutPage({
 
       const loyaltyMsg = custObj ? ` • تم منح نقاط الولاء للزبون (${custObj.full_name})` : ''
 
+      soundService.playSuccess()
       addToast({
         message: `تم إتمام عملية البيع بنجاح! الإجمالي: ${formatCurrency(res.totalDzd)}${loyaltyMsg}`,
         variant: 'success',
@@ -714,67 +720,76 @@ export function POSCheckoutPage({
                 ))}
               </div>
             ) : filteredVariants.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 bg-white rounded-2xl border border-gray-200/80 p-8 text-center">
-                <Store className="w-12 h-12 text-text-tertiary mb-3 opacity-40" />
-                <p className="text-sm font-bold text-text-secondary">{t('لا توجد منتجات تطابق البحث')}</p>
-                <p className="text-xs text-text-tertiary mt-1">{t('تأكد من اختيار الفئة أو كلمة البحث')}</p>
-              </div>
+              <EmptyState
+                variant="search"
+                title={t('لا توجد منتجات تطابق البحث')}
+                description={t('تأكد من اختيار الفئة أو كلمة البحث بشكل صحيح')}
+                className="my-8"
+              />
             ) : (
               <div className="grid grid-cols-3 gap-4">
-                {filteredVariants.map((v) => {
+                {filteredVariants.map((v, idx) => {
                   const itemPrice = v.price_dzd ?? v.default_price
                   const isOutOfStock = v.current_stock <= 0
 
                   return (
-                    <Card
+                    <div
                       key={v.id}
-                      onClick={() => {
-                        if (!isOutOfStock) {
-                          addItem(v, v.product_name, itemPrice)
-                          addToast({
-                            message: `تم إضافة ${v.product_name}`,
-                            variant: 'success',
-                            duration: 1500,
-                          })
-                        }
-                      }}
-                      className={`p-4 border border-gray-200/80 transition-all flex flex-col justify-between h-36 ${
-                        isOutOfStock ? 'opacity-50 grayscale bg-gray-50 cursor-not-allowed' : 'cursor-pointer hover:border-accent'
-                      }`}
+                      className="stagger-item"
+                      style={{ '--stagger-index': Math.min(idx, 12) } as React.CSSProperties}
                     >
-                      <div>
-                        <div className="flex items-start justify-between gap-1 mb-1">
-                          <h3 className="font-extrabold text-sm text-text-primary line-clamp-1">
-                            {v.product_name}
-                          </h3>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent">
-                            {t(v.category_name ?? 'عام')}
+                      <Card
+                        onClick={() => {
+                          if (!isOutOfStock) {
+                            addItem(v, v.product_name, itemPrice)
+                            soundService.playScan()
+                            addToast({
+                              message: `تم إضافة ${v.product_name}`,
+                              variant: 'success',
+                              duration: 1500,
+                            })
+                          } else {
+                            soundService.playError()
+                          }
+                        }}
+                        className={`p-4 border border-gray-200/80 dark:border-slate-700/80 transition-all flex flex-col justify-between h-36 ${
+                          isOutOfStock ? 'opacity-50 grayscale bg-gray-50 dark:bg-slate-800/40 cursor-not-allowed' : 'cursor-pointer hover:border-accent'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-1 mb-1">
+                            <h3 className="font-extrabold text-sm text-[#1C2B3A] dark:text-slate-100 line-clamp-1">
+                              {v.product_name}
+                            </h3>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent">
+                              {t(v.category_name ?? 'عام')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-xs text-[#6B7A8D] dark:text-slate-400 font-semibold">
+                            {v.size && <span className="bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded-md">{t('مقاس:')} {v.size}</span>}
+                            {v.color && <span className="bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded-md">{t('لون:')} {t(v.color)}</span>}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-700/60">
+                          <span className="currency font-black text-accent text-sm">
+                            {formatCurrency(itemPrice)}
+                          </span>
+                          <span
+                            className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                              isOutOfStock
+                                ? 'bg-danger-light text-danger'
+                                : v.current_stock <= 5
+                                  ? 'bg-warning-light text-warning'
+                                  : 'bg-success-light text-success'
+                            }`}
+                          >
+                            {isOutOfStock ? t('نفد') : `${v.current_stock} ${t('قطعة')}`}
                           </span>
                         </div>
-
-                        <div className="flex items-center gap-1.5 text-xs text-text-secondary font-semibold">
-                          {v.size && <span className="bg-gray-100 px-2 py-0.5 rounded-md">{t('مقاس:')} {v.size}</span>}
-                          {v.color && <span className="bg-gray-100 px-2 py-0.5 rounded-md">{t('لون:')} {t(v.color)}</span>}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                        <span className="currency font-black text-accent text-sm">
-                          {formatCurrency(itemPrice)}
-                        </span>
-                        <span
-                          className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                            isOutOfStock
-                              ? 'bg-danger-light text-danger'
-                              : v.current_stock <= 5
-                                ? 'bg-warning-light text-warning'
-                                : 'bg-success-light text-success'
-                          }`}
-                        >
-                          {isOutOfStock ? t('نفد') : `${v.current_stock} ${t('قطعة')}`}
-                        </span>
-                      </div>
-                    </Card>
+                      </Card>
+                    </div>
                   )
                 })}
               </div>
@@ -867,11 +882,12 @@ export function POSCheckoutPage({
           {/* Cart Items List */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 divide-y divide-gray-100">
             {cartItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center text-text-tertiary">
-                <ShoppingCart className="w-12 h-12 opacity-30 mb-2" />
-                <p className="text-xs font-bold">{t('السلة فارغة حالياً')}</p>
-                <p className="text-[11px] mt-0.5">{t('انقر على أي منتج لإضافته للطلب')}</p>
-              </div>
+              <EmptyState
+                variant="cart"
+                title={t('السلة فارغة حالياً')}
+                description={t('اختر السلع من القائمة أو امسح الباركود للبدء')}
+                className="my-auto shadow-none border-none bg-transparent"
+              />
             ) : (
               cartItems.map((item) => (
                 <div key={item.variant_id} className="pt-2 first:pt-0 flex items-center justify-between">
@@ -1014,7 +1030,7 @@ export function POSCheckoutPage({
               )}
               <div className="flex justify-between text-base font-black text-accent pt-1 border-t border-accent/10">
                 <span>{t('المبلغ النهائي المستحق:')}</span>
-                <span>{formatCurrency(cartTotal)}</span>
+                <CountUpNumber value={cartTotal} formatter={(v) => formatCurrency(v)} className="font-extrabold text-base" />
               </div>
             </div>
 
@@ -1022,14 +1038,14 @@ export function POSCheckoutPage({
             <button
               onClick={handleCompleteSale}
               disabled={cartItems.length === 0 || !activeShift || isProcessingSale}
-              className="w-full py-3.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-sm font-extrabold shadow-ambient transition-all duration-200 flex items-center justify-center gap-2 btn-press disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-sm font-extrabold shadow-hero-glow hover:shadow-layered-lg transition-all duration-150 flex items-center justify-center gap-2 btn-press disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isProcessingSale ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
               ) : (
                 <>
                   <CheckCircle2 className="w-5 h-5" />
-                  <span>{t('إتمام عملية البيع')} ({formatCurrency(cartTotal)})</span>
+                  <span>{t('إتمام عملية البيع')} (<CountUpNumber value={cartTotal} formatter={(v) => formatCurrency(v)} />)</span>
                 </>
               )}
             </button>

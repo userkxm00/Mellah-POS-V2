@@ -25,6 +25,7 @@ import {
   Truck
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
+import { CountUpNumber } from '@/components/ui/CountUpNumber'
 import { useAuthStore } from '@/stores/authStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { useToastStore } from '@/stores/toastStore'
@@ -401,9 +402,9 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-text-tertiary">{t('مبيعات اليوم')} ({todayTxCount} {t('عملية')})</p>
+              <p className="text-[11px] font-bold text-text-tertiary dark:text-slate-400">{t('مبيعات اليوم')} ({todayTxCount} {t('عملية')})</p>
               <p className="text-xs font-black text-success mt-0.5 currency font-mono">
-                {formatCurrency(todaySalesDzd)}
+                <CountUpNumber value={todaySalesDzd} formatter={(v) => formatCurrency(v)} />
               </p>
             </div>
           </div>
