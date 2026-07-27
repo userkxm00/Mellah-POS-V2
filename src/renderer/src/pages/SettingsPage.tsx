@@ -235,29 +235,60 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
     }
   }
 
+  const [activeTab, setActiveTab] = useState<'store' | 'printer' | 'theme' | 'backup' | 'language'>('store')
+
+  const tabs = [
+    { id: 'store', label: t('بيانات المتجر'), icon: <Store className="w-4 h-4" /> },
+    { id: 'printer', label: 'طابعة الفواتير', icon: <Printer className="w-4 h-4" /> },
+    { id: 'theme', label: 'المظهر والصوت', icon: <Sun className="w-4 h-4" /> },
+    { id: 'backup', label: 'النسخ الاحتياطي', icon: <Database className="w-4 h-4" /> },
+    { id: 'language', label: t('اللغة والأمان'), icon: <Globe className="w-4 h-4" /> },
+  ]
+
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6 pb-12 select-none">
+    <div className="p-6 max-w-5xl mx-auto space-y-6 pb-12 select-none">
       <div className="flex items-center justify-between">
         <div>
           <button
             onClick={onBack}
-            className="text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 mb-1.5 transition-colors"
+            className="text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 mb-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-accent"
+            aria-label="إغلاق النافذة والعودة"
           >
             <ArrowRight className="w-3.5 h-3.5" />
             <span>{t('إغلاق النافذة')}</span>
           </button>
-          <h1 className="text-2xl font-black text-text-primary">{t('إعدادات المتجر وطابعة الفواتير واللغة والنسخ الاحتياطي')}</h1>
+          <h1 className="text-2xl font-black text-text-primary dark:text-slate-100">{t('إعدادات المتجر وطابعة الفواتير واللغة والنسخ الاحتياطي')}</h1>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        {/* Settings Form Column */}
-        <form onSubmit={handleSave} className="col-span-2 space-y-5">
-          <Card className="p-6 space-y-4 border border-gray-200/80">
-            <h2 className="text-sm font-black text-text-primary flex items-center gap-2 pb-2 border-b border-gray-100">
-              <Store className="w-4 h-4 text-accent" />
-              <span>{t('بيانات المتجر والفواتير')}</span>
-            </h2>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Modern Settings Sidebar Tabs */}
+        <div className="md:col-span-1 space-y-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-extrabold transition-all btn-press focus-visible:ring-2 focus-visible:ring-accent ${
+                activeTab === tab.id
+                  ? 'bg-accent text-white shadow-hero-glow'
+                  : 'bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 text-[#1C2B3A] dark:text-slate-200 hover:border-accent hover:text-accent'
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Settings Content Panels */}
+        <form onSubmit={handleSave} className="md:col-span-3 space-y-5">
+          {activeTab === 'store' && (
+            <Card className="p-6 space-y-4 border border-gray-200/80 dark:border-slate-800 animate-scale-in">
+              <h2 className="text-sm font-black text-text-primary dark:text-slate-100 flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
+                <Store className="w-4 h-4 text-accent" />
+                <span>{t('بيانات المتجر والفواتير')}</span>
+              </h2>
 
             <Input
               label={t('اسم المتجر (المطبوع أعلى الفاتورة)')}
@@ -290,22 +321,35 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                 className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="py-3 px-6 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-extrabold shadow-hero-glow transition-all btn-press flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>حفظ التغييرات</span>
+              </button>
+            </div>
           </Card>
+          )}
 
           {/* Language & Session Timeout Settings Card */}
-          <Card className="p-6 space-y-4 border border-gray-200/80">
-            <h2 className="text-sm font-black text-text-primary flex items-center gap-2 pb-2 border-b border-gray-100">
+          {activeTab === 'language' && (
+          <Card className="p-6 space-y-4 border border-gray-200/80 dark:border-slate-800 animate-scale-in">
+            <h2 className="text-sm font-black text-text-primary dark:text-slate-100 flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
               <Globe className="w-4 h-4 text-accent" />
               <span>{t('اللغة والأمان')}</span>
             </h2>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-text-primary">{t('لغة الواجهة (Language)')}</label>
+                <label className="text-xs font-bold text-text-primary dark:text-slate-200">{t('لغة الواجهة (Language)')}</label>
                 <select
                   value={currentLang}
                   onChange={(e) => setLanguageStore(e.target.value as Language)}
-                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <option value="ar">العربية (RTL)</option>
                   <option value="fr">Français (LTR)</option>
@@ -313,7 +357,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-text-primary flex items-center gap-1">
+                <label className="text-xs font-bold text-text-primary dark:text-slate-200 flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-text-tertiary" />
                   <span>قفل الجلسة عند التوقف (دقائق)</span>
                 </label>
@@ -323,13 +367,15 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                   max={60}
                   value={sessionTimeout}
                   onChange={(e) => setSessionTimeout(parseInt(e.target.value) || 5)}
-                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </div>
             </div>
           </Card>
+          )}
 
           {/* Appearance & Sound Settings Card */}
+          {activeTab === 'theme' && (
           <Card className="p-6 space-y-4 border border-gray-200/80 dark:border-slate-700/80">
             <h2 className="text-sm font-black text-[#1C2B3A] dark:text-slate-100 flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
               <Sun className="w-4 h-4 text-accent" />
@@ -420,20 +466,22 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
               </div>
             </div>
           </Card>
+          )}
 
           {/* Thermal Printer Settings Card */}
-          <Card className="p-6 space-y-4 border border-gray-200/80">
-            <h2 className="text-sm font-black text-text-primary flex items-center gap-2 pb-2 border-b border-gray-100">
+          {activeTab === 'printer' && (
+          <Card className="p-6 space-y-4 border border-gray-200/80 dark:border-slate-800 animate-scale-in">
+            <h2 className="text-sm font-black text-text-primary dark:text-slate-100 flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
               <Printer className="w-4 h-4 text-accent" />
               <span>إعدادات طابعة الفواتير الحرارية (Thermal Printer)</span>
             </h2>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-text-primary">طابعة الفواتير المتصلة بالكمبيوتر</label>
+              <label className="text-xs font-bold text-text-primary dark:text-slate-200">طابعة الفواتير المتصلة بالكمبيوتر</label>
               <select
                 value={selectedPrinter}
                 onChange={(e) => setSelectedPrinter(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full px-4 py-3 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">الطابعة الافتراضية للفرع</option>
                 {printers.map((p) => (
@@ -446,11 +494,11 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-text-primary">عرض ورق الفاتورة الحرارية</label>
+                <label className="text-xs font-bold text-text-primary dark:text-slate-200">عرض ورق الفاتورة الحرارية</label>
                 <select
                   value={paperWidth}
                   onChange={(e) => setPaperWidth(e.target.value as '80mm' | '58mm')}
-                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <option value="80mm">80 مم (80mm Thermal Receipt)</option>
                   <option value="58mm">58 مم (58mm Compact Receipt)</option>
@@ -458,11 +506,11 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-text-primary">لغة طباعة الفاتورة (Receipt Language)</label>
+                <label className="text-xs font-bold text-text-primary dark:text-slate-200">لغة طباعة الفاتورة (Receipt Language)</label>
                 <select
                   value={receiptLanguage}
                   onChange={(e) => setReceiptLanguage(e.target.value as ReceiptLanguage)}
-                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <option value="ar">🇩🇿 العربية (Arabic - RTL)</option>
                   <option value="fr">🇫🇷 Français (French - LTR)</option>
@@ -479,7 +527,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                 onChange={(e) => setAutoPrint(e.target.checked)}
                 className="w-4 h-4 rounded text-accent focus:ring-accent accent-accent cursor-pointer"
               />
-              <label htmlFor="autoPrintCheck" className="text-xs font-bold text-text-primary cursor-pointer">
+              <label htmlFor="autoPrintCheck" className="text-xs font-bold text-text-primary dark:text-slate-200 cursor-pointer">
                 طباعة الفاتورة تلقائياً فور إنهاء عملية البيع
               </label>
             </div>
@@ -524,12 +572,14 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
               </button>
             </div>
           </Card>
+          )}
         </form>
 
-        {/* Database Backup Column */}
-        <div className="col-span-1 space-y-5">
-          <Card className="p-6 space-y-4 border border-gray-200/80">
-            <h2 className="text-sm font-black text-text-primary flex items-center gap-2 pb-2 border-b border-gray-100">
+        {/* Database Backup Section */}
+          {activeTab === 'backup' && (
+          <div className="space-y-5 animate-scale-in">
+          <Card className="p-6 space-y-4 border border-gray-200/80 dark:border-slate-800">
+            <h2 className="text-sm font-black text-text-primary dark:text-slate-100 flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
               <Database className="w-4 h-4 text-success" />
               <span>حماية البيانات والنسخ الاحتياطي</span>
             </h2>
@@ -665,13 +715,11 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
               <p><span className="font-extrabold text-text-primary">إصدار النظام:</span> 1.0.0 Commercial Release</p>
               <p><span className="font-extrabold text-text-primary">قاعدة البيانات:</span> SQLite Offline Sync Engine</p>
               <p><span className="font-extrabold text-text-primary">محرك الواجهة:</span> Electron Desktop Engine</p>
-              <p className="text-[11px] text-text-tertiary pt-2 border-t border-gray-200">
-                برنامج الملاح مخصص ومطور خصيصاً للمحلات التجارية والأنشطة في الجزائر.
-              </p>
             </div>
           </Card>
+          </div>
+          )}
         </div>
-      </div>
 
       {/* Backup Confirmation Modal */}
       <Modal
