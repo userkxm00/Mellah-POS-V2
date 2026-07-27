@@ -52,6 +52,16 @@ export function initAutoUpdater(win: BrowserWindow): void {
   autoUpdater.autoInstallOnAppQuit = true   // Install on next quit
   autoUpdater.allowDowngrade = false
 
+  if (process.env.GH_TOKEN) {
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'userkxm00',
+      repo: 'Mellah-POS-V2',
+      private: true,
+      token: process.env.GH_TOKEN,
+    })
+  }
+
   // ── Events ──
   autoUpdater.on('checking-for-update', () => {
     send({ status: 'checking' })
