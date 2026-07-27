@@ -1,36 +1,31 @@
 import React from 'react'
+import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { SkeletonTableRow } from './Skeleton'
+import { EmptyState } from './EmptyState'
 
 // ----- Types -----
 
-interface Column<T> {
+export interface Column<T> {
   key: string
   header: string
   render?: (row: T) => React.ReactNode
   align?: 'right' | 'left' | 'center'
   width?: string
+  sortable?: boolean
 }
 
-interface TableProps<T> {
+export interface TableProps<T> {
   columns: Column<T>[]
   data: T[]
   loading?: boolean
   emptyMessage?: string
+  emptyType?: 'cart' | 'search' | 'sales' | 'customers'
   onRowClick?: (row: T) => void
   rowKey: (row: T) => string
-}
-
-// ----- Skeleton rows for loading state -----
-
-function SkeletonRow({ colCount }: { colCount: number }): React.JSX.Element {
-  return (
-    <tr>
-      {Array.from({ length: colCount }).map((_, i) => (
-        <td key={i} className="px-4 py-3">
-          <div className="skeleton h-4 w-3/4 rounded" />
-        </td>
-      ))}
-    </tr>
-  )
+  sortKey?: string
+  sortOrder?: 'asc' | 'desc'
+  onSort?: (key: string) => void
+  className?: string
 }
 
 // ----- Component -----
@@ -39,9 +34,14 @@ export function Table<T>({
   columns,
   data,
   loading = false,
-  emptyMessage = 'لا توجد بيانات',
+  emptyMessage = 'لا توجد بيانات متاحة حالياً',
+  emptyType = 'search',
   onRowClick,
   rowKey,
+  sortKey,
+  sortOrder = 'asc',
+  onSort,
+  className = '',
 }: TableProps<T>): React.JSX.Element {
   const alignClass = (align?: string): string => {
     switch (align) {
@@ -55,43 +55,62 @@ export function Table<T>({
   }
 
   return (
-    <div className="overflow-auto rounded-card border border-border-light bg-white">
-      <table className="w-full text-sm">
+    <div className={`overflow-auto rounded-2xl border border-gray-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-layered-sm relative ${className}`}>
+      <table className="w-full text-xs select-none">
         <thead>
-          <tr className="border-b border-border-light bg-bg-base/50">
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                className={[
-                  'px-4 py-3 font-semibold text-text-secondary',
-                  'sticky top-0 bg-bg-base/80 backdrop-blur-sm',
-                  alignClass(col.align),
-                ].join(' ')}
-                style={col.width ? { width: col.width } : undefined}
-              >
-                {col.header}
-              </th>
-            ))}
+          <tr className="border-b border-gray-200/80 dark:border-slate-800 bg-gray-50/90 dark:bg-slate-800/80 backdrop-blur-md">
+            {columns.map((col) => {
+              const isSorted = sortKey === col.key
+              const isSortable = col.sortable && onSort
+
+              return (
+                <th
+                  key={col.key}
+                  onClick={() => isSortable && onSort(col.key)}
+                  className={[
+                    'px-4 py-3.5 font-black text-[#1C2B3A] dark:text-slate-200 tracking-tight',
+                    'sticky top-0 bg-gray-50/95 dark:bg-slate-800/95 backdrop-blur-md z-10',
+                    alignClass(col.align),
+                    isSortable ? 'cursor-pointer hover:text-accent transition-colors' : '',
+                  ].join(' ')}
+                  style={col.width ? { width: col.width } : undefined}
+                >
+                  <div className={`inline-flex items-center gap-1.5 ${col.align === 'left' ? 'justify-start' : col.align === 'center' ? 'justify-center' : 'justify-end'}`}>
+                    <span>{col.header}</span>
+                    {isSortable && (
+                      <span className="text-text-tertiary">
+                        {isSorted ? (
+                          sortOrder === 'asc' ? (
+                            <ArrowUp className="w-3.5 h-3.5 text-accent" />
+                          ) : (
+                            <ArrowDown className="w-3.5 h-3.5 text-accent" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody>
           {loading && (
             <>
-              <SkeletonRow colCount={columns.length} />
-              <SkeletonRow colCount={columns.length} />
-              <SkeletonRow colCount={columns.length} />
-              <SkeletonRow colCount={columns.length} />
-              <SkeletonRow colCount={columns.length} />
+              <SkeletonTableRow cols={columns.length} />
+              <SkeletonTableRow cols={columns.length} />
+              <SkeletonTableRow cols={columns.length} />
+              <SkeletonTableRow cols={columns.length} />
+              <SkeletonTableRow cols={columns.length} />
             </>
           )}
 
           {!loading && data.length === 0 && (
             <tr>
-              <td
-                colSpan={columns.length}
-                className="px-4 py-12 text-center text-text-tertiary"
-              >
-                {emptyMessage}
+              <td colSpan={columns.length} className="px-4 py-12">
+                <EmptyState variant={emptyType} title={emptyMessage} />
               </td>
             </tr>
           )}
@@ -101,18 +120,18 @@ export function Table<T>({
               <tr
                 key={rowKey(row)}
                 className={[
-                  'border-b border-border-light last:border-b-0',
+                  'group border-b border-gray-100 dark:border-slate-800/80 last:border-b-0',
                   'transition-colors duration-150',
                   onRowClick
-                    ? 'cursor-pointer hover:bg-accent-light'
-                    : 'hover:bg-gray-50/50',
+                    ? 'cursor-pointer hover:bg-accent/5 dark:hover:bg-accent/10'
+                    : 'hover:bg-gray-50/80 dark:hover:bg-slate-800/50',
                 ].join(' ')}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    className={['px-4 py-3', alignClass(col.align)].join(' ')}
+                    className={['px-4 py-3 font-medium text-[#1C2B3A] dark:text-slate-200', alignClass(col.align)].join(' ')}
                   >
                     {col.render
                       ? col.render(row)
@@ -126,5 +145,3 @@ export function Table<T>({
     </div>
   )
 }
-
-export type { Column, TableProps }

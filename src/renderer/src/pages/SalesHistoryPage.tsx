@@ -234,10 +234,35 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
   const validSales = filteredSales.filter((s) => s.status !== 'voided')
   const dayTotalDzd = validSales.reduce((acc, curr) => acc + curr.total_dzd, 0)
 
+  const [sortKey, setSortKey] = useState<string>('created_at')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (key: string): void => {
+    if (sortKey === key) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortOrder('desc')
+    }
+  }
+
+  const sortedSales = [...filteredSales].sort((a, b) => {
+    const valA = a[sortKey as keyof SaleRow] ?? ''
+    const valB = b[sortKey as keyof SaleRow] ?? ''
+
+    if (typeof valA === 'number' && typeof valB === 'number') {
+      return sortOrder === 'asc' ? valA - valB : valB - valA
+    }
+    return sortOrder === 'asc'
+      ? String(valA).localeCompare(String(valB))
+      : String(valB).localeCompare(String(valA))
+  })
+
   const columns: Column<SaleRow>[] = [
     {
       key: 'id',
       header: t('رقم الفاتورة'),
+      sortable: true,
       render: (row) => (
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-accent/10 text-accent">
@@ -255,6 +280,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
     {
       key: 'cashier_name',
       header: t('الكاشير والزبون'),
+      sortable: true,
       render: (row) => (
         <div>
           <span className="font-bold text-text-primary text-xs block">{row.cashier_name ?? t('كاشير الفرع')}</span>
@@ -265,6 +291,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
     {
       key: 'payment_method',
       header: t('طريقة الدفع'),
+      sortable: true,
       render: (row) => {
         const isCash = row.payment_method === 'cash'
         const isCard = row.payment_method === 'card'
@@ -287,6 +314,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
     {
       key: 'total_dzd',
       header: t('مبلغ الفاتورة'),
+      sortable: true,
       render: (row) => (
         <div>
           <span className={`currency font-black text-sm block ${row.status === 'voided' ? 'line-through text-text-tertiary' : 'text-accent'}`}>
@@ -301,6 +329,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
     {
       key: 'status',
       header: t('الحالة'),
+      sortable: true,
       render: (row) => (
         <span
           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
@@ -320,9 +349,10 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
       header: t('التفاصيل والطباعة'),
       align: 'left',
       render: (row) => (
-        <div className="flex items-center gap-1.5">
+        <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex justify-end gap-1.5">
           <button
             onClick={() => handleOpenDetail(row)}
+            aria-label="عرض التفاصيل والطباعة"
             className="flex items-center gap-1 px-3 py-1 rounded-xl bg-accent/10 hover:bg-accent/20 text-accent font-bold text-xs transition-colors btn-press"
           >
             <Eye className="w-3.5 h-3.5" />
@@ -466,12 +496,16 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
       </div>
 
       {/* Sales Table */}
-      <Card padding="compact" className="overflow-hidden border border-gray-200/80">
+      <Card padding="compact" className="overflow-hidden border border-gray-200/80 dark:border-slate-800">
         <Table
           columns={columns}
-          data={filteredSales}
+          data={sortedSales}
           loading={isLoading}
           rowKey={(row) => row.id}
+          sortKey={sortKey}
+          sortOrder={sortOrder}
+          onSort={handleSort}
+          emptyType="sales"
           emptyMessage={t('لا توجد مبيعات مسجلة في هذا التاريخ')}
         />
       </Card>

@@ -71,10 +71,32 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
     )
   }
 
+  const [sortKey, setSortKey] = useState<string>('created_at')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (key: string): void => {
+    if (sortKey === key) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortOrder('desc')
+    }
+  }
+
+  const sortedLogs = [...filteredLogs].sort((a, b) => {
+    const valA = a[sortKey as keyof AuditLogRow] ?? ''
+    const valB = b[sortKey as keyof AuditLogRow] ?? ''
+
+    return sortOrder === 'asc'
+      ? String(valA).localeCompare(String(valB))
+      : String(valB).localeCompare(String(valA))
+  })
+
   const columns: Column<AuditLogRow>[] = [
     {
       key: 'created_at',
       header: 'التاريخ والوقت',
+      sortable: true,
       render: (row) => (
         <span className="text-xs font-mono text-text-secondary">
           {new Date(row.created_at).toLocaleString('ar-DZ')}
@@ -84,6 +106,7 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
     {
       key: 'user_name',
       header: 'المستخدم / المنفذ',
+      sortable: true,
       render: (row) => (
         <div className="flex items-center gap-1.5 font-bold text-xs text-text-primary">
           <User className="w-3.5 h-3.5 text-accent" />
@@ -94,11 +117,13 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
     {
       key: 'action',
       header: 'نوع العملية (Action)',
+      sortable: true,
       render: (row) => actionBadge(row.action),
     },
     {
       key: 'entity_name',
       header: 'القسم / النطاق',
+      sortable: true,
       render: (row) => <span className="text-xs font-bold text-text-secondary">{row.entity_name}</span>,
     },
     {
@@ -144,13 +169,17 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
       </div>
 
       {/* Audit Log Table */}
-      <Card padding="compact" className="overflow-hidden border border-gray-200/80">
+      <Card padding="compact" className="overflow-hidden border border-gray-200/80 dark:border-slate-800">
         <Table
           columns={columns}
-          data={filteredLogs}
+          data={sortedLogs}
           loading={isLoading}
           rowKey={(row) => row.id}
-          emptyMessage="لا توجد حركات مسجلة في سجل التدقيق بعد"
+          sortKey={sortKey}
+          sortOrder={sortOrder}
+          onSort={handleSort}
+          emptyType="search"
+          emptyMessage="لا توجد حركات مسجلة في سجل التدقيق تطابق البحث"
         />
       </Card>
     </div>

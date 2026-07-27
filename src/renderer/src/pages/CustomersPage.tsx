@@ -238,11 +238,35 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       setIsTimelineLoading(false)
     }
   }
+  const [sortKey, setSortKey] = useState<string>('full_name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+
+  const handleSort = (key: string): void => {
+    if (sortKey === key) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortOrder('asc')
+    }
+  }
+
+  const sortedCustomers = [...filteredCustomers].sort((a, b) => {
+    const valA = a[sortKey as keyof CustomerItem] ?? ''
+    const valB = b[sortKey as keyof CustomerItem] ?? ''
+
+    if (typeof valA === 'number' && typeof valB === 'number') {
+      return sortOrder === 'asc' ? valA - valB : valB - valA
+    }
+    return sortOrder === 'asc'
+      ? String(valA).localeCompare(String(valB))
+      : String(valB).localeCompare(String(valA))
+  })
 
   const columns: Column<CustomerItem>[] = [
     {
       key: 'full_name',
       header: 'اسم الزبون والتصنيف',
+      sortable: true,
       render: (row) => {
         const spent = row.total_spent_dzd
         const tier =
@@ -277,6 +301,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     {
       key: 'phone',
       header: 'رقم الهاتف',
+      sortable: true,
       render: (row) => (
         <span className="flex items-center gap-1.5 text-xs font-bold text-text-secondary font-mono">
           <Phone className="w-3.5 h-3.5 text-text-tertiary" />
@@ -286,7 +311,8 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     },
     {
       key: 'total_debt_dzd',
-      header: 'الديون المستحقة (Dette)',
+      header: 'الديون المستحقة',
+      sortable: true,
       render: (row) => (
         row.total_debt_dzd > 0 ? (
           <div className="flex items-center gap-2">
@@ -298,38 +324,25 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
                 setPayingDebtCustomer(row)
                 setRepayAmountDzd(String(row.total_debt_dzd))
               }}
-              className="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black transition-all btn-press shadow-sm"
+              className="px-2.5 py-1 rounded-lg bg-red-600 text-white text-xs font-black hover:bg-red-700 transition-colors btn-press shadow-sm"
             >
-              تسديد
+              تسديد الدين
             </button>
           </div>
         ) : (
-          <span className="text-xs text-emerald-600 font-extrabold">خالي من الديون ✅</span>
+          <span className="text-xs text-text-tertiary font-bold">—</span>
         )
       ),
     },
     {
       key: 'loyalty_points',
       header: 'نقاط الولاء',
+      sortable: true,
       render: (row) => (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-warning/10 text-warning border border-warning/20 text-xs font-black">
-          <Award className="w-3.5 h-3.5 text-warning" />
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-extrabold">
+          <Award className="w-3.5 h-3.5 text-amber-500" />
           <span>{row.loyalty_points} نقطة</span>
         </span>
-      ),
-    },
-    {
-      key: 'store_credit_balance',
-      header: 'رصيد المتجر',
-      render: (row) => (
-        row.store_credit_balance > 0 ? (
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-success/10 text-success border border-success/20 text-xs font-black">
-            <Wallet className="w-3.5 h-3.5" />
-            <span>{row.store_credit_balance.toLocaleString('ar-DZ')} دج</span>
-          </span>
-        ) : (
-          <span className="text-xs text-text-tertiary font-bold">—</span>
-        )
       ),
     },
     {
@@ -337,9 +350,10 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       header: 'الإجراءات',
       align: 'left',
       render: (row) => (
-        <div className="flex items-center gap-1">
+        <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center justify-end gap-1">
           <button
             onClick={() => handleOpenTimeline(row)}
+            aria-label="عرض سجل المشتريات"
             className="flex items-center gap-1 text-xs text-accent font-bold bg-accent/10 hover:bg-accent/20 px-2 py-1 rounded-lg transition-colors btn-press"
           >
             <History className="w-3.5 h-3.5" />
@@ -347,6 +361,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
           </button>
           <button
             onClick={() => handleOpenEditCustomer(row)}
+            aria-label="تعديل الزبون"
             className="flex items-center gap-1 text-xs text-warning font-bold hover:bg-warning/10 px-2 py-1 rounded-lg transition-colors"
           >
             <Edit3 className="w-3.5 h-3.5" />
@@ -354,6 +369,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
           </button>
           <button
             onClick={() => handleDeleteCustomer(row.id, row.full_name)}
+            aria-label="حذف الزبون"
             className="flex items-center gap-1 text-xs text-danger font-bold hover:bg-danger/10 px-2 py-1 rounded-lg transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -399,13 +415,17 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         />
       </div>
 
-      <Card padding="compact" className="overflow-hidden border border-gray-200/80">
+      <Card padding="compact" className="overflow-hidden border border-gray-200/80 dark:border-slate-800">
         <Table
           columns={columns}
-          data={filteredCustomers}
+          data={sortedCustomers}
           loading={isLoading}
           rowKey={(row) => row.id}
-          emptyMessage="لا يوجد زبائن مسجلين حالياً"
+          sortKey={sortKey}
+          sortOrder={sortOrder}
+          onSort={handleSort}
+          emptyType="customers"
+          emptyMessage="لا يوجد زبائن مسجلين يطابقون البحث"
         />
       </Card>
 

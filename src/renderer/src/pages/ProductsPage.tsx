@@ -53,6 +53,8 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
   const [isAutoReorderModalOpen, setIsAutoReorderModalOpen] = useState<boolean>(false)
   const [lowStockVariants, setLowStockVariants] = useState<LowStockVariant[]>([])
   const [isFilterLowStockOnly, setIsFilterLowStockOnly] = useState<boolean>(false)
+  const [sortKey, setSortKey] = useState<string>('name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
   // Bulk Price Update State
   const [isBulkPriceModalOpen, setIsBulkPriceModalOpen] = useState<boolean>(false)
@@ -217,18 +219,40 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
     return matchesCat && matchesLowStock && matchesSearch
   })
 
+  const handleSort = (key: string): void => {
+    if (sortKey === key) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortOrder('asc')
+    }
+  }
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    const valA = a[sortKey as keyof ProductRow] ?? ''
+    const valB = b[sortKey as keyof ProductRow] ?? ''
+
+    if (typeof valA === 'number' && typeof valB === 'number') {
+      return sortOrder === 'asc' ? valA - valB : valB - valA
+    }
+    return sortOrder === 'asc'
+      ? String(valA).localeCompare(String(valB))
+      : String(valB).localeCompare(String(valA))
+  })
+
   const columns: Column<ProductRow>[] = [
     {
       key: 'name',
       header: 'المنتج',
+      sortable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-accent/10 text-accent">
+          <div className="p-2 rounded-xl bg-accent/10 text-accent border border-accent/20">
             <Package className="w-4 h-4" />
           </div>
           <div>
-            <p className="font-extrabold text-text-primary text-sm">{row.name}</p>
-            <p className="text-xs font-semibold text-text-tertiary">{row.category_name ?? 'بدون فئة'}</p>
+            <p className="font-extrabold text-[#1C2B3A] dark:text-slate-100 text-sm">{row.name}</p>
+            <p className="text-xs font-semibold text-[#6B7A8D] dark:text-slate-400">{row.category_name ?? 'بدون فئة'}</p>
           </div>
         </div>
       ),
@@ -236,20 +260,23 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
     {
       key: 'price_dzd',
       header: 'السعر الافتراضي',
+      sortable: true,
       render: (row) => <span className="currency font-black text-accent">{formatCurrency(row.price_dzd)}</span>,
     },
     {
       key: 'variant_count',
       header: 'عدد الخيارات',
+      sortable: true,
       render: (row) => (
-        <span className="px-3 py-1 rounded-full bg-gray-100 text-text-secondary text-xs font-bold border border-gray-200/60">
+        <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-slate-800 text-[#6B7A8D] dark:text-slate-300 text-xs font-bold border border-gray-200/60 dark:border-slate-700">
           {row.variant_count} خيارات
         </span>
       ),
     },
     {
       key: 'total_stock',
-      header: 'إجمالي المخزون (Ledger)',
+      header: 'إجمالي المخزون',
+      sortable: true,
       render: (row) => (
         <span
           className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold border ${
@@ -269,16 +296,19 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
       header: 'الإجراءات',
       align: 'left',
       render: (row) => (
-        <button
-          onClick={() => {
-            setSelectedProductId(row.id)
-            setView('detail')
-          }}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-gray-200/80 text-text-primary text-xs font-bold shadow-ambient-sm hover:bg-gray-100 transition-all btn-press"
-        >
-          <Eye className="w-3.5 h-3.5 text-accent" />
-          <span>التفاصيل والجرد</span>
-        </button>
+        <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex justify-end">
+          <button
+            onClick={() => {
+              setSelectedProductId(row.id)
+              setView('detail')
+            }}
+            aria-label="عرض التفاصيل والجرد"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-xs font-bold shadow-layered-sm hover:border-accent hover:text-accent transition-all btn-press"
+          >
+            <Eye className="w-3.5 h-3.5 text-accent" />
+            <span>التفاصيل والجرد</span>
+          </button>
+        </div>
       ),
     },
   ]
@@ -451,13 +481,17 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
       </div>
 
       {/* Products Table */}
-      <Card padding="compact" className="overflow-hidden border border-gray-200/80">
+      <Card padding="compact" className="overflow-hidden border border-gray-200/80 dark:border-slate-800">
         <Table
           columns={columns}
-          data={filteredProducts}
+          data={sortedProducts}
           loading={isLoading}
           rowKey={(row) => row.id}
-          emptyMessage="لا توجد منتجات مسجلة طابق البحث"
+          sortKey={sortKey}
+          sortOrder={sortOrder}
+          onSort={handleSort}
+          emptyType="search"
+          emptyMessage="لا توجد منتجات مسجلة تطابق البحث"
         />
       </Card>
 

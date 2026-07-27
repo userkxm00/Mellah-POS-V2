@@ -164,11 +164,32 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
       setIsPinSaving(false)
     }
   }
+  const [sortKey, setSortKey] = useState<string>('full_name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+
+  const handleSort = (key: string): void => {
+    if (sortKey === key) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortOrder('asc')
+    }
+  }
+
+  const sortedUsers = [...users].sort((a, b) => {
+    const valA = a[sortKey as keyof UserItem] ?? ''
+    const valB = b[sortKey as keyof UserItem] ?? ''
+
+    return sortOrder === 'asc'
+      ? String(valA).localeCompare(String(valB))
+      : String(valB).localeCompare(String(valA))
+  })
 
   const columns: Column<UserItem>[] = [
     {
       key: 'full_name',
       header: 'الاسم الكامل',
+      sortable: true,
       render: (row) => (
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-accent/10 text-accent font-black text-xs flex items-center justify-center border border-accent/20">
@@ -181,6 +202,7 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
     {
       key: 'role',
       header: 'الدور / الصلاحية',
+      sortable: true,
       render: (row) => {
         const labels: Record<UserRole, { title: string; icon: React.ReactNode; style: string }> = {
           admin: { title: 'مدير نظام', icon: <Crown className="w-3.5 h-3.5" />, style: 'bg-accent/10 text-accent border-accent/20' },
@@ -206,9 +228,10 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
       header: 'الإجراءات',
       align: 'left',
       render: (row) => (
-        <div className="flex items-center gap-1">
+        <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center justify-end gap-1">
           <button
             onClick={() => handleOpenEdit(row)}
+            aria-label="تعديل المستخدم"
             className="flex items-center gap-1 text-xs text-accent font-bold hover:bg-accent/10 px-2 py-1 rounded-lg transition-colors"
           >
             <Edit3 className="w-3.5 h-3.5" />
@@ -216,13 +239,15 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
           </button>
           <button
             onClick={() => { setChangePinUser(row); setNewPin(''); setConfirmPin('') }}
+            aria-label="تغيير رمز PIN"
             className="flex items-center gap-1 text-xs text-warning font-bold hover:bg-warning/10 px-2 py-1 rounded-lg transition-colors"
           >
             <KeyRound className="w-3.5 h-3.5" />
-            <span>PIN</span>
+            <span>تغيير PIN</span>
           </button>
           <button
             onClick={() => handleDeleteUser(row.id, row.full_name)}
+            aria-label="حذف المستخدم"
             className="flex items-center gap-1 text-xs text-danger font-bold hover:bg-danger/10 px-2 py-1 rounded-lg transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -256,12 +281,17 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
         </button>
       </div>
 
-      <Card padding="compact" className="overflow-hidden border border-gray-200/80">
+      <Card padding="compact" className="overflow-hidden border border-gray-200/80 dark:border-slate-800">
         <Table
           columns={columns}
-          data={users}
+          data={sortedUsers}
           loading={isLoading}
           rowKey={(row) => row.id}
+          sortKey={sortKey}
+          sortOrder={sortOrder}
+          onSort={handleSort}
+          emptyType="search"
+          emptyMessage="لا يوجد مستخدمين حالياً"
         />
       </Card>
 

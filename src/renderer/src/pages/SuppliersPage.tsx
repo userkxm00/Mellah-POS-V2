@@ -228,6 +228,17 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       setIsStatementLoading(false)
     }
   }
+  const [sortKey, setSortKey] = useState<string>('name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+
+  const handleSort = (key: string): void => {
+    if (sortKey === key) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortOrder('asc')
+    }
+  }
 
   const filteredSuppliers = suppliers.filter((s) => {
     const q = searchQuery.trim().toLowerCase()
@@ -239,10 +250,23 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     )
   })
 
+  const sortedSuppliers = [...filteredSuppliers].sort((a, b) => {
+    const valA = a[sortKey as keyof SupplierItem] ?? ''
+    const valB = b[sortKey as keyof SupplierItem] ?? ''
+
+    if (typeof valA === 'number' && typeof valB === 'number') {
+      return sortOrder === 'asc' ? valA - valB : valB - valA
+    }
+    return sortOrder === 'asc'
+      ? String(valA).localeCompare(String(valB))
+      : String(valB).localeCompare(String(valA))
+  })
+
   const columns: Column<SupplierItem>[] = [
     {
       key: 'name',
       header: 'اسم المورد والشركة',
+      sortable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-blue-50 text-accent font-black text-sm flex items-center justify-center border border-blue-200">
@@ -265,6 +289,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     {
       key: 'phone',
       header: 'رقم الهاتف',
+      sortable: true,
       render: (row) => (
         <span className="flex items-center gap-1.5 text-xs font-bold text-text-secondary font-mono">
           <Phone className="w-3.5 h-3.5 text-text-tertiary" />
@@ -274,7 +299,8 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     },
     {
       key: 'total_debt_dzd',
-      header: 'ديون المورد المستحقة (Dettes)',
+      header: 'ديون المورد المستحقة',
+      sortable: true,
       render: (row) => (
         row.total_debt_dzd > 0 ? (
           <div className="flex items-center gap-2">
@@ -286,13 +312,13 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
                 setRepayingSupplier(row)
                 setRepayAmountDzd(String(row.total_debt_dzd))
               }}
-              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black transition-all btn-press shadow-sm"
+              className="px-2.5 py-1 rounded-lg bg-amber-600 text-white text-xs font-black hover:bg-amber-700 transition-colors btn-press shadow-sm"
             >
-              تسديد المستحقات
+              تسديد الدين
             </button>
           </div>
         ) : (
-          <span className="text-xs text-emerald-600 font-extrabold">مُسدد بالكامل ✅</span>
+          <span className="text-xs text-emerald-600 font-extrabold">خالي من الديون ✅</span>
         )
       ),
     },
@@ -301,20 +327,29 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       header: 'الإجراءات',
       align: 'left',
       render: (row) => (
-        <div className="flex items-center gap-1.5">
+        <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center justify-end gap-1.5">
           <button
-            onClick={() => setPurchasingSupplier(row)}
-            className="flex items-center gap-1 text-xs text-accent font-bold bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg transition-colors btn-press"
+            onClick={() => {
+              setPurchasingSupplier(row)
+              setInvoiceNo('')
+              setPurchaseTotalDzd('')
+              setPurchasePaidDzd('')
+              setPurchaseNotes('')
+            }}
+            aria-label="إضافة فاتورة شراء"
+            className="flex items-center gap-1 text-xs text-white font-bold bg-accent hover:bg-accent-hover px-2.5 py-1 rounded-lg transition-colors btn-press shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>فاتورة شراء</span>
           </button>
+
           <button
             onClick={() => handleOpenStatement(row)}
+            aria-label="كشف الحساب"
             className="flex items-center gap-1 text-xs text-text-secondary font-bold bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-lg transition-colors"
           >
             <History className="w-3.5 h-3.5" />
-            <span>كشف</span>
+            <span>كشف حساب</span>
           </button>
         </div>
       ),
@@ -363,9 +398,13 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         <Table
           rowKey={(row) => (row as SupplierItem).id}
           columns={columns as unknown as Column<unknown>[]}
-          data={filteredSuppliers}
+          data={sortedSuppliers}
           loading={isLoading}
-          emptyMessage="لا يوجد موردين مسجلين حالياً. اضغط 'إضافة مورد جديد' للبدء."
+          sortKey={sortKey}
+          sortOrder={sortOrder}
+          onSort={handleSort}
+          emptyType="search"
+          emptyMessage="لا يوجد موردين مسجلين يطابقون البحث. اضغط 'إضافة مورد جديد' للبدء."
         />
       </Card>
 
