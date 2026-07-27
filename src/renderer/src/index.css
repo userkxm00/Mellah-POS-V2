@@ -159,6 +159,18 @@
     animation-delay: calc(var(--stagger-index, 0) * 30ms);
   }
 
+  /* Hero POS Launcher Tile Highlight */
+  .launcher-tile-hero {
+    @apply relative bg-gradient-to-br from-[#0A84FF] via-[#0066FF] to-[#004BB5] text-white rounded-3xl border border-accent/40 shadow-hero-glow
+           flex flex-col items-center justify-between p-5 transition-all duration-200 cursor-pointer select-none ring-2 ring-accent/30 font-bold;
+  }
+  .launcher-tile-hero:hover {
+    @apply shadow-hero-glow -translate-y-1.5 ring-4 ring-accent/50 border-white/40;
+  }
+  .launcher-tile-hero:active {
+    @apply translate-y-0 scale-[0.98];
+  }
+
   /* Stock Badge Variants */
   .stock-ok {
     @apply bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20;

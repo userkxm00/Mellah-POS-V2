@@ -62,7 +62,6 @@ export function AnimatedBrandLogo({
             <h1 className={`${currentSize.title} font-black text-accent tracking-wider leading-tight drop-shadow-sm`}>
               MELLAH POS
             </h1>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" title="System Active" />
           </div>
           {subtitle && (
             <p className={`${currentSize.sub} font-bold text-text-secondary tracking-widest uppercase opacity-85`}>
