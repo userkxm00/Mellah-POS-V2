@@ -120,15 +120,17 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="أدخل اسم المنتج"
+              isValid={name.trim().length >= 2}
+              error={name.length > 0 && name.trim().length < 2 ? 'اسم المنتج يجب أن يحتوي على حرفين على الأقل' : undefined}
               required
             />
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-text-primary">الفئة</label>
+              <label className="text-xs font-extrabold text-[#1C2B3A] dark:text-slate-200">الفئة</label>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl text-sm bg-white border border-border focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -145,6 +147,8 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
               value={priceDzd}
               onChange={(e) => setPriceDzd(e.target.value)}
               placeholder="0"
+              isValid={parseFloat(priceDzd) > 0}
+              error={priceDzd !== '' && (isNaN(parseFloat(priceDzd)) || parseFloat(priceDzd) <= 0) ? 'السعر يجب أن يكون مبلغاً موجباً أكبر من 0' : undefined}
               required
             />
 
@@ -155,6 +159,7 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
               value={costDzd}
               onChange={(e) => setCostDzd(e.target.value)}
               placeholder="0"
+              isValid={costDzd !== '' && parseFloat(costDzd) >= 0}
             />
           </div>
 

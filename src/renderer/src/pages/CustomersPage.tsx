@@ -429,13 +429,20 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         />
       </Card>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="إضافة زبون جديد للمتجر">
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="إضافة زبون جديد للمتجر"
+        isDirty={fullName.trim().length > 0 || phone.trim().length > 0}
+      >
         <form onSubmit={handleAddCustomer} className="space-y-4">
           <Input
             label="اسم الزبون الكامل"
             placeholder="مثال: ياسمين بن علي"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
+            isValid={fullName.trim().length >= 2}
+            error={fullName.length > 0 && fullName.trim().length < 2 ? 'اسم الزبون يجب أن يحتوي على حرفين على الأقل' : undefined}
             required
             autoFocus
           />
