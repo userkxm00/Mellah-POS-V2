@@ -19,6 +19,7 @@ import {
 import { Card, Input, Modal, Button, ToastContainer } from '@/components/ui'
 import { CountUpNumber } from '@/components/ui/CountUpNumber'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ConfettiBurst } from '@/components/ui/ConfettiBurst'
 import { soundService } from '@/services/soundService'
 import { formatCurrency } from '@/lib/format'
 import { useCartStore } from '@/stores/cartStore'
@@ -118,6 +119,8 @@ export function POSCheckoutPage({
   const [isLocked, setIsLocked] = useState<boolean>(false)
   const [isQuickAddCustomerOpen, setIsQuickAddCustomerOpen] = useState<boolean>(false)
   const [isProcessingSale, setIsProcessingSale] = useState<boolean>(false)
+  const [showConfetti, setShowConfetti] = useState<boolean>(false)
+  const [isReceiptFlying, setIsReceiptFlying] = useState<boolean>(false)
 
   // Mixed payment inputs
   const [isMixedModalOpen, setIsMixedModalOpen] = useState<boolean>(false)
@@ -517,6 +520,30 @@ export function POSCheckoutPage({
         })
       }
 
+      // 5 Signature Delight Moments Trigger
+      setShowConfetti(true)
+      setIsReceiptFlying(true)
+      setTimeout(() => setIsReceiptFlying(false), 800)
+
+      // Milestone Toast Check
+      try {
+        const todayStr = new Date().toISOString().split('T')[0]
+        const [{ count }] = await window.electron.db.query<{ count: number }>(
+          `SELECT COUNT(*) as count FROM sales WHERE DATE(created_at) = ? AND deleted_at IS NULL`,
+          [todayStr]
+        )
+        const milestoneTargets = [5, 10, 25, 50, 100]
+        if (milestoneTargets.includes(count)) {
+          addToast({
+            message: `🎉 مبروك! تم تحقيق ${count} مبيعات لهذا اليوم! استمر في الإنجاز!`,
+            variant: 'success',
+            duration: 5000,
+          })
+        }
+      } catch {
+        // non-blocking
+      }
+
       clearCart()
       setSelectedCustomerId(null)
       setTenderedCashInput('')
@@ -568,9 +595,20 @@ export function POSCheckoutPage({
   const changeDzd = Math.max(0, tenderedCashNum - cartTotal)
 
   return (
-    <div className="flex flex-col h-screen bg-[#F2F2F7] overflow-hidden select-none">
+    <div className="flex flex-col h-screen bg-[#F2F2F7] dark:bg-slate-950 overflow-hidden select-none relative animate-fade-in">
+      {/* 5 Signature Delight Moments: Confetti Burst */}
+      {showConfetti && <ConfettiBurst onComplete={() => setShowConfetti(false)} />}
+
+      {/* Flying Receipt Badge animation */}
+      {isReceiptFlying && (
+        <div className="fixed bottom-24 right-24 z-70 bg-accent text-white px-4 py-2 rounded-2xl shadow-layered-deep text-xs font-black flex items-center gap-2 animate-bounce transition-all duration-700 transform -translate-y-96 opacity-90 pointer-events-none">
+          <Printer className="w-4 h-4 animate-spin" />
+          <span>🧾 جاري ترحيل الفاتورة للطابعة...</span>
+        </div>
+      )}
+
       {/* Top Header */}
-      <header className="glass-header border-b border-gray-200/80 px-6 py-3 flex items-center justify-between z-10 shadow-layered-sm">
+      <header className="glass-header border-b border-gray-200/80 dark:border-slate-800 px-6 py-3 flex items-center justify-between z-10 shadow-layered-sm">
         <div className="flex items-center gap-3">
           {onNavigateToHome && (
             <button

@@ -10,3 +10,5 @@ export { CommandPalette } from './CommandPalette'
 export { KeyboardShortcutsModal } from './KeyboardShortcutsModal'
 export { CountUpNumber } from './CountUpNumber'
 export { EmptyState } from './EmptyState'
+export { ConfettiBurst } from './ConfettiBurst'
+

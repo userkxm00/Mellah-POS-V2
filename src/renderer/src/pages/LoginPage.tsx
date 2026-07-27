@@ -129,10 +129,11 @@ export function LoginPage(): React.JSX.Element {
   // ════════════════════════════════════════════
   if (!selectedUser) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#F2F2F7] p-6 select-none relative overflow-hidden">
-        {/* Ambient glow */}
-        <div className="absolute w-[600px] h-[600px] bg-accent/10 rounded-full blur-3xl pointer-events-none -top-20 -right-20" />
-        <div className="absolute w-[400px] h-[400px] bg-accent/5 rounded-full blur-3xl pointer-events-none -bottom-10 -left-10" />
+      <div className="flex h-screen w-screen items-center justify-center bg-[#F2F2F7] dark:bg-slate-950 p-6 select-none relative overflow-hidden">
+        {/* Modern 3-Blob Ambient Moving Glow */}
+        <div className="absolute w-[650px] h-[650px] bg-gradient-to-tr from-accent/20 to-blue-400/20 rounded-full blur-3xl pointer-events-none -top-32 -right-32 animate-blob" />
+        <div className="absolute w-[500px] h-[500px] bg-gradient-to-br from-purple-500/15 to-accent/15 rounded-full blur-3xl pointer-events-none -bottom-20 -left-20 animate-blob animation-delay-2000" />
+        <div className="absolute w-[400px] h-[400px] bg-gradient-to-r from-emerald-500/10 to-teal-400/15 rounded-full blur-3xl pointer-events-none top-1/3 left-1/3 animate-blob animation-delay-4000" />
 
         <div className="relative w-full max-w-2xl flex flex-col items-center page-enter">
           {/* Brand Header */}

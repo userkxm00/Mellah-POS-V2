@@ -21,6 +21,31 @@
     overflow: hidden; /* prevent scrollbars on the app shell */
   }
 
+  /* Ambient Blob Keyframe Animations */
+  @keyframes floatBlob {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.95);
+    }
+  }
+
+  .animate-blob {
+    animation: floatBlob 10s infinite ease-in-out;
+  }
+
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
   /* Dark Mode Base Surface */
   html.dark body {
     @apply bg-[#0F172A] text-slate-100;
