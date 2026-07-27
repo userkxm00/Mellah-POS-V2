@@ -38,6 +38,7 @@ import {
 } from '@/services/reportService'
 import { formatCurrency } from '@/lib/format'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface DailyChartPoint {
   day: string
@@ -45,6 +46,7 @@ interface DailyChartPoint {
 }
 
 export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
+  const t = useLanguageStore((s) => s.t)
   const [salesSummary, setSalesSummary] = useState<SalesAnalyticsSummary | null>(null)
   const [topProducts, setTopProducts] = useState<TopProductRow[]>([])
   const [inventoryVal, setInventoryVal] = useState<InventoryValuationSummary | null>(null)
@@ -153,12 +155,12 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
   const shiftAuditColumns: Column<ShiftAuditRow>[] = [
     {
       key: 'cashier_name',
-      header: 'الكاشير',
-      render: (row) => <span className="font-bold text-text-primary text-xs">{row.cashier_name ?? 'غير معروف'}</span>,
+      header: t('الكاشير'),
+      render: (row) => <span className="font-bold text-text-primary text-xs">{row.cashier_name ?? t('غير معروف')}</span>,
     },
     {
       key: 'opening_cash_dzd',
-      header: 'مبلغ الفتح',
+      header: t('مبلغ الفتح'),
       render: (row) => <span className="currency text-xs font-bold">{formatCurrency(row.opening_cash_dzd)}</span>,
     },
     {

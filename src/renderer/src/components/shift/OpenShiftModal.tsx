@@ -3,6 +3,7 @@ import { Banknote, CheckCircle2 } from 'lucide-react'
 import { Modal, Input } from '@/components/ui'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface OpenShiftModalProps {
   isOpen: boolean
@@ -10,6 +11,7 @@ interface OpenShiftModalProps {
 }
 
 export function OpenShiftModal({ isOpen }: OpenShiftModalProps): React.JSX.Element | null {
+  const t = useLanguageStore((s) => s.t)
   const [openingCash, setOpeningCash] = useState<string>('5000')
   const openShift = useShiftStore((s) => s.openShift)
   const isLoading = useShiftStore((s) => s.isLoading)
@@ -19,39 +21,39 @@ export function OpenShiftModal({ isOpen }: OpenShiftModalProps): React.JSX.Eleme
     e.preventDefault()
     const cashVal = parseFloat(openingCash)
     if (isNaN(cashVal) || cashVal < 0) {
-      addToast({ message: 'يرجى إدخال مبلغ فتح الصندوق بشكل صحيح', variant: 'error' })
+      addToast({ message: t('يرجى إدخال مبلغ فتح الصندوق بشكل صحيح'), variant: 'error' })
       return
     }
 
     try {
       await openShift(cashVal)
-      addToast({ message: 'تم فتح الصندوق وبداية وردية العمل بنجاح', variant: 'success' })
+      addToast({ message: t('تم فتح الصندوق وبداية وردية العمل بنجاح'), variant: 'success' })
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'فشل فتح الوردية'
+      const msg = err instanceof Error ? err.message : t('فشل فتح الوردية')
       addToast({ message: msg, variant: 'error' })
     }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={() => {}} title="فتح الصندوق — بداية الدوام">
+    <Modal isOpen={isOpen} onClose={() => {}} title={t('فتح الصندوق — بداية الدوام')}>
       <form onSubmit={handleSubmit} className="space-y-5 select-none">
         <div className="p-4 rounded-2xl bg-accent/10 border border-accent/20 flex items-start gap-3">
           <div className="p-2 rounded-xl bg-accent text-white mt-0.5">
             <Banknote className="w-5 h-5" />
           </div>
           <p className="text-xs font-bold text-text-primary leading-relaxed">
-            مرحباً بك! قبل البدء في عمليات البيع، يرجى إدخال مبلغ السيولة النقدية المتوفرة في أدراج الصندوق (الفكة والسيولة الأولية).
+            {t('مرحباً بك! قبل البدء في عمليات البيع، يرجى إدخال مبلغ السيولة النقدية المتوفرة في أدراج الصندوق (الفكة والسيولة الأولية).')}
           </p>
         </div>
 
         <Input
-          label="المبلغ الأولي في الصندوق (DA)"
+          label={t('المبلغ الأولي في الصندوق (DA)')}
           type="number"
           min="0"
           step="100"
           value={openingCash}
           onChange={(e) => setOpeningCash(e.target.value)}
-          placeholder="أدخل مبلغ بداية اليوم"
+          placeholder={t('أدخل مبلغ بداية اليوم')}
           required
           autoFocus
         />
@@ -67,7 +69,7 @@ export function OpenShiftModal({ isOpen }: OpenShiftModalProps): React.JSX.Eleme
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4" />
-                <span>تأكيد وفتح الصندوق</span>
+                <span>{t('تأكيد وفتح الصندوق')}</span>
               </>
             )}
           </button>

@@ -5,6 +5,7 @@ import type { Column } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import { recordAuditLog } from '@/services/auditLogService'
 import type { UserRole } from '@/types/database'
 
@@ -17,6 +18,7 @@ interface UserItem {
 }
 
 export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
+  const t = useLanguageStore((s) => s.t)
   const [users, setUsers] = useState<UserItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
@@ -49,11 +51,11 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
       )
       setUsers(rows)
     } catch {
-      addToast({ message: 'فشل تحميل قائمة المستخدمين', variant: 'error' })
+      addToast({ message: t('فشل تحميل قائمة المستخدمين'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   useEffect(() => {
     loadUsers()
@@ -62,11 +64,11 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
   const handleAddUser = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     if (!fullName.trim()) {
-      addToast({ message: 'الرجاء إدخال اسم المستخدم الكامل', variant: 'error' })
+      addToast({ message: t('الرجاء إدخال اسم المستخدم الكامل'), variant: 'error' })
       return
     }
     if (pin.length < 4) {
-      addToast({ message: 'رمز PIN يجب أن يكون 4 أرقام على الأقل', variant: 'error' })
+      addToast({ message: t('رمز PIN يجب أن يكون 4 أرقام على الأقل'), variant: 'error' })
       return
     }
     setIsSubmitting(true)
@@ -80,7 +82,7 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
         [userId, DEFAULT_BRANCH_ID, fullName.trim(), role, hashedPin, now, now]
       )
 
-      addToast({ message: `تم إضافة ${fullName.trim()} بنجاح ✅`, variant: 'success' })
+      addToast({ message: `${t('تم إضافة')} ${fullName.trim()} ${t('بنجاح')} ✅`, variant: 'success' })
       recordAuditLog('user_created', 'users', `إضافة مستخدم: ${fullName.trim()} (${role})`, userId).catch(() => {})
       setFullName('')
       setRole('cashier')
@@ -88,22 +90,22 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
       setIsModalOpen(false)
       await loadUsers()
     } catch {
-      addToast({ message: 'فشل إضافة المستخدم', variant: 'error' })
+      addToast({ message: t('فشل إضافة المستخدم'), variant: 'error' })
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleDeleteUser = async (id: string, name: string): Promise<void> => {
-    if (!window.confirm(`هل أنت متأكد من رغبتك في حذف المستخدم (${name})؟`)) return
+    if (!window.confirm(`${t('هل أنت متأكد من رغبتك في حذف المستخدم')} (${name})؟`)) return
     try {
       const now = new Date().toISOString()
       await window.electron.db.execute('UPDATE users SET deleted_at = ? WHERE id = ?', [now, id])
-      addToast({ message: 'تم حذف المستخدم', variant: 'info' })
+      addToast({ message: t('تم حذف المستخدم'), variant: 'info' })
       recordAuditLog('user_deleted', 'users', `حذف المستخدم: ${name}`, id).catch(() => {})
       await loadUsers()
     } catch {
-      addToast({ message: 'فشل حذف المستخدم', variant: 'error' })
+      addToast({ message: t('فشل حذف المستخدم'), variant: 'error' })
     }
   }
 
@@ -123,12 +125,12 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
         'UPDATE users SET full_name = ?, role = ?, updated_at = ? WHERE id = ?',
         [editName.trim(), editRole, now, editingUser.id]
       )
-      addToast({ message: `تم تحديث بيانات المستخدم "${editName.trim()}" ✅`, variant: 'success' })
+      addToast({ message: `${t('تم تحديث بيانات المستخدم')} "${editName.trim()}" ✅`, variant: 'success' })
       recordAuditLog('user_updated', 'users', `تعديل المستخدم: ${editName.trim()} (${editRole})`, editingUser.id).catch(() => {})
       setEditingUser(null)
       await loadUsers()
     } catch {
-      addToast({ message: 'فشل تحديث بيانات المستخدم', variant: 'error' })
+      addToast({ message: t('فشل تحديث بيانات المستخدم'), variant: 'error' })
     } finally {
       setIsEditSaving(false)
     }
@@ -138,11 +140,11 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
   const handleChangePin = async (): Promise<void> => {
     if (!changePinUser) return
     if (newPin.length < 4) {
-      addToast({ message: 'رمز PIN الجديد يجب أن يكون 4 أرقام على الأقل', variant: 'error' })
+      addToast({ message: t('رمز PIN الجديد يجب أن يكون 4 أرقام على الأقل'), variant: 'error' })
       return
     }
     if (newPin !== confirmPin) {
-      addToast({ message: 'رمز PIN الجديد وتأكيده غير متطابقين', variant: 'error' })
+      addToast({ message: t('رمز PIN الجديد وتأكيده غير متطابقين'), variant: 'error' })
       return
     }
     setIsPinSaving(true)
@@ -153,13 +155,13 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
         'UPDATE users SET pin_hash = ?, updated_at = ? WHERE id = ?',
         [hashedPin, now, changePinUser.id]
       )
-      addToast({ message: `تم تغيير رمز PIN لـ "${changePinUser.full_name}" ✅`, variant: 'success' })
+      addToast({ message: `${t('تم تغيير رمز PIN لـ')} "${changePinUser.full_name}" ✅`, variant: 'success' })
       recordAuditLog('user_pin_changed', 'users', `تغيير PIN: ${changePinUser.full_name}`, changePinUser.id).catch(() => {})
       setChangePinUser(null)
       setNewPin('')
       setConfirmPin('')
     } catch {
-      addToast({ message: 'فشل تغيير رمز PIN', variant: 'error' })
+      addToast({ message: t('فشل تغيير رمز PIN'), variant: 'error' })
     } finally {
       setIsPinSaving(false)
     }
@@ -220,12 +222,12 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
     },
     {
       key: 'pin_hash',
-      header: 'رمز PIN',
-      render: () => <span className="font-mono text-xs font-bold text-text-secondary">•••• (مشفر Bcrypt)</span>,
+      header: t('رمز PIN'),
+      render: () => <span className="font-mono text-xs font-bold text-text-secondary">•••• ({t('مشفر Bcrypt')})</span>,
     },
     {
       key: 'actions',
-      header: 'الإجراءات',
+      header: t('الإجراءات'),
       align: 'left',
       render: (row) => (
         <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center justify-end gap-1">

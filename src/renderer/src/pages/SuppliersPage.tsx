@@ -324,7 +324,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     },
     {
       key: 'actions',
-      header: 'الإجراءات',
+      header: t('الإجراءات'),
       align: 'left',
       render: (row) => (
         <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center justify-end gap-1.5">

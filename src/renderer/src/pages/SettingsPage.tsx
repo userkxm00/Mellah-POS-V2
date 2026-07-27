@@ -57,6 +57,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
   const [isExporting, setIsExporting] = useState<boolean>(false)
   const [isImporting, setIsImporting] = useState<boolean>(false)
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState<boolean>(false)
+  const [isRestartModalOpen, setIsRestartModalOpen] = useState<boolean>(false)
+  const [initialLang, setInitialLang] = useState<Language>(currentLang)
   const [pendingBackupContent, setPendingBackupContent] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -99,7 +101,12 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
         setStoreAddress(rows[0].store_address ?? '')
         setStorePhone(rows[0].store_phone ?? '')
         setFooterText(rows[0].receipt_footer_text ?? '')
-        if (rows[0].session_timeout_minutes) setSessionTimeout(rows[0].session_timeout_minutes)
+        if (rows[0].default_language) {
+          setInitialLang(rows[0].default_language as Language)
+        }
+        if (rows[0].session_timeout_minutes) {
+          setSessionTimeout(rows[0].session_timeout_minutes)
+        }
         if (rows[0].default_language) {
           setLanguageStore(rows[0].default_language as Language)
         }
@@ -159,6 +166,10 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
       useStoreSettingsStore.getState().loadSettings()
 
       addToast({ message: 'تم حفظ إعدادات المتجر وطابعة الفواتير واللغة بنجاح! ✅', variant: 'success' })
+
+      if (currentLang !== initialLang) {
+        setIsRestartModalOpen(true)
+      }
     } catch {
       addToast({ message: 'فشل حفظ الإعدادات', variant: 'error' })
     } finally {
@@ -720,6 +731,41 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
           </div>
           )}
         </div>
+
+      {/* Language Restart Modal */}
+      <Modal
+        isOpen={isRestartModalOpen}
+        onClose={() => setIsRestartModalOpen(false)}
+        title={t('تأكيد إعادة تشغيل التطبيق')}
+        size="md"
+      >
+        <div className="space-y-4 select-none">
+          <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 flex items-start gap-3">
+            <RefreshCw className="w-5 h-5 text-accent shrink-0 mt-0.5 animate-spin" />
+            <div className="text-xs font-bold text-blue-900 space-y-1">
+              <p className="font-extrabold text-sm">{t('يلزم إعادة تشغيل التطبيق لتطبيق تغيير اللغة بالكامل')}</p>
+              <p>{t('تم تغيير لغة النظام. اضغط على زر إعادة التشغيل الآن لتطبيق التغيير وإعادة تشغيل البرنامج فوراً.')}</p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setIsRestartModalOpen(false)}
+              className="flex-1 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-text-secondary"
+            >
+              {t('لاحقاً')}
+            </button>
+            <button
+              onClick={() => {
+                window.electron?.relaunchApp()
+              }}
+              className="flex-1 py-3 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-extrabold shadow-ambient btn-press"
+            >
+              {t('إعادة التشغيل الآن')}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Backup Confirmation Modal */}
       <Modal

@@ -151,6 +151,12 @@ function registerIpcHandlers(): void {
     return activeRuntimeUserId
   })
 
+  // ── App Relaunch IPC Handler for Language Change ──
+  ipcMain.handle('app:relaunch', () => {
+    app.relaunch()
+    app.exit(0)
+  })
+
   // ── Hash a PIN for user creation/update ──
   // Called by the renderer when creating or editing a user.
   ipcMain.handle('auth:hash-pin', async (_event, pin: string) => {
@@ -648,9 +654,6 @@ app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.mellah.pos')
 
-  // Initialize the database
-  await initDatabase()
-
   // Register IPC handlers
   registerIpcHandlers()
 
@@ -659,7 +662,11 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  // ⚡ FAST STARTUP: Create window immediately so splash screen displays instantly
   createWindow()
+
+  // Initialize database in background while splash screen is visible
+  await initDatabase()
 
   // Initialize auto-updater (production only)
   if (!is.dev && mainWindow) {

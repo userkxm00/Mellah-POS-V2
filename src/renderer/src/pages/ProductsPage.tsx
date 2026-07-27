@@ -243,7 +243,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
   const columns: Column<ProductRow>[] = [
     {
       key: 'name',
-      header: 'المنتج',
+      header: t('المنتج'),
       sortable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
@@ -252,30 +252,30 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
           </div>
           <div>
             <p className="font-extrabold text-[#1C2B3A] dark:text-slate-100 text-sm">{row.name}</p>
-            <p className="text-xs font-semibold text-[#6B7A8D] dark:text-slate-400">{row.category_name ?? 'بدون فئة'}</p>
+            <p className="text-xs font-semibold text-[#6B7A8D] dark:text-slate-400">{row.category_name ?? t('بدون فئة')}</p>
           </div>
         </div>
       ),
     },
     {
       key: 'price_dzd',
-      header: 'السعر الافتراضي',
+      header: t('السعر الافتراضي'),
       sortable: true,
       render: (row) => <span className="currency font-black text-accent">{formatCurrency(row.price_dzd)}</span>,
     },
     {
       key: 'variant_count',
-      header: 'عدد الخيارات',
+      header: t('عدد الخيارات'),
       sortable: true,
       render: (row) => (
         <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-slate-800 text-[#6B7A8D] dark:text-slate-300 text-xs font-bold border border-gray-200/60 dark:border-slate-700">
-          {row.variant_count} خيارات
+          {row.variant_count} {t('خيارات')}
         </span>
       ),
     },
     {
       key: 'total_stock',
-      header: 'إجمالي المخزون',
+      header: t('إجمالي المخزون'),
       sortable: true,
       render: (row) => (
         <span
@@ -287,13 +287,13 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
                 : 'bg-success/10 text-success border-success/20'
           }`}
         >
-          {row.total_stock <= 0 ? 'نفد (0)' : `${row.total_stock} قطعة`}
+          {row.total_stock <= 0 ? t('نفد (0)') : `${row.total_stock} ${t('قطعة')}`}
         </span>
       ),
     },
     {
       key: 'id',
-      header: 'الإجراءات',
+      header: t('الإجراءات'),
       align: 'left',
       render: (row) => (
         <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex justify-end">

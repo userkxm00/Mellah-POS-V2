@@ -107,17 +107,17 @@ export function ReturnsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
     },
     {
       key: 'reason',
-      header: 'سبب الإرجاع',
+      header: t('سبب الإرجاع'),
       render: (row) => <span className="text-xs text-text-secondary">{row.reason}</span>,
     },
     {
       key: 'cashier_name',
-      header: 'الكاشير',
-      render: (row) => <span className="text-xs font-bold text-text-primary">{row.cashier_name ?? 'عام'}</span>,
+      header: t('الكاشير'),
+      render: (row) => <span className="text-xs font-bold text-text-primary">{row.cashier_name ?? t('عام')}</span>,
     },
     {
       key: 'created_at',
-      header: 'التاريخ والوقت',
+      header: t('التاريخ والوقت'),
       render: (row) => (
         <span className="font-mono text-xs text-text-tertiary">
           {new Date(row.created_at).toLocaleString('ar-DZ')}

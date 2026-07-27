@@ -3,6 +3,7 @@ import { ArrowRight, ClipboardList, Search, User } from 'lucide-react'
 import { Card, Input, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface AuditLogRow {
   id: string
@@ -16,6 +17,7 @@ interface AuditLogRow {
 }
 
 export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
+  const t = useLanguageStore((s) => s.t)
   const [logs, setLogs] = useState<AuditLogRow[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [searchQuery, setSearchQuery] = useState<string>('')
@@ -36,11 +38,11 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
       )
       setLogs(rows)
     } catch {
-      addToast({ message: 'فشل تحميل سجل التدقيق والعمليات', variant: 'error' })
+      addToast({ message: t('فشل تحميل سجل التدقيق والعمليات'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   useEffect(() => {
     loadAuditLogs()

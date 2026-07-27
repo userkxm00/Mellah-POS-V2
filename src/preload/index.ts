@@ -109,6 +109,7 @@ export interface ElectronApi {
   maintenance: MaintenanceApi
   backup: BackupApi
   appInfo: AppInfoApi
+  relaunchApp: () => Promise<void>
 }
 
 const api: ElectronApi = {
@@ -207,6 +208,9 @@ const api: ElectronApi = {
     getDbSize: (): Promise<number> => {
       return ipcRenderer.invoke('app:get-db-size') as Promise<number>
     },
+  },
+  relaunchApp: (): Promise<void> => {
+    return ipcRenderer.invoke('app:relaunch') as Promise<void>
   },
 }
 

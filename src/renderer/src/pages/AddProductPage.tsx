@@ -3,6 +3,7 @@ import { Card, Button, Input } from '@/components/ui'
 import { VariantMatrixBuilder } from '@/components/products/VariantMatrixBuilder'
 import { createProductWithVariants, type VariantInput } from '@/services/productService'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface CategoryItem {
   id: string
@@ -15,6 +16,7 @@ interface AddProductPageProps {
 }
 
 export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): React.JSX.Element {
+  const t = useLanguageStore((s) => s.t)
   const [categories, setCategories] = useState<CategoryItem[]>([])
   const [name, setName] = useState<string>('')
   const [categoryId, setCategoryId] = useState<string>('')
@@ -36,9 +38,9 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
         }
       })
       .catch(() => {
-        addToast({ message: 'فشل تحميل الفئات', variant: 'error' })
+        addToast({ message: t('فشل تحميل الفئات'), variant: 'error' })
       })
-  }, [addToast])
+  }, [addToast, t])
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()

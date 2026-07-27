@@ -5,6 +5,7 @@ import type { Column } from '@/components/ui'
 import { formatCurrency } from '@/lib/format'
 import { StockAdjustmentModal } from '@/components/products/StockAdjustmentModal'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import { useAuthStore } from '@/stores/authStore'
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { generateUUID } from '@/lib/uuid'
@@ -49,6 +50,7 @@ export function ProductDetailPage({
   productId,
   onBack,
 }: ProductDetailPageProps): React.JSX.Element {
+  const t = useLanguageStore((s) => s.t)
   const [product, setProduct] = useState<ProductDetailData | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [selectedVariantForAdj, setSelectedVariantForAdj] = useState<{
@@ -302,31 +304,31 @@ export function ProductDetailPage({
   const variantColumns: Column<ProductVariantWithStock>[] = [
     {
       key: 'size',
-      header: 'المقاس',
-      render: (row) => <span className="font-semibold">{row.size ?? 'عام'}</span>,
+      header: t('المقاس'),
+      render: (row) => <span className="font-semibold">{row.size ?? t('عام')}</span>,
     },
     {
       key: 'color',
-      header: 'اللون',
-      render: (row) => <span className="font-semibold">{row.color ?? 'عام'}</span>,
+      header: t('اللون'),
+      render: (row) => <span className="font-semibold">{row.color ?? t('عام')}</span>,
     },
     {
       key: 'barcode',
-      header: 'الباركود',
+      header: t('الباركود'),
       render: (row) => <span className="font-mono text-xs text-text-secondary">{row.barcode ?? '-'}</span>,
     },
     {
       key: 'price_dzd',
-      header: 'السعر الخاص',
+      header: t('السعر الخاص'),
       render: (row) => (
         <span className="currency font-bold text-accent">
-          {row.price_dzd ? formatCurrency(row.price_dzd) : `افتراضي (${formatCurrency(product.price_dzd)})`}
+          {row.price_dzd ? formatCurrency(row.price_dzd) : `${t('افتراضي')} (${formatCurrency(product.price_dzd)})`}
         </span>
       ),
     },
     {
       key: 'current_stock',
-      header: 'المخزون الحالي (Ledger)',
+      header: t('المخزون الحالي (Ledger)'),
       render: (row) => (
         <span
           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
@@ -339,13 +341,13 @@ export function ProductDetailPage({
                   : 'bg-success-light text-success'
           }`}
         >
-          {row.current_stock} وحدة
+          {row.current_stock} {t('وحدة')}
         </span>
       ),
     },
     {
       key: 'actions',
-      header: 'الإجراءات',
+      header: t('الإجراءات'),
       align: 'left',
       render: (row) => (
         <Button
@@ -358,7 +360,7 @@ export function ProductDetailPage({
             })
           }
         >
-          ⚙️ تعديل المخزون
+          ⚙️ {t('تعديل المخزون')}
         </Button>
       ),
     },
@@ -367,7 +369,7 @@ export function ProductDetailPage({
   const movementColumns: Column<StockMovementRow>[] = [
     {
       key: 'created_at',
-      header: 'التاريخ',
+      header: t('التاريخ'),
       render: (row) => (
         <span className="text-xs font-mono text-text-secondary">
           {new Date(row.created_at).toLocaleString('ar-DZ')}
@@ -376,21 +378,21 @@ export function ProductDetailPage({
     },
     {
       key: 'type',
-      header: 'النوع',
+      header: t('النوع'),
       render: (row) => <span className="text-xs font-bold">{movementTypeLabel(row.type)}</span>,
     },
     {
       key: 'variant_id',
-      header: 'الخيار',
+      header: t('الخيار'),
       render: (row) => (
         <span className="text-xs font-semibold text-text-secondary">
-          {row.size ?? 'عام'} / {row.color ?? 'عام'}
+          {row.size ?? t('عام')} / {row.color ?? t('عام')}
         </span>
       ),
     },
     {
       key: 'quantity_change',
-      header: 'الكمية',
+      header: t('الكمية'),
       render: (row) => (
         <span className={`font-black text-sm ${row.quantity_change > 0 ? 'text-success' : 'text-danger'}`}>
           {row.quantity_change > 0 ? `+${row.quantity_change}` : row.quantity_change}
@@ -399,13 +401,13 @@ export function ProductDetailPage({
     },
     {
       key: 'note',
-      header: 'ملاحظة',
+      header: t('ملاحظة'),
       render: (row) => <span className="text-xs text-text-tertiary">{row.note ?? '-'}</span>,
     },
     {
       key: 'id',
-      header: 'بواسطة',
-      render: (row) => <span className="text-xs text-text-tertiary">{row.created_by_name ?? 'النظام'}</span>,
+      header: t('بواسطة'),
+      render: (row) => <span className="text-xs text-text-tertiary">{row.created_by_name ?? t('النظام')}</span>,
     },
   ]
 

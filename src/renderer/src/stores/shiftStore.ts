@@ -3,6 +3,7 @@ import type { Shift } from '@/types/database'
 import { generateUUID } from '@/lib/uuid'
 import { logger } from '@/lib/logger'
 import { useAuthStore } from '@/stores/authStore'
+import { sendShiftOpenedTelegramNotification } from '@/services/telegramService'
 
 // Fallback seed constants if session is empty
 export const DEFAULT_BRANCH_ID = 'b1111111-1111-4111-8111-111111111111'
@@ -88,6 +89,15 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
 
       set({ activeShift: newShift, isLoading: false })
       logger.info('Shift opened successfully', { id, openingCashDzd })
+
+      // Send Telegram notification to store owner (non-blocking)
+      sendShiftOpenedTelegramNotification({
+        branchName: useAuthStore.getState().currentBranch?.name || 'الفرع الرئيسي',
+        cashierName: useAuthStore.getState().currentUser?.full_name || 'الكاشير',
+        openingCashDzd: openingCashDzd,
+        openedAt: now,
+      }).catch(() => {})
+
       return newShift
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'فشل في فتح الوردية'

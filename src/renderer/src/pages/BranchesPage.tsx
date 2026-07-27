@@ -4,6 +4,7 @@ import { Card, Input, Modal, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import { recordAuditLog } from '@/services/auditLogService'
 
 interface BranchItem {
@@ -14,6 +15,7 @@ interface BranchItem {
 }
 
 export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
+  const t = useLanguageStore((s) => s.t)
   const [branches, setBranches] = useState<BranchItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
@@ -39,11 +41,11 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
       )
       setBranches(rows)
     } catch {
-      addToast({ message: 'فشل تحميل قائمة الفروع', variant: 'error' })
+      addToast({ message: t('فشل تحميل قائمة الفروع'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   useEffect(() => {
     loadBranches()
@@ -147,7 +149,7 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
     },
     {
       key: 'created_at',
-      header: 'تاريخ الإنشاء',
+      header: t('تاريخ الإنشاء'),
       render: (row) => (
         <span className="text-xs text-text-tertiary font-mono">
           {new Date(row.created_at).toLocaleDateString('ar-DZ')}
@@ -156,7 +158,7 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
     },
     {
       key: 'id',
-      header: 'الإجراءات',
+      header: t('الإجراءات'),
       align: 'left',
       render: (row) => (
         <div className="flex items-center gap-1">
