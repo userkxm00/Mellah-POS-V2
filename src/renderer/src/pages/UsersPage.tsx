@@ -318,35 +318,35 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
       </Modal>
 
       {/* Edit User Modal */}
-      <Modal isOpen={editingUser !== null} onClose={() => setEditingUser(null)} title={`✏️ تعديل بيانات — ${editingUser?.full_name ?? ''}`}>
+      <Modal isOpen={editingUser !== null} onClose={() => setEditingUser(null)} title={`${t('تعديل بيانات')} — ${editingUser?.full_name ?? ''}`}>
         <div className="space-y-4">
-          <Input label="الاسم الكامل" value={editName} onChange={(e) => setEditName(e.target.value)} required autoFocus />
+          <Input label={t('الاسم الكامل')} value={editName} onChange={(e) => setEditName(e.target.value)} required autoFocus />
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-bold text-text-primary">الدور والصلاحية</label>
-            <select value={editRole} onChange={(e) => setEditRole(e.target.value as UserRole)} className="w-full px-4 py-2.5 rounded-xl text-sm bg-white border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent font-bold">
-              <option value="cashier">كاشير</option>
-              <option value="manager">مشرف</option>
-              <option value="admin">مدير</option>
+            <label className="text-sm font-bold text-text-primary">{t('الدور والصلاحية')}</label>
+            <select value={editRole} onChange={(e) => setEditRole(e.target.value as UserRole)} className="w-full px-4 py-2.5 rounded-xl text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent font-bold">
+              <option value="cashier">{t('كاشير')}</option>
+              <option value="manager">{t('مشرف')}</option>
+              <option value="admin">{t('مدير')}</option>
             </select>
           </div>
           <div className="flex gap-3 pt-2">
-            <button onClick={handleSaveEdit} disabled={isEditSaving} className="flex-1 py-3 rounded-xl bg-accent text-white text-sm font-bold shadow-ambient btn-press">حفظ التعديلات</button>
-            <button onClick={() => setEditingUser(null)} className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press">إلغاء</button>
+            <button onClick={handleSaveEdit} disabled={isEditSaving} className="flex-1 py-3 rounded-xl bg-accent text-white text-sm font-bold shadow-ambient btn-press">{t('حفظ التعديلات')}</button>
+            <button onClick={() => setEditingUser(null)} className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press">{t('إلغاء')}</button>
           </div>
         </div>
       </Modal>
 
       {/* Change PIN Modal */}
-      <Modal isOpen={changePinUser !== null} onClose={() => setChangePinUser(null)} title={`🔑 تغيير رمز PIN — ${changePinUser?.full_name ?? ''}`}>
+      <Modal isOpen={changePinUser !== null} onClose={() => setChangePinUser(null)} title={`${t('تغيير رمز PIN')} — ${changePinUser?.full_name ?? ''}`}>
         <div className="space-y-4">
-          <Input label="رمز PIN الجديد" type="password" maxLength={6} placeholder="أدخل 4-6 أرقام" value={newPin} onChange={(e) => setNewPin(e.target.value)} autoFocus />
-          <Input label="تأكيد رمز PIN الجديد" type="password" maxLength={6} placeholder="أعد إدخال الرمز" value={confirmPin} onChange={(e) => setConfirmPin(e.target.value)} />
+          <Input label={t('رمز PIN الجديد')} type="password" maxLength={6} placeholder="أدخل 4-6 أرقام" value={newPin} onChange={(e) => setNewPin(e.target.value)} autoFocus />
+          <Input label={t('تأكيد رمز PIN الجديد')} type="password" maxLength={6} placeholder="أعد إدخال الرمز" value={confirmPin} onChange={(e) => setConfirmPin(e.target.value)} />
           {newPin && confirmPin && newPin !== confirmPin && (
-            <p className="text-xs text-danger font-bold">⚠️ الرمزان غير متطابقين</p>
+            <p className="text-xs text-danger font-bold">{t('الرمزان غير متطابقين')}</p>
           )}
           <div className="flex gap-3 pt-2">
-            <button onClick={handleChangePin} disabled={isPinSaving || newPin.length < 4 || newPin !== confirmPin} className="flex-1 py-3 rounded-xl bg-warning text-white text-sm font-bold shadow-ambient btn-press disabled:opacity-50">تغيير PIN</button>
-            <button onClick={() => setChangePinUser(null)} className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press">إلغاء</button>
+            <button onClick={handleChangePin} disabled={isPinSaving || newPin.length < 4 || newPin !== confirmPin} className="flex-1 py-3 rounded-xl bg-warning text-white text-sm font-bold shadow-ambient btn-press disabled:opacity-50">{t('تغيير PIN')}</button>
+            <button onClick={() => setChangePinUser(null)} className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press">{t('إلغاء')}</button>
           </div>
         </div>
       </Modal>

@@ -447,7 +447,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
                 >
                   {/* Top Badge */}
                   <span className="self-end text-[10px] font-extrabold text-white bg-white/20 px-2.5 py-0.5 rounded-full border border-white/30 backdrop-blur-md shadow-sm">
-                    ⚡ شاشة فوريّة
+                    {t('شاشة سريعة')}
                   </span>
 
                   {/* Icon */}

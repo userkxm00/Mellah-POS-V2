@@ -127,7 +127,7 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
   const columns: Column<BranchItem>[] = [
     {
       key: 'name',
-      header: 'اسم الفرع',
+      header: t('اسم الفرع'),
       render: (row) => (
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-accent/10 text-accent">
@@ -139,11 +139,11 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
     },
     {
       key: 'address',
-      header: 'العنوان / الموقع',
+      header: t('العنوان / الموقع'),
       render: (row) => (
         <span className="flex items-center gap-1 text-text-secondary text-xs font-semibold">
           <MapPin className="w-3.5 h-3.5 text-text-tertiary" />
-          <span>{row.address ?? 'غير محدد'}</span>
+          <span>{row.address ?? t('غير محدد')}</span>
         </span>
       ),
     },
@@ -167,14 +167,14 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
             className="flex items-center gap-1 text-xs text-warning font-bold hover:bg-warning/10 px-2.5 py-1 rounded-lg transition-colors"
           >
             <Edit3 className="w-3.5 h-3.5" />
-            <span>تعديل</span>
+            <span>{t('تعديل')}</span>
           </button>
           <button
             onClick={() => handleDeleteBranch(row.id, row.name)}
             className="flex items-center gap-1 text-xs text-danger font-bold hover:bg-danger/10 px-2.5 py-1 rounded-lg transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>حذف</span>
+            <span>{t('حذف')}</span>
           </button>
         </div>
       ),
@@ -190,9 +190,9 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
             className="text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 mb-1.5 transition-colors"
           >
             <ArrowRight className="w-3.5 h-3.5" />
-            <span>إغلاق النافذة</span>
+            <span>{t('إغلاق النافذة')}</span>
           </button>
-          <h1 className="text-2xl font-black text-text-primary">إدارة فروع المتجر (Multi-Branch)</h1>
+          <h1 className="text-2xl font-black text-text-primary">{t('إدارة الفروع والمحلات')}</h1>
         </div>
 
         <button
@@ -200,25 +200,27 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
           className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-bold shadow-ambient transition-all btn-press"
         >
           <Plus className="w-4 h-4" />
-          <span>إضافة فرع جديد</span>
+          <span>{t('إضافة فرع جديد')}</span>
         </button>
       </div>
 
-      <Card padding="compact" className="overflow-hidden border border-gray-200/80">
+      <Card padding="compact" className="overflow-hidden border border-gray-200/80 dark:border-slate-800">
         <Table
           columns={columns}
           data={branches}
           loading={isLoading}
           rowKey={(row) => row.id}
+          emptyType="search"
+          emptyMessage={t('لا تملك فروعاً إضافية حالياً')}
         />
       </Card>
 
       {/* Add Branch Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="إضافة فرع جديد للمتجر">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={t('إضافة فرع جديد')}>
         <form onSubmit={handleAddBranch} className="space-y-4">
           <Input
-            label="اسم الفرع"
-            placeholder="مثال: فرع وهران — حي العثمانية"
+            label={t('اسم الفرع')}
+            placeholder="مثال: فرع وهران — حي السلام"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -226,7 +228,7 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
           />
 
           <Input
-            label="عنوان الفرع التفصيلي"
+            label={t('العنوان التفصيلي')}
             placeholder="مثال: شارع العربي بن مهيدي، وهران"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
@@ -238,24 +240,24 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
               disabled={isSubmitting}
               className="flex-1 py-3 rounded-xl bg-accent text-white text-sm font-bold shadow-ambient btn-press"
             >
-              حفظ الفرع
+              {t('حفظ الفرع')}
             </button>
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
               className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press"
             >
-              إلغاء
+              {t('إلغاء')}
             </button>
           </div>
         </form>
       </Modal>
 
       {/* Edit Branch Modal */}
-      <Modal isOpen={editingBranch !== null} onClose={() => setEditingBranch(null)} title={`✏️ تعديل فرع — ${editingBranch?.name ?? ''}`}>
+      <Modal isOpen={editingBranch !== null} onClose={() => setEditingBranch(null)} title={`${t('تعديل فرع')} — ${editingBranch?.name ?? ''}`}>
         <div className="space-y-4">
           <Input
-            label="اسم الفرع"
+            label={t('اسم الفرع')}
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
             required
@@ -263,7 +265,7 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
           />
 
           <Input
-            label="عنوان الفرع التفصيلي"
+            label={t('العنوان التفصيلي')}
             value={editAddress}
             onChange={(e) => setEditAddress(e.target.value)}
           />
@@ -274,7 +276,7 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
               disabled={isEditSaving}
               className="flex-1 py-3 rounded-xl bg-accent text-white text-sm font-bold shadow-ambient btn-press"
             >
-              حفظ التعديلات
+              {t('حفظ التعديلات')}
             </button>
             <button
               onClick={() => setEditingBranch(null)}

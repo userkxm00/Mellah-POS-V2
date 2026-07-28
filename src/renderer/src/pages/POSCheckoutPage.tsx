@@ -275,20 +275,6 @@ export function POSCheckoutPage({
     addToast({ message: 'تم تعليق السلة الحالية بنجاح (F2) ⏸️', variant: 'info' })
   }, [cartItems, addToast, holdCart, clearCart, selectedCustomerObj?.full_name])
 
-  // Keyboard Shortcuts (F2 hold, F4 reprint, Enter checkout)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'F2') {
-        e.preventDefault()
-        handleHoldCart()
-      } else if (e.key === 'F4') {
-        e.preventDefault()
-        addToast({ message: 'إعادة طباعة أحدث فاتورة...', variant: 'info' })
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [cartItems, addToast, handleHoldCart])
   const filteredVariants = variants.filter((v) => {
     const matchesCategory = selectedCategoryId ? v.category_id === selectedCategoryId : true
     const q = searchQuery.trim().toLowerCase()
@@ -560,20 +546,20 @@ export function POSCheckoutPage({
       if (e.key === 'F2') {
         e.preventDefault()
         searchInputRef.current?.focus()
-        addToast({ message: '⚡ F2: تم التوجيه لبحث المنتجات والباركود', variant: 'info', duration: 1500 })
+        addToast({ message: t('F2: تم التوجيه لبحث المنتجات والباركود'), variant: 'info', duration: 1500 })
       } else if (e.key === 'F4') {
         e.preventDefault()
         const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
         window.electron?.openCashDrawer(printerName).then(() => {
-          addToast({ message: '💵 F4: تم إرسال أمر فتح درج النقود', variant: 'success', duration: 1500 })
+          addToast({ message: t('F4: تم إرسال أمر فتح درج النقود'), variant: 'success', duration: 1500 })
         }).catch((err) => {
-          addToast({ message: '⚠️ تعذر فتح درج النقود: ' + ((err as Error)?.message || 'تأكد من توصيل الطابعة/الدرج'), variant: 'warning', duration: 3000 })
+          addToast({ message: t('تعذر فتح درج النقود: ') + ((err as Error)?.message || t('تأكد من توصيل الطابعة/الدرج')), variant: 'warning', duration: 3000 })
         })
       } else if (e.key === 'Escape') {
         if (!isMixedModalOpen && !isHeldModalOpen && !isManagerPinOpen) {
           if (cartItems.length > 0) {
             clearCart()
-            addToast({ message: '⚡ ESC: تم تفريغ السلة', variant: 'info', duration: 1500 })
+            addToast({ message: t('ESC: تم تفريغ السلة'), variant: 'info', duration: 1500 })
           }
         }
       } else if (e.key === 'F12') {
@@ -587,7 +573,7 @@ export function POSCheckoutPage({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartItems, isProcessingSale, isMixedModalOpen, isHeldModalOpen, isManagerPinOpen, addToast, clearCart])
+  }, [cartItems, isProcessingSale, isMixedModalOpen, isHeldModalOpen, isManagerPinOpen, addToast, clearCart, t])
 
   const cartSubtotal = getSubtotal()
   const cartTotal = getTotal()

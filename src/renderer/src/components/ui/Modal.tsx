@@ -68,16 +68,29 @@ export function Modal({
     [handleRequestClose]
   )
 
+  const hasFocusedOnOpenRef = useRef(false)
+
   useEffect(() => {
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown)
       document.body.style.overflow = 'hidden'
-      if (contentRef.current) {
-        const firstInput = contentRef.current.querySelector<HTMLElement>('input, button, select')
-        if (firstInput) firstInput.focus()
-        else contentRef.current.focus()
+
+      if (!hasFocusedOnOpenRef.current && contentRef.current) {
+        hasFocusedOnOpenRef.current = true
+        const firstEditable = contentRef.current.querySelector<HTMLElement>(
+          'input:not([type="hidden"]), textarea, select, button:not([aria-label])'
+        )
+        if (firstEditable) {
+          firstEditable.focus()
+        } else {
+          const fallback = contentRef.current.querySelector<HTMLElement>('button')
+          if (fallback) fallback.focus()
+        }
       }
+    } else {
+      hasFocusedOnOpenRef.current = false
     }
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = ''

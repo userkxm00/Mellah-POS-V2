@@ -124,23 +124,21 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
            s.cash_amount_dzd, s.card_amount_dzd, s.payment_method, s.status, s.void_reason,
            u.full_name as cashier_name,
            c.full_name as customer_name,
-           COUNT(si.id) as item_count
+           (SELECT COUNT(*) FROM sale_items si WHERE si.sale_id = s.id) as item_count
          FROM sales s
          LEFT JOIN users u ON u.id = s.cashier_id
          LEFT JOIN customers c ON c.id = s.customer_id
-         LEFT JOIN sale_items si ON si.sale_id = s.id
          WHERE s.deleted_at IS NULL ${dateCondition}
-         GROUP BY s.id
          ORDER BY s.created_at DESC`,
         params
       )
       setSales(rows)
     } catch {
-      addToast({ message: 'فشل تحميل سجل المبيعات', variant: 'error' })
+      addToast({ message: t('فشل تحميل سجل المبيعات'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
-  }, [dateFilter, activeShift, selectedShiftId, startDate, endDate, addToast])
+  }, [dateFilter, activeShift, selectedShiftId, startDate, endDate, addToast, t])
 
   useEffect(() => {
     loadSalesHistory()
