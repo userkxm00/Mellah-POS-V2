@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import bcrypt from 'bcryptjs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { initDatabase, closeDatabase, getDatabase, withTransaction } from './database'
+import { initDatabase, closeDatabase, getDatabase, whenDatabaseReady, withTransaction } from './database'
 import { initAutoUpdater, stopAutoUpdater } from './autoUpdater'
 
 const BCRYPT_ROUNDS = 10
@@ -52,19 +52,19 @@ function saveWindowState(win: BrowserWindow): void {
 // ----- IPC Handlers -----
 
 function registerIpcHandlers(): void {
-  // Generic database query handler (read-only)
+  // Generic database query handler (read-only) - awaits whenDatabaseReady() to handle early queries seamlessly
   ipcMain.handle('db:query', async (_event, sql: string, params: unknown[]) => {
-    const db = getDatabase()
+    const db = await whenDatabaseReady()
     return db.query(sql, params)
   })
 
-  // Generic database execute handler (single write)
+  // Generic database execute handler (single write) - awaits whenDatabaseReady()
   ipcMain.handle('db:execute', async (_event, sql: string, params: unknown[]) => {
-    const db = getDatabase()
+    const db = await whenDatabaseReady()
     return db.execute(sql, params)
   })
 
-  // Transaction handler (multiple writes atomically)
+  // Transaction handler (multiple writes atomically) - awaits whenDatabaseReady()
   ipcMain.handle(
     'db:transaction',
     async (_event, operations: Array<{ sql: string; params: unknown[] }>) => {

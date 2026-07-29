@@ -213,6 +213,12 @@ async function runMigrations(wrapper: DbWrapper): Promise<void> {
   }
 }
 
+export function whenDatabaseReady(): Promise<DbWrapper> {
+  if (activeWrapper) return Promise.resolve(activeWrapper)
+  if (initPromise) return initPromise
+  return initDatabase()
+}
+
 export function getDatabase(): DbWrapper {
   if (!activeWrapper) {
     throw new Error('Database not initialized. Ensure initDatabase() is awaited on app startup.')
@@ -227,7 +233,7 @@ export function closeDatabase(): void {
 }
 
 export async function withTransaction<T>(fn: (wrapper: DbWrapper) => Promise<T>): Promise<T> {
-  const wrapper = getDatabase()
+  const wrapper = await whenDatabaseReady()
   try {
     await wrapper.exec('BEGIN')
     const result = await fn(wrapper)
