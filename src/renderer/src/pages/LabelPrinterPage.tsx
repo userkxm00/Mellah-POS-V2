@@ -104,8 +104,8 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
       if (groupedList.length > 0) {
         setSelectedProductId(groupedList[0].product_id)
       }
-    } catch {
-      addToast({ message: t('فشل تحميل المنتجات للطباعة'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[LabelPrinterPage]", err); addToast({ message: t('فشل تحميل المنتجات للطباعة'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -317,7 +317,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-text-tertiary absolute right-3.5 top-1/2 -translate-y-1/2" />
           <Input
-            placeholder="البحث باسم المنتج، المقاس، اللون، أو الباركود..."
+            placeholder={t('البحث باسم المنتج، المقاس، اللون، أو الباركود...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pr-10 bg-gray-50 border-gray-200 focus:bg-white text-xs font-bold"

@@ -58,8 +58,8 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
       } else {
         set({ loaded: true })
       }
-    } catch {
-      set({ loaded: true })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[storeSettingsStore]", err); set({ loaded: true })
     }
   },
 }))

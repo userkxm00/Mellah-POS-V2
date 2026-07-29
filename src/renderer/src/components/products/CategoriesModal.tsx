@@ -34,8 +34,8 @@ export function CategoriesModal({
         'SELECT id, name FROM categories WHERE deleted_at IS NULL ORDER BY name'
       )
       setCategories(rows)
-    } catch {
-      addToast({ message: 'فشل تحميل الفئات', variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[CategoriesModal]", err); addToast({ message: 'فشل تحميل الفئات', variant: 'error' })
     }
   }, [addToast])
 
@@ -62,8 +62,8 @@ export function CategoriesModal({
       setNewCatName('')
       await fetchCategories()
       onCategoryChanged()
-    } catch {
-      addToast({ message: 'فشل إضافة الفئة', variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[CategoriesModal]", err); addToast({ message: 'فشل إضافة الفئة', variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -84,8 +84,8 @@ export function CategoriesModal({
       setEditingId(null)
       await fetchCategories()
       onCategoryChanged()
-    } catch {
-      addToast({ message: 'فشل تحديث الفئة', variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[CategoriesModal]", err); addToast({ message: 'فشل تحديث الفئة', variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -104,8 +104,8 @@ export function CategoriesModal({
       addToast({ message: 'تم حذف الفئة', variant: 'info' })
       await fetchCategories()
       onCategoryChanged()
-    } catch {
-      addToast({ message: 'فشل حذف الفئة', variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[CategoriesModal]", err); addToast({ message: 'فشل حذف الفئة', variant: 'error' })
     } finally {
       setIsLoading(false)
     }

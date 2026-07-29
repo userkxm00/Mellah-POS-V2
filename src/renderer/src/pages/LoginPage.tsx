@@ -58,8 +58,8 @@ export function LoginPage(): React.JSX.Element {
           `SELECT id, full_name, role FROM users WHERE deleted_at IS NULL ORDER BY role ASC, full_name ASC`
         )
         setUsers(rows)
-      } catch {
-        addToast({ message: t('فشل تحميل قائمة المستخدمين'), variant: 'error' })
+      } catch (err) {// eslint-disable-next-line no-console
+      console.error("[LoginPage]", err); addToast({ message: t('فشل تحميل قائمة المستخدمين'), variant: 'error' })
       } finally {
         setIsLoadingUsers(false)
       }

@@ -62,8 +62,8 @@ export function FirstRunWizardModal(): React.JSX.Element | null {
           [hashedPin, now]
         )
       }
-    } catch {
-      // Fallback
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[FirstRunWizardModal]", err); // Fallback
     }
 
     localStorage.setItem('mellah_store_name', storeName)

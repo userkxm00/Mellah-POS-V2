@@ -22,15 +22,16 @@ function loadSavedHeldCarts(): HeldCart[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY)
     return data ? JSON.parse(data) : []
-  } catch {
-    return []
+  } catch (err) {// eslint-disable-next-line no-console
+      console.error("[heldCartStore]", err); return []
   }
 }
 
 function saveHeldCarts(carts: HeldCart[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(carts))
-  } catch { /* ignore */ }
+  } catch (err) {// eslint-disable-next-line no-console
+      console.error("[heldCartStore]", err); /* ignore */ }
 }
 
 export const useHeldCartStore = create<HeldCartState>((set, get) => ({

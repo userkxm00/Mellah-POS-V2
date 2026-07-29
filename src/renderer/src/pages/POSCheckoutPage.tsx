@@ -213,8 +213,8 @@ export function POSCheckoutPage({
         [branchId, branchId]
       )
       setVariants(variantRows)
-    } catch {
-      addToast({ message: t('فشل تحميل قائمة المنتجات والزبائن للفرع الحالي'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[POSCheckoutPage]", err); addToast({ message: t('فشل تحميل قائمة المنتجات والزبائن للفرع الحالي'), variant: 'error' })
     } finally {
       setIsLoadingVariants(false)
     }
@@ -359,8 +359,8 @@ export function POSCheckoutPage({
       setNewCustPhone('')
       await loadData()
       setSelectedCustomerId(id)
-    } catch {
-      addToast({ message: t('فشل إضافة الزبون'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[POSCheckoutPage]", err); addToast({ message: t('فشل إضافة الزبون'), variant: 'error' })
     }
   }
 
@@ -398,8 +398,8 @@ export function POSCheckoutPage({
       } else {
         addToast({ message: t('رمز PIN الخاص بالمدير غير صحيح'), variant: 'error' })
       }
-    } catch {
-      addToast({ message: t('فشل التحقق من رمز المدير'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[POSCheckoutPage]", err); addToast({ message: t('فشل التحقق من رمز المدير'), variant: 'error' })
     } finally {
       setIsVerifyingPin(false)
     }
@@ -526,8 +526,8 @@ export function POSCheckoutPage({
             duration: 5000,
           })
         }
-      } catch {
-        // non-blocking
+      } catch (err) {// eslint-disable-next-line no-console
+      console.error("[POSCheckoutPage]", err); // non-blocking
       }
 
       clearCart()
@@ -653,7 +653,7 @@ export function POSCheckoutPage({
           {/* Manual Open Drawer */}
           <button
             onClick={handleOpenDrawer}
-            title="تجربة فتح درج النقود يدويًا (ESC/POS)"
+            title={t('تجربة فتح درج النقود يدويًا (ESC/POS)')}
             className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-text-secondary text-xs font-bold transition-all btn-press"
           >
             <Wallet className="w-3.5 h-3.5 text-amber-600" />
@@ -871,7 +871,7 @@ export function POSCheckoutPage({
               <button
                 onClick={() => setIsQuickAddCustomerOpen(true)}
                 className="p-2 rounded-xl bg-accent text-white text-xs font-bold shadow-ambient hover:bg-accent-hover transition-all btn-press"
-                title="إضافة زبون جديد"
+                title={t('إضافة زبون جديد')}
               >
                 <UserPlus className="w-4 h-4" />
               </button>
@@ -971,7 +971,7 @@ export function POSCheckoutPage({
                       : 'bg-white border border-gray-200 text-text-secondary hover:bg-gray-100'
                   }`}
                 >
-                  {pm === 'cash' ? '💵 نقد' : pm === 'card' ? '💳 CIB' : pm === 'mixed' ? '🔀 مزدوج' : '📖 كريدي'}
+                  {pm === 'cash' ? t('نقد') : pm === 'card' ? 'CIB' : pm === 'mixed' ? t('مزدوج') : t('كريدي')}
                 </button>
               ))}
             </div>
@@ -983,7 +983,7 @@ export function POSCheckoutPage({
                   <span>{t('المبلغ النقدي المقدم من الزبون:')}</span>
                   <input
                     type="number"
-                    placeholder="مثلاً: 5000"
+                    placeholder={t('مثلاً: 5000')}
                     value={tenderedCashInput}
                     onChange={(e) => setTenderedCashInput(e.target.value)}
                     className="w-28 px-2 py-1 text-left font-black text-accent bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
@@ -1158,19 +1158,19 @@ export function POSCheckoutPage({
       <CloseShiftModal isOpen={isCloseShiftOpen} onClose={() => setIsCloseShiftOpen(false)} />
 
       {/* Quick Add Customer Modal */}
-      <Modal isOpen={isQuickAddCustomerOpen} onClose={() => setIsQuickAddCustomerOpen(false)} title="إضافة زبون جديد فوراً">
+      <Modal isOpen={isQuickAddCustomerOpen} onClose={() => setIsQuickAddCustomerOpen(false)} title={t('إضافة زبون جديد فوراً')}>
         <form onSubmit={handleQuickAddCustomer} className="space-y-4">
-          <Input placeholder="مثلاً: محمد الأمين" value={newCustName} onChange={(e) => setNewCustName(e.target.value)} required />
+          <Input placeholder={t('مثلاً: محمد الأمين')} value={newCustName} onChange={(e) => setNewCustName(e.target.value)} required />
           <Input placeholder="06XXXXXXXX" value={newCustPhone} onChange={(e) => setNewCustPhone(e.target.value)} />
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="secondary" onClick={() => setIsQuickAddCustomerOpen(false)}>إلغاء</Button>
-            <Button type="submit" variant="primary">حفظ واختيار الزبون</Button>
+            <Button type="button" variant="secondary" onClick={() => setIsQuickAddCustomerOpen(false)}>{t('إلغاء')}</Button>
+            <Button type="submit" variant="primary">{t('حفظ واختيار الزبون')}</Button>
           </div>
         </form>
       </Modal>
 
       {/* Mixed Payment Modal */}
-      <Modal isOpen={isMixedModalOpen} onClose={() => setIsMixedModalOpen(false)} title="حاسبة التقسيم للدفع المختلط (نقداً + CIB)">
+      <Modal isOpen={isMixedModalOpen} onClose={() => setIsMixedModalOpen(false)} title={t('حاسبة التقسيم للدفع المختلط (نقداً + CIB)')}>
         <div className="space-y-4">
           <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs font-bold text-text-secondary flex justify-between">
             <span>إجمالي الفاتورة المستحق:</span>

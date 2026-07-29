@@ -80,8 +80,8 @@ export function MaintenancePage({ onBack }: { onBack?: () => void }): React.JSX.
         const size = await window.electron.appInfo.getDbSize()
         setDbSizeMB((size / (1024 * 1024)).toFixed(2))
       }
-    } catch {
-      setAppVersion('N/A')
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[MaintenancePage]", err); setAppVersion('N/A')
       setDbSizeMB('N/A')
     }
   }, [])
@@ -157,8 +157,8 @@ export function MaintenancePage({ onBack }: { onBack?: () => void }): React.JSX.
         setUpdateVersion(null)
         addToast({ message: t('أنت تستخدم أحدث إصدار ✅'), variant: 'success' })
       }
-    } catch {
-      addToast({ message: t('فشل فحص التحديثات'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[MaintenancePage]", err); addToast({ message: t('فشل فحص التحديثات'), variant: 'error' })
     } finally {
       setIsCheckingUpdate(false)
     }

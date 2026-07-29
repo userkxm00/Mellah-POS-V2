@@ -42,8 +42,8 @@ export async function exportDatabaseBackup(): Promise<string> {
       try {
         const rows = await window.electron.db.query(`SELECT * FROM ${table}`)
         backupData[table] = rows
-      } catch {
-        // Table might not exist yet
+      } catch (err) {// eslint-disable-next-line no-console
+      console.error("[backupService]", err); // Table might not exist yet
       }
     }
 
@@ -70,8 +70,8 @@ export async function importDatabaseBackup(jsonString: string): Promise<number> 
   let backupData: Record<string, Record<string, unknown>[]>
   try {
     backupData = JSON.parse(jsonString)
-  } catch {
-    throw new Error('ملف النسخة الاحتياطية غير صالح (صيغة JSON غير صحيحة)')
+  } catch (err) {// eslint-disable-next-line no-console
+      console.error("[backupService]", err); throw new Error('ملف النسخة الاحتياطية غير صالح (صيغة JSON غير صحيحة)')
   }
 
   if (typeof backupData !== 'object' || backupData === null) {
@@ -133,8 +133,8 @@ export function initAutoBackupScheduler(): () => void {
       }
 
       await window.electron.backup.runAuto()
-    } catch {
-      // Silently fail — non-critical background task
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[backupService]", err); // Silently fail — non-critical background task
     }
   }
 

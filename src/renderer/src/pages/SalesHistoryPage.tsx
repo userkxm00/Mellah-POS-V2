@@ -133,7 +133,9 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
         params
       )
       setSales(rows)
-    } catch {
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[SalesHistoryPage:loadSalesHistory]', err)
       addToast({ message: t('فشل تحميل سجل المبيعات'), variant: 'error' })
     } finally {
       setIsLoading(false)
@@ -158,7 +160,9 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
       )
       setSaleItems(items)
       setIsDetailOpen(true)
-    } catch {
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[SalesHistoryPage:handleOpenDetail]', err)
       addToast({ message: t('فشل جلب تفاصيل الفاتورة'), variant: 'error' })
     }
   }
@@ -350,7 +354,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
         <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex justify-end gap-1.5">
           <button
             onClick={() => handleOpenDetail(row)}
-            aria-label="عرض التفاصيل والطباعة"
+            aria-label={t('عرض التفاصيل والطباعة')}
             className="flex items-center gap-1 px-3 py-1 rounded-xl bg-accent/10 hover:bg-accent/20 text-accent font-bold text-xs transition-colors btn-press"
           >
             <Eye className="w-3.5 h-3.5" />
@@ -643,8 +647,8 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
           </p>
 
           <Input
-            label="سبب إلغاء الفاتورة"
-            placeholder="مثال: خطأ في الصرف / طلب الزبون"
+            label={t('سبب إلغاء الفاتورة')}
+            placeholder={t('مثال: خطأ في الصرف / طلب الزبون')}
             value={voidReason}
             onChange={(e) => setVoidReason(e.target.value)}
             required

@@ -42,8 +42,8 @@ export async function updatePendingQueueCount(): Promise<number> {
     const count = rows[0]?.count ?? 0
     useSyncStore.getState().setPendingCount(count)
     return count
-  } catch {
-    return 0
+  } catch (err) {// eslint-disable-next-line no-console
+      console.error("[syncEngine]", err); return 0
   }
 }
 
@@ -72,8 +72,8 @@ export async function checkRealConnectivity(): Promise<boolean> {
 
     useSyncStore.getState().setOnlineStatus(true)
     return true
-  } catch {
-    // If ping fails (e.g. offline local network), use navigator.onLine fallback
+  } catch (err) {// eslint-disable-next-line no-console
+      console.error("[syncEngine]", err); // If ping fails (e.g. offline local network), use navigator.onLine fallback
     const online = typeof navigator !== 'undefined' ? navigator.onLine : false
     useSyncStore.getState().setOnlineStatus(online)
     return online
@@ -164,8 +164,8 @@ export async function processSyncQueue(): Promise<number> {
         let payloadObj: Record<string, unknown> = {}
         try {
           payloadObj = JSON.parse(entry.payload)
-        } catch {
-          payloadObj = {}
+        } catch (err) {// eslint-disable-next-line no-console
+      console.error("[syncEngine]", err); payloadObj = {}
         }
 
         // If actual Supabase credentials exist, push to remote Supabase DB

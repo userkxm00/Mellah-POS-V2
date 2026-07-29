@@ -50,8 +50,8 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
         'SELECT id, full_name, role, pin_hash, created_at FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC'
       )
       setUsers(rows)
-    } catch {
-      addToast({ message: t('فشل تحميل قائمة المستخدمين'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[UsersPage]", err); addToast({ message: t('فشل تحميل قائمة المستخدمين'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -89,8 +89,8 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
       setPin('')
       setIsModalOpen(false)
       await loadUsers()
-    } catch {
-      addToast({ message: t('فشل إضافة المستخدم'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[UsersPage]", err); addToast({ message: t('فشل إضافة المستخدم'), variant: 'error' })
     } finally {
       setIsSubmitting(false)
     }
@@ -104,8 +104,8 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
       addToast({ message: t('تم حذف المستخدم'), variant: 'info' })
       recordAuditLog('user_deleted', 'users', `حذف المستخدم: ${name}`, id).catch(() => {})
       await loadUsers()
-    } catch {
-      addToast({ message: t('فشل حذف المستخدم'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[UsersPage]", err); addToast({ message: t('فشل حذف المستخدم'), variant: 'error' })
     }
   }
 
@@ -129,8 +129,8 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
       recordAuditLog('user_updated', 'users', `تعديل المستخدم: ${editName.trim()} (${editRole})`, editingUser.id).catch(() => {})
       setEditingUser(null)
       await loadUsers()
-    } catch {
-      addToast({ message: t('فشل تحديث بيانات المستخدم'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[UsersPage]", err); addToast({ message: t('فشل تحديث بيانات المستخدم'), variant: 'error' })
     } finally {
       setIsEditSaving(false)
     }
@@ -160,8 +160,8 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
       setChangePinUser(null)
       setNewPin('')
       setConfirmPin('')
-    } catch {
-      addToast({ message: t('فشل تغيير رمز PIN'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[UsersPage]", err); addToast({ message: t('فشل تغيير رمز PIN'), variant: 'error' })
     } finally {
       setIsPinSaving(false)
     }
@@ -233,27 +233,27 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
         <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center justify-end gap-1">
           <button
             onClick={() => handleOpenEdit(row)}
-            aria-label="تعديل المستخدم"
+            aria-label={t('تعديل المستخدم')}
             className="flex items-center gap-1 text-xs text-accent font-bold hover:bg-accent/10 px-2 py-1 rounded-lg transition-colors"
           >
             <Edit3 className="w-3.5 h-3.5" />
-            <span>تعديل</span>
+            <span>{t('تعديل')}</span>
           </button>
           <button
             onClick={() => { setChangePinUser(row); setNewPin(''); setConfirmPin('') }}
-            aria-label="تغيير رمز PIN"
+            aria-label={t('تغيير رمز PIN')}
             className="flex items-center gap-1 text-xs text-warning font-bold hover:bg-warning/10 px-2 py-1 rounded-lg transition-colors"
           >
             <KeyRound className="w-3.5 h-3.5" />
-            <span>تغيير PIN</span>
+            <span>{t('تغيير PIN')}</span>
           </button>
           <button
             onClick={() => handleDeleteUser(row.id, row.full_name)}
-            aria-label="حذف المستخدم"
+            aria-label={t('حذف المستخدم')}
             className="flex items-center gap-1 text-xs text-danger font-bold hover:bg-danger/10 px-2 py-1 rounded-lg transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>حذف</span>
+            <span>{t('حذف')}</span>
           </button>
         </div>
       ),
@@ -269,9 +269,9 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
             className="text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 mb-1.5 transition-colors"
           >
             <ArrowRight className="w-3.5 h-3.5" />
-            <span>إغلاق النافذة</span>
+            <span>{t('إغلاق النافذة')}</span>
           </button>
-          <h1 className="text-2xl font-black text-text-primary">إدارة المستخدمين والأدوار</h1>
+          <h1 className="text-2xl font-black text-text-primary">{t('إدارة المستخدمين والأدوار')}</h1>
         </div>
 
         <button
@@ -279,7 +279,7 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
           className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-bold shadow-ambient transition-all btn-press"
         >
           <Plus className="w-4 h-4" />
-          <span>إضافة مستخدم جديد</span>
+          <span>{t('إضافة مستخدم جديد')}</span>
         </button>
       </div>
 
@@ -293,23 +293,23 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
           sortOrder={sortOrder}
           onSort={handleSort}
           emptyType="search"
-          emptyMessage="لا يوجد مستخدمين حالياً"
+          emptyMessage={t('لا يوجد مستخدمين حالياً')}
         />
       </Card>
 
       {/* Add User Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="إضافة مستخدم جديد">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={t('إضافة مستخدم جديد')}>
         <form onSubmit={handleAddUser} className="space-y-4">
-          <Input label="الاسم الكامل" placeholder="مثال: كريم حماني" value={fullName} onChange={(e) => setFullName(e.target.value)} required autoFocus />
+          <Input label={t('الاسم الكامل')} placeholder={t('مثال: كريم حماني')} value={fullName} onChange={(e) => setFullName(e.target.value)} required autoFocus />
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-bold text-text-primary">الدور والصلاحية</label>
+            <label className="text-sm font-bold text-text-primary">{t('الدور والصلاحية')}</label>
             <select value={role} onChange={(e) => setRole(e.target.value as UserRole)} className="w-full px-4 py-2.5 rounded-xl text-sm bg-white border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent font-bold">
-              <option value="cashier">كاشير (نقطة البيع فقط)</option>
-              <option value="manager">مشرف (مبيعات + مخزون + تقارير)</option>
-              <option value="admin">مدير (صلاحيات كاملة)</option>
+              <option value="cashier">{t('كاشير (نقطة البيع فقط)')}</option>
+              <option value="manager">{t('مشرف (مبيعات + مخزون + تقارير)')}</option>
+              <option value="admin">{t('مدير (صلاحيات كاملة)')}</option>
             </select>
           </div>
-          <Input label="رمز PIN (4 أرقام لتسجيل الدخول)" type="password" maxLength={6} placeholder="مثال: 5555" value={pin} onChange={(e) => setPin(e.target.value)} required />
+          <Input label={t('رمز PIN (4 أرقام لتسجيل الدخول)')} type="password" maxLength={6} placeholder={t('مثال: 5555')} value={pin} onChange={(e) => setPin(e.target.value)} required />
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={isSubmitting} className="flex-1 py-3 rounded-xl bg-accent text-white text-sm font-bold shadow-ambient btn-press">حفظ المستخدم</button>
             <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press">إلغاء</button>

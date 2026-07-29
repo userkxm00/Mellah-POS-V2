@@ -37,8 +37,8 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
          LIMIT 200`
       )
       setLogs(rows)
-    } catch {
-      addToast({ message: t('فشل تحميل سجل التدقيق والعمليات'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[AuditLogPage]", err); addToast({ message: t('فشل تحميل سجل التدقيق والعمليات'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }

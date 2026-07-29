@@ -45,8 +45,8 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
             setCustomers(custs)
           }
         }
-      } catch {
-        // Fallback gracefully
+      } catch (err) {// eslint-disable-next-line no-console
+      console.error("[CommandPalette]", err); // Fallback gracefully
       }
     }
     fetchData()

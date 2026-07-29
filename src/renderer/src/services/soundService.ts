@@ -48,8 +48,8 @@ class SoundService {
 
       osc.start()
       osc.stop(ctx.currentTime + 0.08)
-    } catch {
-      // Audio playback fallback
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[soundService]", err); // Audio playback fallback
     }
   }
 
@@ -82,8 +82,8 @@ class SoundService {
         osc.start(startTime)
         osc.stop(startTime + 0.26)
       })
-    } catch {
-      // Fallback
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[soundService]", err); // Fallback
     }
   }
 
@@ -113,8 +113,8 @@ class SoundService {
 
       osc.start()
       osc.stop(ctx.currentTime + 0.19)
-    } catch {
-      // Fallback
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[soundService]", err); // Fallback
     }
   }
 }

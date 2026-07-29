@@ -50,8 +50,8 @@ export function SessionLockModal({ isOpen, onUnlock }: SessionLockModalProps): R
         setError('رمز PIN غير صحيح، يرجى المحاولة مجدداً')
         setPin('')
       }
-    } catch {
-      setError('حدث خطأ أثناء التحقق من الرمز')
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[SessionLockModal]", err); setError('حدث خطأ أثناء التحقق من الرمز')
     } finally {
       setIsVerifying(false)
     }

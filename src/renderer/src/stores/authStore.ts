@@ -120,8 +120,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         sessionStorage.removeItem(SESSION_KEY)
         set({ isAuthenticated: false, isLoading: false })
       }
-    } catch {
-      set({ isAuthenticated: false, isLoading: false })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[authStore]", err); set({ isAuthenticated: false, isLoading: false })
     }
   },
 

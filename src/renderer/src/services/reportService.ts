@@ -242,7 +242,7 @@ export async function fetchCloudMultiBranchAnalytics(): Promise<CloudBranchReven
       total_revenue_dzd: stats.total_revenue_dzd,
       sales_count: stats.sales_count,
     }))
-  } catch {
-    return []
+  } catch (err) {// eslint-disable-next-line no-console
+      console.error("[reportService]", err); return []
   }
 }

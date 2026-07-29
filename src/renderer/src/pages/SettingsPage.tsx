@@ -111,8 +111,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
           setLanguageStore(rows[0].default_language as Language)
         }
       }
-    } catch {
-      // Default fallback settings
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[SettingsPage]", err); // Default fallback settings
     }
   }, [selectedPrinter, setLanguageStore, t])
 
@@ -131,7 +131,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
       if (info.latestBackup) {
         setLastBackupTime(new Date(info.latestBackup.time).toLocaleString('ar-DZ'))
       }
-    } catch { /* ignore */ }
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[SettingsPage]", err); /* ignore */ }
   }, [])
 
   useEffect(() => {
@@ -170,8 +171,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
       if (currentLang !== initialLang) {
         setIsRestartModalOpen(true)
       }
-    } catch {
-      addToast({ message: t('فشل حفظ الإعدادات'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[SettingsPage]", err); addToast({ message: t('فشل حفظ الإعدادات'), variant: 'error' })
     } finally {
       setIsSaving(false)
     }
@@ -198,8 +199,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
         { printerName: selectedPrinter || undefined, paperWidth, language: receiptLanguage }
       )
       addToast({ message: t('تم إرسال أمر الطباعة التجريبية! 🖨️'), variant: 'success' })
-    } catch {
-      addToast({ message: t('فشل إرسال الفاتورة التجريبية للطابعة'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[SettingsPage]", err); addToast({ message: t('فشل إرسال الفاتورة التجريبية للطابعة'), variant: 'error' })
     }
   }
 
@@ -263,7 +264,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
           <button
             onClick={onBack}
             className="text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 mb-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-accent"
-            aria-label="إغلاق النافذة والعودة"
+            aria-label={t('إغلاق النافذة والعودة')}
           >
             <ArrowRight className="w-3.5 h-3.5" />
             <span>{t('إغلاق النافذة')}</span>
@@ -329,13 +330,13 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
             <div className="grid grid-cols-2 gap-4">
               <Input
                 label={t('عنوان المتجر')}
-                placeholder="مثال: الجزائر العاصمة، حي حسيبة بن بوعلي"
+                placeholder={t('مثال: الجزائر العاصمة، حي حسيبة بن بوعلي')}
                 value={storeAddress}
                 onChange={(e) => setStoreAddress(e.target.value)}
               />
               <Input
                 label={t('هاتف المتجر')}
-                placeholder="مثال: 0550123456"
+                placeholder={t('مثال: 0550123456')}
                 value={storePhone}
                 onChange={(e) => setStorePhone(e.target.value)}
               />
@@ -674,7 +675,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                           addToast({ message: `${t('فشل:')} ${result.error}`, variant: 'error' })
                         }
                       }
-                    } catch { addToast({ message: t('فشل فتح اختيار المجلد'), variant: 'error' }) }
+                    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[SettingsPage]", err); addToast({ message: t('فشل فتح اختيار المجلد'), variant: 'error' }) }
                     finally { setIsChangingDir(false) }
                   }}
                   disabled={isChangingDir}
@@ -691,7 +693,8 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                         addToast({ message: t('تم الرجوع للمجلد الافتراضي'), variant: 'success' })
                         loadBackupInfo()
                       }
-                    } catch { addToast({ message: t('فشل الرجوع للمجلد الافتراضي'), variant: 'error' }) }
+                    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[SettingsPage]", err); addToast({ message: t('فشل الرجوع للمجلد الافتراضي'), variant: 'error' }) }
                   }}
                   className="py-3 px-4 rounded-2xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-text-secondary transition-all btn-press flex items-center justify-center gap-1"
                 >
@@ -785,7 +788,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
       <Modal
         isOpen={isRestoreModalOpen}
         onClose={() => setIsRestoreModalOpen(false)}
-        title="تأكيد استرجاع النسخة الاحتياطية"
+        title={t('تأكيد استرجاع النسخة الاحتياطية')}
         size="md"
       >
         <div className="space-y-4 select-none">
@@ -821,7 +824,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
       <Modal
         isOpen={isReceiptPreviewOpen}
         onClose={() => setIsReceiptPreviewOpen(false)}
-        title="معاينة شكل الفاتورة الحرارية (Live Thermal Receipt Preview)"
+        title={t('معاينة شكل الفاتورة الحرارية (Live Thermal Receipt Preview)')}
         size="lg"
       >
         <div className="space-y-4 select-none">
@@ -928,7 +931,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
       <Modal
         isOpen={isBarcodePreviewOpen}
         onClose={() => setIsBarcodePreviewOpen(false)}
-        title="معاينة ملصق الباركود (Live Barcode Sticker Preview)"
+        title={t('معاينة ملصق الباركود (Live Barcode Sticker Preview)')}
         size="md"
       >
         <div className="space-y-4 select-none">

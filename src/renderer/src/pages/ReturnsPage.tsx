@@ -46,8 +46,8 @@ export function ReturnsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
          ORDER BY r.created_at DESC`
       )
       setReturns(rows)
-    } catch {
-      addToast({ message: t('فشل تحميل سجل المرتجعات'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[ReturnsPage]", err); addToast({ message: t('فشل تحميل سجل المرتجعات'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }

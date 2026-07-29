@@ -111,8 +111,8 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
           { day: t('اليوم'), revenue: salesRes.totalRevenueDzd },
         ])
       }
-    } catch {
-      addToast({ message: t('فشل تحميل التقارير'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[ReportsPage]", err); addToast({ message: t('فشل تحميل التقارير'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -430,7 +430,7 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
           data={topProducts}
           loading={isLoading}
           rowKey={(row) => row.variant_id}
-          emptyMessage="لا توجد بيانات مبيعات بعد"
+          emptyMessage={t('لا توجد بيانات مبيعات بعد')}
         />
       </Card>
 
@@ -438,14 +438,14 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
       <Card padding="compact" className="overflow-hidden border border-gray-200/80">
         <div className="px-4 py-3.5 border-b border-gray-200/80 bg-gray-50/50 flex items-center gap-2">
           <ClipboardList className="w-4 h-4 text-accent" />
-          <h2 className="text-sm font-black text-text-primary">سجل ورديات العمل وصندوق الكاشير (Shift Audit Log)</h2>
+          <h2 className="text-sm font-black text-text-primary">{t('سجل ورديات العمل وصندوق الكاشير (Shift Audit Log)')}</h2>
         </div>
         <Table
           columns={shiftAuditColumns}
           data={shifts}
           loading={isLoading}
           rowKey={(row) => row.id}
-          emptyMessage="لا توجد ورديات سابقة"
+          emptyMessage={t('لا توجد ورديات سابقة')}
         />
       </Card>
 

@@ -239,8 +239,8 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
           setTodaySalesDzd(rows[0].total)
           setTodayTxCount(rows[0].count)
         }
-      } catch {
-        // Fallback
+      } catch (err) {// eslint-disable-next-line no-console
+      console.error("[HomeLauncherPage]", err); // Fallback
       }
     })()
   }, [])
@@ -262,8 +262,8 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
           variant: 'error',
         })
       }
-    } catch {
-      addToast({ message: t('حدث خطأ أثناء فحص الاتصال'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[HomeLauncherPage]", err); addToast({ message: t('حدث خطأ أثناء فحص الاتصال'), variant: 'error' })
     } finally {
       setIsReconnecting(false)
     }

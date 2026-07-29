@@ -128,8 +128,8 @@ export function ProductDetailPage({
       )
 
       setProduct({ ...p, variants })
-    } catch {
-      addToast({ message: t('فشل تحميل تفاصيل المنتج'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[ProductDetailPage]", err); addToast({ message: t('فشل تحميل تفاصيل المنتج'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -145,7 +145,8 @@ export function ProductDetailPage({
         [branchId]
       )
       setCategories(rows)
-    } catch { /* ignore */ }
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[ProductDetailPage]", err); /* ignore */ }
   }, [])
 
   useEffect(() => {
@@ -186,8 +187,8 @@ export function ProductDetailPage({
       recordAuditLog('product_updated', 'products', `تعديل المنتج: ${editName.trim()}`, product.id).catch(() => {})
       setIsEditMode(false)
       await loadProductDetail()
-    } catch {
-      addToast({ message: t('فشل حفظ التعديلات'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[ProductDetailPage]", err); addToast({ message: t('فشل حفظ التعديلات'), variant: 'error' })
     } finally {
       setIsSaving(false)
     }
@@ -210,8 +211,8 @@ export function ProductDetailPage({
       addToast({ message: `${t('تم حذف المنتج')} "${product.name}"`, variant: 'success' })
       recordAuditLog('product_deleted', 'products', `حذف المنتج: ${product.name}`, product.id).catch(() => {})
       onBack()
-    } catch {
-      addToast({ message: t('فشل حذف المنتج'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[ProductDetailPage]", err); addToast({ message: t('فشل حذف المنتج'), variant: 'error' })
     }
   }
 
@@ -247,8 +248,8 @@ export function ProductDetailPage({
       setNewBarcode('')
       setNewVariantPrice('')
       await loadProductDetail()
-    } catch {
-      addToast({ message: t('فشل إضافة الخيار — تأكد من عدم تكرار الباركود'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[ProductDetailPage]", err); addToast({ message: t('فشل إضافة الخيار — تأكد من عدم تكرار الباركود'), variant: 'error' })
     } finally {
       setIsAddingVariant(false)
     }
@@ -272,8 +273,8 @@ export function ProductDetailPage({
         [product.id]
       )
       setStockMovements(rows)
-    } catch {
-      addToast({ message: t('فشل تحميل سجل حركات المخزون'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[ProductDetailPage]", err); addToast({ message: t('فشل تحميل سجل حركات المخزون'), variant: 'error' })
     } finally {
       setIsLoadingMovements(false)
     }
@@ -426,7 +427,7 @@ export function ProductDetailPage({
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               className="text-2xl font-extrabold"
-              placeholder="اسم المنتج"
+              placeholder={t('اسم المنتج')}
             />
           ) : (
             <h1 className="text-2xl font-extrabold text-text-primary">{product.name}</h1>
@@ -437,19 +438,19 @@ export function ProductDetailPage({
           {isEditMode ? (
             <>
               <Button size="sm" variant="primary" onClick={handleSaveEdit} disabled={isSaving}>
-                <Save className="w-4 h-4 ml-1" /> حفظ التعديلات
+                <Save className="w-4 h-4 ml-1" /> {t('حفظ التعديلات')}
               </Button>
               <Button size="sm" variant="secondary" onClick={() => setIsEditMode(false)}>
-                <X className="w-4 h-4 ml-1" /> إلغاء
+                <X className="w-4 h-4 ml-1" /> {t('إلغاء')}
               </Button>
             </>
           ) : (
             <>
               <Button size="sm" variant="secondary" onClick={handleStartEdit}>
-                <Edit3 className="w-4 h-4 ml-1" /> تعديل المنتج
+                <Edit3 className="w-4 h-4 ml-1" /> {t('تعديل المنتج')}
               </Button>
               <Button size="sm" variant="secondary" onClick={handleOpenMovements}>
-                <History className="w-4 h-4 ml-1" /> سجل الحركات
+                <History className="w-4 h-4 ml-1" /> {t('سجل الحركات')}
               </Button>
               <Button size="sm" variant="secondary" onClick={() => setIsDeleteConfirmOpen(true)}>
                 <Trash2 className="w-4 h-4 ml-1 text-danger" />
@@ -464,38 +465,38 @@ export function ProductDetailPage({
         <Card className="space-y-4 p-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="سعر البيع (دج)"
+              label={t('سعر البيع (دج)')}
               type="number"
               value={editPrice}
               onChange={(e) => setEditPrice(e.target.value)}
             />
             <Input
-              label="سعر التكلفة (دج)"
+              label={t('سعر التكلفة (دج)')}
               type="number"
               value={editCost}
               onChange={(e) => setEditCost(e.target.value)}
-              placeholder="اختياري"
+              placeholder={t('اختياري')}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-text-secondary mb-1">الفئة</label>
+              <label className="block text-xs font-bold text-text-secondary mb-1">{t('الفئة')}</label>
               <select
                 value={editCategoryId}
                 onChange={(e) => setEditCategoryId(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-white text-sm font-semibold text-text-primary focus:ring-2 focus:ring-accent/30"
               >
-                <option value="">— بدون فئة —</option>
+                <option value="">— {t('بدون فئة')} —</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
               </select>
             </div>
             <Input
-              label="الوصف"
+              label={t('الوصف')}
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
-              placeholder="وصف مختصر للمنتج"
+              placeholder={t('وصف مختصر للمنتج')}
             />
           </div>
         </Card>
@@ -559,12 +560,12 @@ export function ProductDetailPage({
       <Modal isOpen={isAddVariantOpen} onClose={() => setIsAddVariantOpen(false)} title="➕ إضافة خيار جديد (مقاس/لون)">
         <form onSubmit={handleAddVariant} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input label="المقاس" placeholder="مثال: XL" value={newSize} onChange={(e) => setNewSize(e.target.value)} />
-            <Input label="اللون" placeholder="مثال: أسود" value={newColor} onChange={(e) => setNewColor(e.target.value)} />
+            <Input label={t('المقاس')} placeholder={t('مثال: XL')} value={newSize} onChange={(e) => setNewSize(e.target.value)} />
+            <Input label={t('اللون')} placeholder={t('مثال: أسود')} value={newColor} onChange={(e) => setNewColor(e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="الباركود" placeholder="اختياري" value={newBarcode} onChange={(e) => setNewBarcode(e.target.value)} />
-            <Input label="سعر خاص (اختياري)" type="number" placeholder="يترك فارغ = سعر المنتج" value={newVariantPrice} onChange={(e) => setNewVariantPrice(e.target.value)} />
+            <Input label={t('الباركود')} placeholder={t('اختياري')} value={newBarcode} onChange={(e) => setNewBarcode(e.target.value)} />
+            <Input label={t('سعر خاص (اختياري)')} type="number" placeholder={t('يترك فارغ = سعر المنتج')} value={newVariantPrice} onChange={(e) => setNewVariantPrice(e.target.value)} />
           </div>
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={isAddingVariant} className="flex-1 py-3 rounded-xl bg-accent text-white text-sm font-bold shadow-ambient btn-press">

@@ -89,8 +89,8 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         ORDER BY total_debt_dzd DESC, total_spent_dzd DESC
       `)
       setCustomers(rows)
-    } catch {
-      addToast({ message: t('فشل تحميل قائمة الزبائن والديون'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[CustomersPage]", err); addToast({ message: t('فشل تحميل قائمة الزبائن والديون'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -121,8 +121,8 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       setFullName('')
       setPhone('')
       await loadCustomers()
-    } catch {
-      addToast({ message: t('فشل إضافة الزبون'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[CustomersPage]", err); addToast({ message: t('فشل إضافة الزبون'), variant: 'error' })
     } finally {
       setIsSubmitting(false)
     }
@@ -139,8 +139,8 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       )
       addToast({ message: t('تم حذف الزبون'), variant: 'info' })
       await loadCustomers()
-    } catch {
-      addToast({ message: t('فشل حذف الزبون'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[CustomersPage]", err); addToast({ message: t('فشل حذف الزبون'), variant: 'error' })
     }
   }
 
@@ -163,8 +163,8 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       addToast({ message: `${t('تم تحديث بيانات الزبون')} "${editFullName.trim()}"`, variant: 'success' })
       setEditingCustomer(null)
       await loadCustomers()
-    } catch {
-      addToast({ message: t('فشل تحديث بيانات الزبون'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[CustomersPage]", err); addToast({ message: t('فشل تحديث بيانات الزبون'), variant: 'error' })
     } finally {
       setIsEditSaving(false)
     }
@@ -204,8 +204,8 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       setRepayAmountDzd('')
       setRepayNotes('')
       await loadCustomers()
-    } catch {
-      addToast({ message: t('فشل تسجيل عملية تسديد الدين'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[CustomersPage]", err); addToast({ message: t('فشل تسجيل عملية تسديد الدين'), variant: 'error' })
     } finally {
       setIsRepaying(false)
     }
@@ -232,8 +232,8 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         [customer.id]
       ).catch(() => [])
       setCustomerPaymentsHistory(paymentRows)
-    } catch {
-      addToast({ message: t('فشل تحميل سجل مشتريات وتسديدات الزبون'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[CustomersPage]", err); addToast({ message: t('فشل تحميل سجل مشتريات وتسديدات الزبون'), variant: 'error' })
     } finally {
       setIsTimelineLoading(false)
     }
@@ -438,7 +438,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         <form onSubmit={handleAddCustomer} className="space-y-4">
           <Input
             label={t('اسم الزبون الكامل')}
-            placeholder="مثال: ياسمين بن علي"
+            placeholder={t('مثال: ياسمين بن علي')}
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             isValid={fullName.trim().length >= 2}
@@ -449,7 +449,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
 
           <Input
             label={t('رقم الهاتف')}
-            placeholder="مثال: 0661234567"
+            placeholder={t('مثال: 0661234567')}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />

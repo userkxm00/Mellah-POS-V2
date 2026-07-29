@@ -90,8 +90,8 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         ORDER BY total_debt_dzd DESC, s.name ASC
       `, [DEFAULT_BRANCH_ID]).catch(() => [])
       setSuppliers(rows)
-    } catch {
-      addToast({ message: t('فشل تحميل قائمة الموردين'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[SuppliersPage]", err); addToast({ message: t('فشل تحميل قائمة الموردين'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -126,8 +126,8 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       setAddress('')
       setNotes('')
       await loadSuppliers()
-    } catch {
-      addToast({ message: t('فشل إضافة المورد'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[SuppliersPage]", err); addToast({ message: t('فشل إضافة المورد'), variant: 'error' })
     } finally {
       setIsSubmitting(false)
     }
@@ -162,8 +162,8 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       setPurchasePaidDzd('')
       setPurchaseNotes('')
       await loadSuppliers()
-    } catch {
-      addToast({ message: t('فشل تسجيل فاتورة الشراء'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[SuppliersPage]", err); addToast({ message: t('فشل تسجيل فاتورة الشراء'), variant: 'error' })
     } finally {
       setIsSavingPurchase(false)
     }
@@ -194,8 +194,8 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       setRepayAmountDzd('')
       setRepayNotes('')
       await loadSuppliers()
-    } catch {
-      addToast({ message: t('فشل تسجيل تسديد المستحقات'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[SuppliersPage]", err); addToast({ message: t('فشل تسجيل تسديد المستحقات'), variant: 'error' })
     } finally {
       setIsRepaying(false)
     }
@@ -222,8 +222,8 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         [supplier.id]
       ).catch(() => [])
       setPaymentsHistory(payRows)
-    } catch {
-      addToast({ message: t('فشل تحميل كشف حساب المورد'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[SuppliersPage]", err); addToast({ message: t('فشل تحميل كشف حساب المورد'), variant: 'error' })
     } finally {
       setIsStatementLoading(false)
     }

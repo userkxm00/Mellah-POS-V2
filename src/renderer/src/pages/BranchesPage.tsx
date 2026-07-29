@@ -40,8 +40,8 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
         'SELECT id, name, address, created_at FROM branches WHERE deleted_at IS NULL ORDER BY created_at ASC'
       )
       setBranches(rows)
-    } catch {
-      addToast({ message: t('فشل تحميل قائمة الفروع'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[BranchesPage]", err); addToast({ message: t('فشل تحميل قائمة الفروع'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -73,8 +73,8 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
       setName('')
       setAddress('')
       await loadBranches()
-    } catch {
-      addToast({ message: t('فشل إضافة الفرع'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[BranchesPage]", err); addToast({ message: t('فشل إضافة الفرع'), variant: 'error' })
     } finally {
       setIsSubmitting(false)
     }
@@ -99,8 +99,8 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
       recordAuditLog('branch_updated', 'branches', `تعديل فرع: ${editName.trim()}`, editingBranch.id).catch(() => {})
       setEditingBranch(null)
       await loadBranches()
-    } catch {
-      addToast({ message: t('فشل تحديث بيانات الفرع'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[BranchesPage]", err); addToast({ message: t('فشل تحديث بيانات الفرع'), variant: 'error' })
     } finally {
       setIsEditSaving(false)
     }
@@ -119,8 +119,8 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
       addToast({ message: t('تم أرشفة الفرع'), variant: 'info' })
       recordAuditLog('branch_deleted', 'branches', `حذف فرع: ${name}`, id).catch(() => {})
       await loadBranches()
-    } catch {
-      addToast({ message: t('فشل حذف الفرع'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[BranchesPage]", err); addToast({ message: t('فشل حذف الفرع'), variant: 'error' })
     }
   }
 
@@ -220,7 +220,7 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
         <form onSubmit={handleAddBranch} className="space-y-4">
           <Input
             label={t('اسم الفرع')}
-            placeholder="مثال: فرع وهران — حي السلام"
+            placeholder={t('مثال: فرع وهران — حي السلام')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -229,7 +229,7 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
 
           <Input
             label={t('العنوان التفصيلي')}
-            placeholder="مثال: شارع العربي بن مهيدي، وهران"
+            placeholder={t('مثال: شارع العربي بن مهيدي، وهران')}
             value={address}
             onChange={(e) => setAddress(e.target.value)}
           />

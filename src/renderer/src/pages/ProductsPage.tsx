@@ -78,8 +78,8 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
         return
       }
       setIsAutoReorderModalOpen(true)
-    } catch {
-      addToast({ message: t('فشل فحص المنتجات ناقصة المخزون'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[ProductsPage]", err); addToast({ message: t('فشل فحص المنتجات ناقصة المخزون'), variant: 'error' })
     }
   }
 
@@ -138,8 +138,8 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
       setIsBulkPriceModalOpen(false)
       setBulkAdjustmentVal(0)
       await loadProducts()
-    } catch {
-      addToast({ message: t('فشل التعديل الجماعي لأسعار المنتجات'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[ProductsPage]", err); addToast({ message: t('فشل التعديل الجماعي لأسعار المنتجات'), variant: 'error' })
     } finally {
       setIsBulkSaving(false)
     }
@@ -173,8 +173,8 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
         [branchId, branchId, branchId]
       )
       setProducts(prodRows)
-    } catch {
-      addToast({ message: t('فشل تحميل المنتجات للفرع الحالي'), variant: 'error' })
+    } catch (err) {// eslint-disable-next-line no-console
+      console.error("[ProductsPage]", err); addToast({ message: t('فشل تحميل المنتجات للفرع الحالي'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -302,7 +302,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
               setSelectedProductId(row.id)
               setView('detail')
             }}
-            aria-label="عرض التفاصيل والجرد"
+            aria-label={t('عرض التفاصيل والجرد')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-xs font-bold shadow-layered-sm hover:border-accent hover:text-accent transition-all btn-press"
           >
             <Eye className="w-3.5 h-3.5 text-accent" />
@@ -392,8 +392,8 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
                 }
                 exportInventoryToCSV(variantsRows)
                 addToast({ message: t('تم تصدير تقرير المخزون لملف CSV بنجاح!'), variant: 'success' })
-              } catch {
-                addToast({ message: t('فشل تصدير بيانات المخزون'), variant: 'error' })
+              } catch (err) {// eslint-disable-next-line no-console
+      console.error("[ProductsPage]", err); addToast({ message: t('فشل تصدير بيانات المخزون'), variant: 'error' })
               }
             }}
             className="flex items-center gap-1.5 h-10 px-3.5 rounded-2xl text-xs font-bold shadow-ambient-sm"
