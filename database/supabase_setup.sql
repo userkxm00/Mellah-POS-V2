@@ -134,7 +134,7 @@ CREATE TABLE sales (
   paid_amount_dzd NUMERIC(12,2) DEFAULT 0,
   remaining_debt_dzd NUMERIC(12,2) DEFAULT 0,
   payment_method TEXT NOT NULL CHECK (payment_method IN ('cash','card','mixed','credit')),
-  status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed','refunded','partial_refund')),
+  status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed','refunded','partial_refund','voided')),
   voided_at TIMESTAMPTZ,
   void_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
