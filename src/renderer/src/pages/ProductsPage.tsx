@@ -178,7 +178,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
     } finally {
       setIsLoading(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   useEffect(() => {
     if (view === 'list') {

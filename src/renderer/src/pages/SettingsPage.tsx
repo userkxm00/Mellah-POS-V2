@@ -114,7 +114,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
     } catch {
       // Default fallback settings
     }
-  }, [selectedPrinter, setLanguageStore])
+  }, [selectedPrinter, setLanguageStore, t])
 
   useEffect(() => {
     loadSettings()
@@ -639,6 +639,25 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                 <p className="text-[11px] text-text-tertiary font-semibold mb-1">{t('المسار النشط حالياً:')}</p>
                 <p className="text-xs text-text-primary font-bold break-all font-mono leading-relaxed" dir="ltr">{backupDir || '...'}</p>
               </div>
+
+              {isCustomMissing && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2 text-xs text-amber-900 font-semibold">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-extrabold text-amber-900">{t('المجلد الخارجي غير متصل!')}</p>
+                    <p className="text-[11px] text-amber-800 leading-snug">
+                      {t('المسار المخصص')} (<span className="font-mono" dir="ltr">{configuredDir}</span>) {t('غير موجود حالياً. يتم حفظ النسخ الاحتياطية مؤقتاً في المجلد المحلي.')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {backupCount > 0 && (
+                <div className="flex items-center gap-3 text-[11px] font-semibold text-blue-800">
+                  <span>📁 {backupCount} {t('نسخة محفوظة')}</span>
+                  {lastBackupTime && <span>🕐 {t('آخر نسخة:')} {lastBackupTime}</span>}
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <button
