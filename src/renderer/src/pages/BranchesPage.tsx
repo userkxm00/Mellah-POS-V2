@@ -54,7 +54,7 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
   const handleAddBranch = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     if (!name.trim()) {
-      addToast({ message: 'يرجى كتابة اسم الفرع', variant: 'error' })
+      addToast({ message: t('يرجى كتابة اسم الفرع'), variant: 'error' })
       return
     }
 
@@ -67,14 +67,14 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
         [id, name.trim(), address.trim() || null, now, now]
       )
 
-      addToast({ message: 'تم إضافة الفرع بنجاح! ✅', variant: 'success' })
+      addToast({ message: t('تم إضافة الفرع بنجاح!'), variant: 'success' })
       recordAuditLog('branch_created', 'branches', `إضافة فرع: ${name.trim()}`, id).catch(() => {})
       setIsModalOpen(false)
       setName('')
       setAddress('')
       await loadBranches()
     } catch {
-      addToast({ message: 'فشل إضافة الفرع', variant: 'error' })
+      addToast({ message: t('فشل إضافة الفرع'), variant: 'error' })
     } finally {
       setIsSubmitting(false)
     }
@@ -95,12 +95,12 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
         'UPDATE branches SET name = ?, address = ?, updated_at = ? WHERE id = ?',
         [editName.trim(), editAddress.trim() || null, now, editingBranch.id]
       )
-      addToast({ message: `تم تحديث بيانات الفرع "${editName.trim()}" ✅`, variant: 'success' })
+      addToast({ message: `${t('تم تحديث بيانات الفرع')} "${editName.trim()}"`, variant: 'success' })
       recordAuditLog('branch_updated', 'branches', `تعديل فرع: ${editName.trim()}`, editingBranch.id).catch(() => {})
       setEditingBranch(null)
       await loadBranches()
     } catch {
-      addToast({ message: 'فشل تحديث بيانات الفرع', variant: 'error' })
+      addToast({ message: t('فشل تحديث بيانات الفرع'), variant: 'error' })
     } finally {
       setIsEditSaving(false)
     }
@@ -108,19 +108,19 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
 
   const handleDeleteBranch = async (id: string, name: string): Promise<void> => {
     if (branches.length <= 1) {
-      addToast({ message: 'لا يمكن حذف الفرع الأخير للنظام', variant: 'error' })
+      addToast({ message: t('لا يمكن حذف الفرع الأخير للنظام'), variant: 'error' })
       return
     }
-    if (!window.confirm(`هل أنت متأكد من رغبتك في حذف الفرع (${name})؟`)) return
+    if (!window.confirm(`${t('هل أنت متأكد من رغبتك في حذف الفرع')} (${name})؟`)) return
 
     try {
       const now = new Date().toISOString()
       await window.electron.db.execute('UPDATE branches SET deleted_at = ? WHERE id = ?', [now, id])
-      addToast({ message: 'تم أرشفة الفرع', variant: 'info' })
+      addToast({ message: t('تم أرشفة الفرع'), variant: 'info' })
       recordAuditLog('branch_deleted', 'branches', `حذف فرع: ${name}`, id).catch(() => {})
       await loadBranches()
     } catch {
-      addToast({ message: 'فشل حذف الفرع', variant: 'error' })
+      addToast({ message: t('فشل حذف الفرع'), variant: 'error' })
     }
   }
 

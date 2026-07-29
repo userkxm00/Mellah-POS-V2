@@ -49,17 +49,17 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
     const costNum = costDzd ? parseFloat(costDzd) : null
 
     if (!name.trim()) {
-      addToast({ message: 'يرجى كتابة اسم المنتج', variant: 'error' })
+      addToast({ message: t('يرجى كتابة اسم المنتج'), variant: 'error' })
       return
     }
 
     if (isNaN(priceNum) || priceNum <= 0) {
-      addToast({ message: 'يرجى إدخال سعر بيع صحيح أكبر من 0', variant: 'error' })
+      addToast({ message: t('يرجى إدخال سعر بيع صحيح أكبر من 0'), variant: 'error' })
       return
     }
 
     if (matrixVariants.length === 0) {
-      addToast({ message: 'يرجى إضافة خيار واحد على الأقل', variant: 'error' })
+      addToast({ message: t('يرجى إضافة خيار واحد على الأقل'), variant: 'error' })
       return
     }
 
@@ -74,10 +74,10 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
         variants: matrixVariants,
       })
 
-      addToast({ message: 'تم إضافة المنتج وجميع الخيارات والمخزون بنجاح!', variant: 'success' })
+      addToast({ message: t('تم إضافة المنتج وجميع الخيارات والمخزون بنجاح!'), variant: 'success' })
       onSuccess()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'فشل إضافة المنتج'
+      const msg = err instanceof Error ? err.message : t('فشل إضافة المنتج')
       addToast({ message: msg, variant: 'error' })
     } finally {
       setIsSubmitting(false)
@@ -94,17 +94,17 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
             onClick={onBack}
             className="text-xs font-semibold text-text-secondary hover:text-accent flex items-center gap-1 mb-1"
           >
-            ← العودة لقائمة المنتجات
+            ← {t('العودة لقائمة المنتجات')}
           </button>
-          <h1 className="text-xl font-bold text-text-primary">إضافة منتج جديد وتوليد الخيارات</h1>
+          <h1 className="text-xl font-bold text-text-primary">{t('إضافة منتج جديد وتوليد الخيارات')}</h1>
         </div>
 
         <div className="flex gap-3">
           <Button variant="secondary" onClick={onBack} disabled={isSubmitting}>
-            إلغاء
+            {t('إلغاء')}
           </Button>
           <Button variant="primary" onClick={handleSubmit} loading={isSubmitting}>
-            حفظ المنتج والمصفوفة
+            {t('حفظ المنتج والمصفوفة')}
           </Button>
         </div>
       </div>
@@ -113,22 +113,22 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
         {/* Base Info Card */}
         <Card>
           <h2 className="text-base font-semibold text-text-primary mb-4 pb-2 border-b border-border-light">
-            1. المعلومات الأساسية للمنتج
+            1. {t('المعلومات الأساسية للمنتج')}
           </h2>
 
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="اسم المنتج (مثال: تي شيرت كلاسيك)"
+              label={t('اسم المنتج (مثال: تي شيرت كلاسيك)')}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="أدخل اسم المنتج"
+              placeholder={t('أدخل اسم المنتج')}
               isValid={name.trim().length >= 2}
-              error={name.length > 0 && name.trim().length < 2 ? 'اسم المنتج يجب أن يحتوي على حرفين على الأقل' : undefined}
+              error={name.length > 0 && name.trim().length < 2 ? t('اسم المنتج يجب أن يحتوي على حرفين على الأقل') : undefined}
               required
             />
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-extrabold text-[#1C2B3A] dark:text-slate-200">الفئة</label>
+              <label className="text-xs font-extrabold text-[#1C2B3A] dark:text-slate-200">{t('الفئة')}</label>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
@@ -143,19 +143,19 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
             </div>
 
             <Input
-              label="سعر البيع الافتراضي (DA)"
+              label={t('سعر البيع الافتراضي (DA)')}
               type="number"
               min="0"
               value={priceDzd}
               onChange={(e) => setPriceDzd(e.target.value)}
               placeholder="0"
               isValid={parseFloat(priceDzd) > 0}
-              error={priceDzd !== '' && (isNaN(parseFloat(priceDzd)) || parseFloat(priceDzd) <= 0) ? 'السعر يجب أن يكون مبلغاً موجباً أكبر من 0' : undefined}
+              error={priceDzd !== '' && (isNaN(parseFloat(priceDzd)) || parseFloat(priceDzd) <= 0) ? t('السعر يجب أن يكون مبلغاً موجباً أكبر من 0') : undefined}
               required
             />
 
             <Input
-              label="سعر التكلفة (DA) — اختياري لحساب الربح"
+              label={t('سعر التكلفة (DA) — اختياري لحساب الربح')}
               type="number"
               min="0"
               value={costDzd}
@@ -166,11 +166,11 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
           </div>
 
           <div className="mt-4">
-            <label className="text-sm font-medium text-text-primary block mb-1.5">الوصف (اختياري)</label>
+            <label className="text-sm font-medium text-text-primary block mb-1.5">{t('الوصف (اختياري)')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="أدخل وصفاً قصيراً للمنتج..."
+              placeholder={t('أدخل وصفاً قصيراً للمنتج...')}
               rows={2}
               className="w-full px-4 py-2.5 rounded-xl text-sm bg-white border border-border focus:outline-none focus:ring-2 focus:ring-accent"
             />

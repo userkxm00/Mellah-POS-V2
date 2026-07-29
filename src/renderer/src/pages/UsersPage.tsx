@@ -190,7 +190,7 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
   const columns: Column<UserItem>[] = [
     {
       key: 'full_name',
-      header: 'الاسم الكامل',
+      header: t('الاسم الكامل'),
       sortable: true,
       render: (row) => (
         <div className="flex items-center gap-2.5">
@@ -203,13 +203,13 @@ export function UsersPage({ onBack }: { onBack?: () => void }): React.JSX.Elemen
     },
     {
       key: 'role',
-      header: 'الدور / الصلاحية',
+      header: t('الدور / الصلاحية'),
       sortable: true,
       render: (row) => {
         const labels: Record<UserRole, { title: string; icon: React.ReactNode; style: string }> = {
-          admin: { title: 'مدير نظام', icon: <Crown className="w-3.5 h-3.5" />, style: 'bg-accent/10 text-accent border-accent/20' },
-          manager: { title: 'مشرف فرع', icon: <Briefcase className="w-3.5 h-3.5" />, style: 'bg-warning/10 text-warning border-warning/20' },
-          cashier: { title: 'كاشير', icon: <UserCheck className="w-3.5 h-3.5" />, style: 'bg-success/10 text-success border-success/20' },
+          admin: { title: t('مدير نظام'), icon: <Crown className="w-3.5 h-3.5" />, style: 'bg-accent/10 text-accent border-accent/20' },
+          manager: { title: t('مشرف فرع'), icon: <Briefcase className="w-3.5 h-3.5" />, style: 'bg-warning/10 text-warning border-warning/20' },
+          cashier: { title: t('كاشير'), icon: <UserCheck className="w-3.5 h-3.5" />, style: 'bg-success/10 text-success border-success/20' },
         }
         const info = labels[row.role]
         return (

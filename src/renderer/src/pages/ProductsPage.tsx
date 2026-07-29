@@ -74,12 +74,12 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
       const items = await fetchLowStockVariants()
       setLowStockVariants(items)
       if (items.length === 0) {
-        addToast({ message: 'ممتاز! لا توجد أي سلع منخفضة المخزون حالياً', variant: 'success' })
+        addToast({ message: t('ممتاز! لا توجد أي سلع منخفضة المخزون حالياً'), variant: 'success' })
         return
       }
       setIsAutoReorderModalOpen(true)
     } catch {
-      addToast({ message: 'فشل فحص المنتجات ناقصة المخزون', variant: 'error' })
+      addToast({ message: t('فشل فحص المنتجات ناقصة المخزون'), variant: 'error' })
     }
   }
 
@@ -94,7 +94,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
         try {
           const { importProductsFromCSV } = await import('@/services/csvProductImport')
           const count = await importProductsFromCSV(content)
-          addToast({ message: `تمت عملية استيراد ${count} منتج بنجاح من ملف CSV! 📦`, variant: 'success' })
+          addToast({ message: `${t('تمت عملية استيراد')} ${count} ${t('منتج بنجاح من ملف CSV!')}`, variant: 'success' })
           await loadProducts()
         } catch (err) {
           addToast({ message: (err as Error).message, variant: 'error' })
@@ -106,7 +106,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
 
   const handleExecuteBulkPriceUpdate = async (): Promise<void> => {
     if (bulkAdjustmentVal === 0) {
-      addToast({ message: 'يرجى إدخال قيمة التعديل (أكبر أو أقل من 0)', variant: 'warning' })
+      addToast({ message: t('يرجى إدخال قيمة التعديل (أكبر أو أقل من 0)'), variant: 'warning' })
       return
     }
 
@@ -134,12 +134,12 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
         )
       }
 
-      addToast({ message: 'تم تحديث أسعار المنتجات المحددة بنجاح! 🏷️', variant: 'success' })
+      addToast({ message: t('تم تحديث أسعار المنتجات المحددة بنجاح!'), variant: 'success' })
       setIsBulkPriceModalOpen(false)
       setBulkAdjustmentVal(0)
       await loadProducts()
     } catch {
-      addToast({ message: 'فشل التعديل الجماعي لأسعار المنتجات', variant: 'error' })
+      addToast({ message: t('فشل التعديل الجماعي لأسعار المنتجات'), variant: 'error' })
     } finally {
       setIsBulkSaving(false)
     }
@@ -174,7 +174,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
       )
       setProducts(prodRows)
     } catch {
-      addToast({ message: 'فشل تحميل المنتجات للفرع الحالي', variant: 'error' })
+      addToast({ message: t('فشل تحميل المنتجات للفرع الحالي'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -387,13 +387,13 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
                   GROUP BY v.id
                 `)
                 if (variantsRows.length === 0) {
-                  addToast({ message: 'لا يوجد مخزون للتصدير حالياً', variant: 'warning' })
+                  addToast({ message: t('لا يوجد مخزون للتصدير حالياً'), variant: 'warning' })
                   return
                 }
                 exportInventoryToCSV(variantsRows)
-                addToast({ message: 'تم تصدير تقرير المخزون لملف CSV بنجاح!', variant: 'success' })
+                addToast({ message: t('تم تصدير تقرير المخزون لملف CSV بنجاح!'), variant: 'success' })
               } catch {
-                addToast({ message: 'فشل تصدير بيانات المخزون', variant: 'error' })
+                addToast({ message: t('فشل تصدير بيانات المخزون'), variant: 'error' })
               }
             }}
             className="flex items-center gap-1.5 h-10 px-3.5 rounded-2xl text-xs font-bold shadow-ambient-sm"
@@ -440,7 +440,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
                 : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
             }`}
           >
-            جميع الفئات ({products.length})
+            {t('جميع الفئات')} ({products.length})
           </button>
           {categories.map((cat) => (
             <button
@@ -467,11 +467,11 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
             }`}
           >
             <AlertTriangle className="w-3.5 h-3.5" />
-            <span>المنخفض فقط</span>
+            <span>{t('المنخفض فقط')}</span>
           </button>
 
           <Input
-            placeholder="ابحث باسم المنتج أو الفئة..."
+            placeholder={t('ابحث باسم المنتج أو الفئة...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-gray-50 border-gray-200 text-xs"
@@ -491,7 +491,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
           sortOrder={sortOrder}
           onSort={handleSort}
           emptyType="search"
-          emptyMessage="لا توجد منتجات مسجلة تطابق البحث"
+          emptyMessage={t('لا توجد منتجات مسجلة تطابق البحث')}
         />
       </Card>
 
@@ -506,16 +506,16 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
       <Modal
         isOpen={isAutoReorderModalOpen}
         onClose={() => setIsAutoReorderModalOpen(false)}
-        title="📋 اقتراح طلبية التزود الشاملة للموردين (Auto Purchase Order)"
+        title={t('📋 اقتراح طلبية التزود الشاملة للموردين (Auto Purchase Order)')}
         size="lg"
       >
         <div className="space-y-4 select-none">
           <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-xs font-bold text-amber-900 space-y-1">
-              <p className="font-extrabold text-sm">تنبيه المخزون المنخفض!</p>
+              <p className="font-extrabold text-sm">{t('تنبيه المخزون المنخفض!')}</p>
               <p>
-                السلع والخيارات التالية اقتربت من النفاد أو نفدت بالكامل. قمنا بحساب الكمية المقترحة للشراء تلقائياً للوصول للمستوى الآمن (10 قطع لكل خيار).
+                {t('السلع والخيارات التالية اقتربت من النفاد أو نفدت بالكامل. قمنا بحساب الكمية المقترحة للشراء تلقائياً للوصول للمستوى الآمن (10 قطع لكل خيار).')}
               </p>
             </div>
           </div>
@@ -524,11 +524,11 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
             <table className="w-full text-right text-xs">
               <thead className="bg-gray-50 border-b border-gray-200 font-bold text-text-secondary">
                 <tr>
-                  <th className="p-3">المنتج والخيار</th>
-                  <th className="p-3 font-mono text-[11px]">الباركود</th>
-                  <th className="p-3 text-center">المخزون الحالي</th>
-                  <th className="p-3 text-center">الحد الأدنى</th>
-                  <th className="p-3 text-center">المقترح للشراء</th>
+                  <th className="p-3">{t('المنتج والخيار')}</th>
+                  <th className="p-3 font-mono text-[11px]">{t('الباركود')}</th>
+                  <th className="p-3 text-center">{t('المخزون الحالي')}</th>
+                  <th className="p-3 text-center">{t('الحد الأدنى')}</th>
+                  <th className="p-3 text-center">{t('المقترح للشراء')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -537,14 +537,14 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
                     <td className="p-3">
                       <p className="font-bold text-text-primary">{item.product_name}</p>
                       <p className="text-[11px] text-text-tertiary">
-                        {item.size || 'بدون مقاس'} / {item.color || 'بدون لون'}
+                        {item.size || t('بدون مقاس')} / {item.color || t('بدون لون')}
                       </p>
                     </td>
                     <td className="p-3 font-mono text-[11px] text-text-secondary">{item.barcode || '—'}</td>
-                    <td className="p-3 text-center font-bold text-danger">{item.current_stock} قطعة</td>
-                    <td className="p-3 text-center text-text-tertiary">{item.min_stock_level} قطعة</td>
+                    <td className="p-3 text-center font-bold text-danger">{item.current_stock} {t('قطعة')}</td>
+                    <td className="p-3 text-center text-text-tertiary">{item.min_stock_level} {t('قطعة')}</td>
                     <td className="p-3 text-center font-black text-accent bg-accent/5 rounded-lg">
-                      +{item.suggested_reorder_qty} قطعة
+                      +{item.suggested_reorder_qty} {t('قطعة')}
                     </td>
                   </tr>
                 ))}
@@ -554,11 +554,11 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
 
           <div className="flex items-center justify-between pt-2">
             <p className="text-xs text-text-tertiary font-bold">
-              إجمالي المنتجات المطلوب إعادة تزودها: <span className="text-text-primary">{lowStockVariants.length} سلع</span>
+              {t('إجمالي المنتجات المطلوب إعادة تزودها:')} <span className="text-text-primary">{lowStockVariants.length} {t('سلع')}</span>
             </p>
             <div className="flex gap-2">
               <Button variant="secondary" onClick={() => setIsAutoReorderModalOpen(false)}>
-                إلغاء
+                {t('إلغاء')}
               </Button>
               <Button
                 variant="primary"
@@ -566,7 +566,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
                   exportInventoryToCSV(
                     lowStockVariants.map((item) => ({
                       barcode: item.barcode,
-                      product_name: `[طلبية تزود] ${item.product_name}`,
+                      product_name: `[${t('طلبية تزود')}] ${item.product_name}`,
                       category_name: item.category_name,
                       size: item.size,
                       color: item.color,
@@ -574,13 +574,13 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
                       current_stock: item.suggested_reorder_qty,
                     }))
                   )
-                  addToast({ message: 'تم تصدير قائمة التزود لملف CSV بنجاح للمورد!', variant: 'success' })
+                  addToast({ message: t('تم تصدير قائمة التزود لملف CSV بنجاح للمورد!'), variant: 'success' })
                   setIsAutoReorderModalOpen(false)
                 }}
                 className="flex items-center gap-1.5"
               >
                 <FileText className="w-4 h-4" />
-                <span>تصدير الطلبية لـ Excel (CSV)</span>
+                <span>{t('تصدير الطلبية لـ Excel (CSV)')}</span>
               </Button>
             </div>
           </div>
@@ -591,22 +591,22 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
       <Modal
         isOpen={isBulkPriceModalOpen}
         onClose={() => setIsBulkPriceModalOpen(false)}
-        title="🏷️ التعديل الجماعي لأسعار البيع (Bulk Price Update)"
+        title={t('🏷️ التعديل الجماعي لأسعار البيع (Bulk Price Update)')}
         size="md"
       >
         <div className="space-y-4 select-none">
           <div className="p-3.5 bg-accent/10 border border-accent/20 rounded-2xl text-xs font-bold text-accent">
-            يتيح لك هذا الخيار زيادة أو تخفيض أسعار المنتجات دفعة واحدة لجميع المنتجات أو حسب فئة معينة.
+            {t('يتيح لك هذا الخيار زيادة أو تخفيض أسعار المنتجات دفعة واحدة لجميع المنتجات أو حسب فئة معينة.')}
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-text-primary">اختر الفئة المستهدفة:</label>
+            <label className="text-xs font-bold text-text-primary">{t('اختر الفئة المستهدفة:')}</label>
             <select
               value={bulkCatId}
               onChange={(e) => setBulkCatId(e.target.value)}
               className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200"
             >
-              <option value="">جميع الفئات والمنتجات</option>
+              <option value="">{t('جميع الفئات والمنتجات')}</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
@@ -617,22 +617,22 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-text-primary">نوع التعديل:</label>
+              <label className="text-xs font-bold text-text-primary">{t('نوع التعديل:')}</label>
               <select
                 value={bulkAdjustmentType}
                 onChange={(e) => setBulkAdjustmentType(e.target.value as 'percent' | 'fixed')}
                 className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200"
               >
-                <option value="percent">نسبة مئوية (%)</option>
-                <option value="fixed">مبلغ ثابت (دج DZD)</option>
+                <option value="percent">{t('نسبة مئوية (%)')}</option>
+                <option value="fixed">{t('مبلغ ثابت (دج DZD)')}</option>
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-text-primary">قيمة التعديل (+ للزيادة، - للتخفيض):</label>
+              <label className="text-xs font-bold text-text-primary">{t('قيمة التعديل (+ للزيادة، - للتخفيض):')}</label>
               <input
                 type="number"
-                placeholder="مثلاً: 10 أو -500"
+                placeholder={t('مثلاً: 10 أو -500')}
                 value={bulkAdjustmentVal || ''}
                 onChange={(e) => setBulkAdjustmentVal(parseFloat(e.target.value) || 0)}
                 className="w-full px-4 py-2.5 rounded-2xl text-xs font-black bg-gray-50 border border-gray-200"
@@ -646,7 +646,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
               disabled={isBulkSaving || bulkAdjustmentVal === 0}
               className="flex-1 py-3.5 rounded-2xl bg-accent text-white text-xs font-extrabold shadow-ambient btn-press disabled:opacity-50"
             >
-              {isBulkSaving ? 'جاري تحديث الأسعار...' : 'تأكيد وتطبيق التعديل الجماعي'}
+              {isBulkSaving ? t('جاري تحديث الأسعار...') : t('تأكيد وتطبيق التعديل الجماعي')}
             </button>
             <button
               onClick={() => setIsBulkPriceModalOpen(false)}

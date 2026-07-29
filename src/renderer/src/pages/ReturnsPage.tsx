@@ -47,11 +47,11 @@ export function ReturnsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
       )
       setReturns(rows)
     } catch {
-      addToast({ message: 'فشل تحميل سجل المرتجعات', variant: 'error' })
+      addToast({ message: t('فشل تحميل سجل المرتجعات'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   useEffect(() => {
     loadReturns()
@@ -60,46 +60,46 @@ export function ReturnsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
   const columns: Column<ReturnHistoryRow>[] = [
     {
       key: 'original_sale_id',
-      header: 'رقم الوصل الأصلي',
+      header: t('رقم الوصل الأصلي'),
       render: (row) => <span className="font-mono text-xs text-text-primary font-bold">{row.original_sale_id}</span>,
     },
     {
       key: 'product_name',
-      header: 'المنتج المرجوع',
+      header: t('المنتج المرجوع'),
       render: (row) => (
         <div>
           <p className="font-extrabold text-text-primary text-xs">{row.product_name}</p>
           <p className="text-[11px] text-text-tertiary">
-            {row.size ? `مقاس: ${row.size} ` : ''}
-            {row.color ? `لون: ${row.color}` : ''}
+            {row.size ? `${t('مقاس:')} ${row.size} ` : ''}
+            {row.color ? `${t('لون:')} ${row.color}` : ''}
           </p>
         </div>
       ),
     },
     {
       key: 'quantity',
-      header: 'الكمية المرجوعة',
-      render: (row) => <span className="text-xs font-extrabold text-danger">{row.quantity} قطعة</span>,
+      header: t('الكمية المرجوعة'),
+      render: (row) => <span className="text-xs font-extrabold text-danger">{row.quantity} {t('قطعة')}</span>,
     },
     {
       key: 'total_refund_dzd',
-      header: 'المبلغ المسترد',
+      header: t('المبلغ المسترد'),
       render: (row) => <span className="currency font-black text-danger">{formatCurrency(row.total_refund_dzd)}</span>,
     },
     {
       key: 'refund_method',
-      header: 'طريقة الاسترداد',
+      header: t('طريقة الاسترداد'),
       render: (row) => (
         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-text-secondary text-xs font-bold border border-gray-200/60">
           {row.refund_method === 'cash' ? (
             <>
               <Banknote className="w-3.5 h-3.5 text-success" />
-              <span>نقداً</span>
+              <span>{t('نقداً')}</span>
             </>
           ) : (
             <>
               <Tag className="w-3.5 h-3.5 text-accent" />
-              <span>رصيد متجر</span>
+              <span>{t('رصيد المتجر')}</span>
             </>
           )}
         </span>

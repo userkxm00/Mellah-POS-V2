@@ -159,7 +159,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
       setSaleItems(items)
       setIsDetailOpen(true)
     } catch {
-      addToast({ message: 'فشل جلب تفاصيل الفاتورة', variant: 'error' })
+      addToast({ message: t('فشل جلب تفاصيل الفاتورة'), variant: 'error' })
     }
   }
 
@@ -304,7 +304,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
             }`}
           >
             {isCash ? <Banknote className="w-3 h-3" /> : isCard ? <CreditCard className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
-            <span>{t(isCash ? 'نقداً' : isCard ? 'بطاقة CIB' : 'مزدوج')}</span>
+            <span>{isCash ? t('نقداً') : isCard ? t('بطاقة CIB') : t('مزدوج')}</span>
           </span>
         )
       },
@@ -338,7 +338,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
                 : 'bg-warning-light text-warning'
           }`}
         >
-          {t(row.status === 'completed' ? 'مكتملة' : row.status === 'voided' ? 'ملغاة (Voided)' : 'مرتجعة')}
+          {row.status === 'completed' ? t('مكتملة') : row.status === 'voided' ? t('ملغاة (Voided)') : t('مرتجعة')}
         </span>
       ),
     },
@@ -657,7 +657,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
               disabled={isVoiding || !voidReason.trim()}
               className="flex-1 py-3 rounded-xl bg-danger text-white text-xs font-bold shadow-ambient btn-press disabled:opacity-50"
             >
-              {isVoiding ? 'جاري الإلغاء...' : 'تأكيد الإلغاء وإعادة السلع'}
+              {isVoiding ? t('جاري الإلغاء...') : t('تأكيد الإلغاء وإعادة السلع')}
             </button>
             <button
               onClick={() => setIsVoidModalOpen(false)}

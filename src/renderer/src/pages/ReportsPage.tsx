@@ -108,15 +108,15 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
         setDailyChartData(chartRows)
       } else {
         setDailyChartData([
-          { day: 'اليوم', revenue: salesRes.totalRevenueDzd },
+          { day: t('اليوم'), revenue: salesRes.totalRevenueDzd },
         ])
       }
     } catch {
-      addToast({ message: 'فشل تحميل التقارير', variant: 'error' })
+      addToast({ message: t('فشل تحميل التقارير'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
-  }, [getPeriodDates, addToast])
+  }, [getPeriodDates, addToast, t])
 
   useEffect(() => {
     loadReports()
@@ -125,29 +125,29 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
   const topProductColumns: Column<TopProductRow>[] = [
     {
       key: 'product_name',
-      header: 'المنتج الخيار',
+      header: t('المنتج الخيار'),
       render: (row) => (
         <div>
           <p className="font-extrabold text-text-primary text-xs">{row.product_name}</p>
           <p className="text-[11px] text-text-tertiary">
-            {row.size ? `مقاس: ${row.size} ` : ''}
-            {row.color ? `لون: ${row.color}` : ''}
+            {row.size ? `${t('مقاس:')} ${row.size} ` : ''}
+            {row.color ? `${t('لون:')} ${row.color}` : ''}
           </p>
         </div>
       ),
     },
     {
       key: 'total_quantity_sold',
-      header: 'الكمية المباعة',
+      header: t('الكمية المباعة'),
       render: (row) => (
         <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-black border border-accent/20">
-          {row.total_quantity_sold} قطعة
+          {row.total_quantity_sold} {t('قطعة')}
         </span>
       ),
     },
     {
       key: 'total_revenue_dzd',
-      header: 'إجمالي العوائد',
+      header: t('إجمالي العوائد'),
       render: (row) => <span className="currency font-black text-success text-xs">{formatCurrency(row.total_revenue_dzd)}</span>,
     },
   ]
@@ -165,7 +165,7 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
     },
     {
       key: 'expected_cash_dzd',
-      header: 'المحسوب متوقع',
+      header: t('المحسوب متوقع'),
       render: (row) => (
         <span className="currency font-extrabold text-accent text-xs">
           {row.expected_cash_dzd ? formatCurrency(row.expected_cash_dzd) : '-'}
@@ -174,7 +174,7 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
     },
     {
       key: 'closing_cash_dzd',
-      header: 'العد الفعلي',
+      header: t('العد الفعلي'),
       render: (row) => (
         <span className="currency font-extrabold text-text-primary text-xs">
           {row.closing_cash_dzd ? formatCurrency(row.closing_cash_dzd) : '-'}
@@ -183,9 +183,9 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
     },
     {
       key: 'difference_dzd',
-      header: 'الفرق (عجز/فائض)',
+      header: t('الفرق (عجز/فائض)'),
       render: (row) => {
-        if (row.difference_dzd === null) return <span className="text-xs text-text-tertiary">مفتوحة</span>
+        if (row.difference_dzd === null) return <span className="text-xs text-text-tertiary">{t('مفتوحة')}</span>
         const diff = row.difference_dzd
         return (
           <span
@@ -197,26 +197,26 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
                   : 'bg-danger/10 text-danger border-danger/20'
             }`}
           >
-            {diff === 0 ? '0 DA (متطابق)' : diff > 0 ? `+${formatCurrency(diff)}` : `- ${formatCurrency(Math.abs(diff))}`}
+            {diff === 0 ? `0 DA (${t('متطابق')})` : diff > 0 ? `+${formatCurrency(diff)}` : `- ${formatCurrency(Math.abs(diff))}`}
           </span>
         )
       },
     },
     {
       key: 'opened_at',
-      header: 'تاريخ الفتح والإغلاق',
+      header: t('تاريخ الفتح والإغلاق'),
       render: (row) => (
         <span className="font-mono text-[11px] text-text-tertiary">
           {new Date(row.opened_at).toLocaleDateString('ar-DZ')}{' '}
-          {row.closed_at ? `← ${new Date(row.closed_at).toLocaleTimeString('ar-DZ')}` : '(جارية)'}
+          {row.closed_at ? `← ${new Date(row.closed_at).toLocaleTimeString('ar-DZ')}` : `(${t('جارية')})`}
         </span>
       ),
     },
   ]
 
   const paymentData = [
-    { name: 'نقداً', amount: salesSummary?.cashSalesDzd ?? 0, color: '#30D158' },
-    { name: 'بطاقة CIB', amount: salesSummary?.cardSalesDzd ?? 0, color: '#0A84FF' },
+    { name: t('نقداً'), amount: salesSummary?.cashSalesDzd ?? 0, color: '#30D158' },
+    { name: t('بطاقة CIB'), amount: salesSummary?.cardSalesDzd ?? 0, color: '#0A84FF' },
   ]
 
   return (
@@ -272,16 +272,16 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
           <button
             onClick={() => {
               if (shifts.length === 0) {
-                addToast({ message: 'لا توجد بيانات ورديات للتصدير حالياً', variant: 'warning' })
+                addToast({ message: t('لا توجد بيانات ورديات للتصدير حالياً'), variant: 'warning' })
                 return
               }
               exportShiftsToCSV(shifts)
-              addToast({ message: 'تم تصدير تقرير الورديات إلى ملف CSV بنجاح!', variant: 'success' })
+              addToast({ message: t('تم تصدير تقرير الورديات إلى ملف CSV بنجاح!'), variant: 'success' })
             }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-success hover:bg-success/90 text-white text-xs font-bold shadow-ambient transition-all btn-press"
           >
             <FileText className="w-4 h-4" />
-            <span>تصدير الورديات CSV</span>
+            <span>{t('تصدير الورديات CSV')}</span>
           </button>
         </div>
       </div>
@@ -382,7 +382,7 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
                 <YAxis stroke="#AEAEB2" fontSize={11} />
                 <Tooltip
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  formatter={(val: any) => [`${(Number(val) || 0).toLocaleString()} DA`, 'المبيعات']}
+                  formatter={(val: any) => [`${(Number(val) || 0).toLocaleString()} DA`, t('المبيعات')]}
                   contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e5ea', fontWeight: 'bold' }}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="#0A84FF" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
@@ -395,7 +395,7 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
         <div className="col-span-1 bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
             <CreditCard className="w-4 h-4 text-success" />
-            <h2 className="text-sm font-black text-text-primary">مقارنة وسائل الدفع (DA)</h2>
+            <h2 className="text-sm font-black text-text-primary">{t('مقارنة وسائل الدفع')} (DA)</h2>
           </div>
 
           <div className="h-64 w-full">
@@ -405,7 +405,7 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
                 <YAxis stroke="#AEAEB2" fontSize={11} />
                 <Tooltip
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  formatter={(val: any) => [`${(Number(val) || 0).toLocaleString()} DA`, 'المبلغ']}
+                  formatter={(val: any) => [`${(Number(val) || 0).toLocaleString()} DA`, t('المبلغ')]}
                   contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e5ea', fontWeight: 'bold' }}
                 />
                 <Bar dataKey="amount" radius={[8, 8, 0, 0]}>

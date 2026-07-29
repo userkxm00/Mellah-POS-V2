@@ -29,6 +29,9 @@ import { CountUpNumber } from '@/components/ui/CountUpNumber'
 import { useAuthStore } from '@/stores/authStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
+import { UpdateNotificationBanner } from '@/components/updates/UpdateNotificationBanner'
+import { AnimatedBrandLogo } from '@/components/brand/AnimatedBrandLogo'
 import { manualReconnectAndSync } from '@/services/syncEngine'
 import type { UserRole } from '@/types/database'
 
@@ -46,8 +49,8 @@ interface LauncherTile {
 const tiles: LauncherTile[] = [
   {
     id: 'pos',
-    label: 'نقطة البيع (POS)',
-    description: 'واجهة الكاشير البيع الفوري السريع',
+    label: useLanguageStore.getState().t('نقطة البيع (POS)'),
+    description: useLanguageStore.getState().t('واجهة الكاشير البيع الفوري السريع'),
     icon: <Store className="w-8 h-8" />,
     iconBg: 'bg-accent text-white',
     roles: ['admin', 'manager', 'cashier'],
@@ -55,8 +58,8 @@ const tiles: LauncherTile[] = [
   },
   {
     id: 'history',
-    label: 'سجل المبيعات',
-    description: 'استعراض الفواتير وإعادة الطباعة',
+    label: useLanguageStore.getState().t('سجل المبيعات'),
+    description: useLanguageStore.getState().t('استعراض الفواتير وإعادة الطباعة'),
     icon: <Receipt className="w-8 h-8" />,
     iconBg: 'bg-[#5856D6] text-white',
     roles: ['admin', 'manager', 'cashier'],
@@ -64,8 +67,8 @@ const tiles: LauncherTile[] = [
   },
   {
     id: 'returns',
-    label: 'إدارة المرتجعات',
-    description: 'استرجاع المنتجات والتعويضات',
+    label: useLanguageStore.getState().t('إدارة المرتجعات'),
+    description: useLanguageStore.getState().t('استرجاع المنتجات والتعويضات'),
     icon: <RotateCcw className="w-8 h-8" />,
     iconBg: 'bg-warning text-white',
     roles: ['admin', 'manager', 'cashier'],
@@ -73,8 +76,8 @@ const tiles: LauncherTile[] = [
   },
   {
     id: 'customers',
-    label: 'الزبائن والولاء',
-    description: 'قاعدة الزبائن ونقاط المكافآت',
+    label: useLanguageStore.getState().t('الزبائن والولاء'),
+    description: useLanguageStore.getState().t('قاعدة الزبائن ونقاط المكافآت'),
     icon: <UserPlus className="w-8 h-8" />,
     iconBg: 'bg-[#FF2D55] text-white',
     roles: ['admin', 'manager', 'cashier'],
@@ -82,17 +85,17 @@ const tiles: LauncherTile[] = [
   },
   {
     id: 'labels',
-    label: 'طباعة الملصقات',
+    label: useLanguageStore.getState().t('طباعة الملصقات'),
     icon: <Tag className="w-8 h-8" />,
-    description: 'تيكيتات الباركود 40mm×30mm',
+    description: useLanguageStore.getState().t('تيكيتات الباركود 40mm×30mm'),
     iconBg: 'bg-[#FF9500] text-white',
     roles: ['admin', 'manager', 'cashier'],
     inWindow: false,
   },
   {
     id: 'products',
-    label: 'المنتجات والمخزون',
-    description: 'إضافة السلع والمقاسات والألوان',
+    label: useLanguageStore.getState().t('المنتجات والمخزون'),
+    description: useLanguageStore.getState().t('إضافة السلع والمقاسات والألوان'),
     icon: <Package className="w-8 h-8" />,
     iconBg: 'bg-success text-white',
     roles: ['admin', 'manager'],
@@ -100,8 +103,8 @@ const tiles: LauncherTile[] = [
   },
   {
     id: 'suppliers',
-    label: 'الموردين والديون',
-    description: 'فواتير الشراء وديون السلع (Fournisseurs)',
+    label: useLanguageStore.getState().t('الموردين والديون'),
+    description: useLanguageStore.getState().t('فواتير الشراء وديون السلع (Fournisseurs)'),
     icon: <Truck className="w-8 h-8" />,
     iconBg: 'bg-[#FF9500] text-white',
     roles: ['admin', 'manager'],
@@ -109,8 +112,8 @@ const tiles: LauncherTile[] = [
   },
   {
     id: 'reports',
-    label: 'التقارير والتحليلات',
-    description: 'مؤشرات الأرباح والمبيعات الحية',
+    label: useLanguageStore.getState().t('التقارير والتحليلات'),
+    description: useLanguageStore.getState().t('مؤشرات الأرباح والمبيعات الحية'),
     icon: <BarChart3 className="w-8 h-8" />,
     iconBg: 'bg-[#AF52DE] text-white',
     roles: ['admin', 'manager'],
@@ -118,8 +121,8 @@ const tiles: LauncherTile[] = [
   },
   {
     id: 'users',
-    label: 'إدارة المستخدمين',
-    description: 'إضافة وحذف وتعيين أدوار الطاقم',
+    label: useLanguageStore.getState().t('إدارة المستخدمين'),
+    description: useLanguageStore.getState().t('إضافة وحذف وتعيين أدوار الطاقم'),
     icon: <Users className="w-8 h-8" />,
     iconBg: 'bg-[#007AFF] text-white',
     roles: ['admin'],
@@ -127,8 +130,8 @@ const tiles: LauncherTile[] = [
   },
   {
     id: 'branches',
-    label: 'إدارة الفروع',
-    description: 'الفروع والمحلات التابعة للمتجر',
+    label: useLanguageStore.getState().t('إدارة الفروع'),
+    description: useLanguageStore.getState().t('الفروع والمحلات التابعة للمتجر'),
     icon: <Building2 className="w-8 h-8" />,
     iconBg: 'bg-[#34C759] text-white',
     roles: ['admin'],
@@ -136,8 +139,8 @@ const tiles: LauncherTile[] = [
   },
   {
     id: 'settings',
-    label: 'إعدادات المتجر',
-    description: 'بيانات الفاتورة والنسخ الاحتياطي',
+    label: useLanguageStore.getState().t('إعدادات المتجر'),
+    description: useLanguageStore.getState().t('بيانات الفاتورة والنسخ الاحتياطي'),
     icon: <Settings className="w-8 h-8" />,
     iconBg: 'bg-[#8E8E93] text-white',
     roles: ['admin'],
@@ -145,8 +148,8 @@ const tiles: LauncherTile[] = [
   },
   {
     id: 'audit_logs',
-    label: 'سجل العمليات (Audit)',
-    description: 'استعراض سجل التدقيق والأمان',
+    label: useLanguageStore.getState().t('سجل العمليات (Audit)'),
+    description: useLanguageStore.getState().t('استعراض سجل التدقيق والأمان'),
     icon: <ShieldCheck className="w-8 h-8" />,
     iconBg: 'bg-[#34C759] text-white',
     roles: ['admin'],
@@ -154,8 +157,8 @@ const tiles: LauncherTile[] = [
   },
   {
     id: 'maintenance',
-    label: 'الصيانة والتحديثات',
-    description: 'فحص وإصلاح النظام وتحديث التطبيق',
+    label: useLanguageStore.getState().t('الصيانة والتحديثات'),
+    description: useLanguageStore.getState().t('فحص وإصلاح النظام وتحديث التطبيق'),
     icon: <Wrench className="w-8 h-8" />,
     iconBg: 'bg-[#FF9500] text-white',
     roles: ['admin'],
@@ -165,17 +168,17 @@ const tiles: LauncherTile[] = [
 
 const roleBadges: Record<UserRole, { label: string; icon: React.ReactNode; style: string }> = {
   admin: {
-    label: 'مدير النظام',
+    label: useLanguageStore.getState().t('مدير النظام'),
     icon: <Crown className="w-3.5 h-3.5" />,
     style: 'bg-accent/10 text-accent border-accent/20',
   },
   manager: {
-    label: 'مشرف المتجر',
+    label: useLanguageStore.getState().t('مشرف المتجر'),
     icon: <Briefcase className="w-3.5 h-3.5" />,
     style: 'bg-warning/10 text-warning border-warning/20',
   },
   cashier: {
-    label: 'كاشير',
+    label: useLanguageStore.getState().t('كاشير'),
     icon: <UserCheck className="w-3.5 h-3.5" />,
     style: 'bg-success/10 text-success border-success/20',
   },
@@ -185,18 +188,14 @@ interface HomeLauncherPageProps {
   onNavigate: (moduleId: string) => void
 }
 
-import { AnimatedBrandLogo } from '@/components/brand/AnimatedBrandLogo'
-import { useLanguageStore } from '@/stores/languageStore'
-import { UpdateNotificationBanner } from '@/components/updates/UpdateNotificationBanner'
-
 export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.JSX.Element {
+  const [isReconnecting, setIsReconnecting] = useState(false)
+  const isOnline = useSyncStore((s) => s.isOnline)
   const currentUser = useAuthStore((s) => s.currentUser)
   const currentBranch = useAuthStore((s) => s.currentBranch)
-  const t = useLanguageStore((s) => s.t)
   const logout = useAuthStore((s) => s.logout)
+  const t = useLanguageStore((s) => s.t)
   const hasRole = useAuthStore((s) => s.hasRole)
-  const isOnline = useSyncStore((s) => s.isOnline)
-
   const language = useLanguageStore((s) => s.language)
 
   // Live ticking clock
@@ -246,7 +245,6 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
     })()
   }, [])
 
-  const [isReconnecting, setIsReconnecting] = useState(false)
   const addToast = useToastStore((s) => s.addToast)
 
   const handleManualReconnect = async (): Promise<void> => {
@@ -255,17 +253,17 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
       const { isOnline: onlineStatus, processed } = await manualReconnectAndSync()
       if (onlineStatus) {
         addToast({
-          message: processed > 0 ? `تم الاتصال ومزامنة ${processed} عملية بنجاح!` : 'تم الاتصال بالشبكة بنجاح (أونلاين)',
+          message: processed > 0 ? `${t('تم الاتصال ومزامنة')} ${processed} ${t('عملية بنجاح!')}` : t('تم الاتصال بالشبكة بنجاح (أونلاين)'),
           variant: 'success',
         })
       } else {
         addToast({
-          message: 'تعذر الاتصال بالشبكة، تحقق من اتصال الإنترنت (أوفلاين)',
+          message: t('تعذر الاتصال بالشبكة، تحقق من اتصال الإنترنت (أوفلاين)'),
           variant: 'error',
         })
       }
     } catch {
-      addToast({ message: 'حدث خطأ أثناء فحص الاتصال', variant: 'error' })
+      addToast({ message: t('حدث خطأ أثناء فحص الاتصال'), variant: 'error' })
     } finally {
       setIsReconnecting(false)
     }
@@ -314,7 +312,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               onClick={handleManualReconnect}
               disabled={isReconnecting}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 border border-gray-200/80 text-text-primary hover:border-accent hover:text-accent text-xs font-bold shadow-layered-sm transition-all btn-press disabled:opacity-50"
-              title="إعادة الاتصال بالشبكة والمزامنة يدوياً"
+              title={t('إعادة الاتصال بالشبكة والمزامنة يدوياً')}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isReconnecting ? 'animate-spin text-accent' : ''}`} />
               <span>{isReconnecting ? t('جاري الفحص...') : t('إعادة الاتصال')}</span>
@@ -339,7 +337,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
           {/* Logout */}
           <button
             onClick={() => {
-              if (window.confirm('هل تريد تسجيل الخروج؟')) logout()
+              if (window.confirm(t('هل تريد تسجيل الخروج؟'))) logout()
             }}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gray-200/60 text-text-secondary hover:bg-danger/10 hover:text-danger text-xs font-bold transition-colors btn-press"
           >

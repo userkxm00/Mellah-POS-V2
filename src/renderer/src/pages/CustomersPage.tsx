@@ -90,11 +90,11 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       `)
       setCustomers(rows)
     } catch {
-      addToast({ message: 'فشل تحميل قائمة الزبائن والديون', variant: 'error' })
+      addToast({ message: t('فشل تحميل قائمة الزبائن والديون'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   useEffect(() => {
     loadCustomers()
@@ -103,7 +103,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
   const handleAddCustomer = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     if (!fullName.trim()) {
-      addToast({ message: 'يرجى كتابة اسم الزبون', variant: 'error' })
+      addToast({ message: t('يرجى كتابة اسم الزبون'), variant: 'error' })
       return
     }
 
@@ -116,20 +116,20 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         [id, DEFAULT_BRANCH_ID, fullName.trim(), phone.trim() || null, 0, now, now]
       )
 
-      addToast({ message: 'تم إضافة الزبون بنجاح!', variant: 'success' })
+      addToast({ message: t('تم إضافة الزبون بنجاح!'), variant: 'success' })
       setIsModalOpen(false)
       setFullName('')
       setPhone('')
       await loadCustomers()
     } catch {
-      addToast({ message: 'فشل إضافة الزبون', variant: 'error' })
+      addToast({ message: t('فشل إضافة الزبون'), variant: 'error' })
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleDeleteCustomer = async (id: string, name: string): Promise<void> => {
-    if (!window.confirm(`هل أنت تأكد من رغبتك في حذف الزبون (${name})؟`)) return
+    if (!window.confirm(`${t('هل أنت متأكد من رغبتك في حذف الزبون')} (${name})؟`)) return
 
     try {
       const now = new Date().toISOString()
@@ -137,10 +137,10 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         'UPDATE customers SET deleted_at = ? WHERE id = ?',
         [now, id]
       )
-      addToast({ message: 'تم حذف الزبون', variant: 'info' })
+      addToast({ message: t('تم حذف الزبون'), variant: 'info' })
       await loadCustomers()
     } catch {
-      addToast({ message: 'فشل حذف الزبون', variant: 'error' })
+      addToast({ message: t('فشل حذف الزبون'), variant: 'error' })
     }
   }
 
@@ -160,11 +160,11 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         'UPDATE customers SET full_name = ?, phone = ?, updated_at = ? WHERE id = ?',
         [editFullName.trim(), editPhone.trim() || null, now, editingCustomer.id]
       )
-      addToast({ message: `تم تحديث بيانات الزبون "${editFullName.trim()}" ✅`, variant: 'success' })
+      addToast({ message: `${t('تم تحديث بيانات الزبون')} "${editFullName.trim()}"`, variant: 'success' })
       setEditingCustomer(null)
       await loadCustomers()
     } catch {
-      addToast({ message: 'فشل تحديث بيانات الزبون', variant: 'error' })
+      addToast({ message: t('فشل تحديث بيانات الزبون'), variant: 'error' })
     } finally {
       setIsEditSaving(false)
     }
@@ -184,7 +184,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     if (!payingDebtCustomer) return
     const amount = parseFloat(repayAmountDzd)
     if (!amount || amount <= 0) {
-      addToast({ message: 'يرجى كتابة مبلغ تسديد صحيح', variant: 'error' })
+      addToast({ message: t('يرجى كتابة مبلغ تسديد صحيح'), variant: 'error' })
       return
     }
 
@@ -199,13 +199,13 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         [paymentId, DEFAULT_BRANCH_ID, activeShift?.id || null, payingDebtCustomer.id, amount, repayMethod, repayNotes.trim() || null, now]
       )
 
-      addToast({ message: `تم تسديد مبلغ ${amount.toLocaleString('ar-DZ')} دج لـ ${payingDebtCustomer.full_name} بنجاح! 💵`, variant: 'success' })
+      addToast({ message: `${t('تم تسديد مبلغ')} ${amount.toLocaleString('ar-DZ')} ${t('دج لـ')} ${payingDebtCustomer.full_name}`, variant: 'success' })
       setPayingDebtCustomer(null)
       setRepayAmountDzd('')
       setRepayNotes('')
       await loadCustomers()
     } catch {
-      addToast({ message: 'فشل تسجيل عملية تسديد الدين', variant: 'error' })
+      addToast({ message: t('فشل تسجيل عملية تسديد الدين'), variant: 'error' })
     } finally {
       setIsRepaying(false)
     }
@@ -233,7 +233,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       ).catch(() => [])
       setCustomerPaymentsHistory(paymentRows)
     } catch {
-      addToast({ message: 'فشل تحميل سجل مشتريات وتسديدات الزبون', variant: 'error' })
+      addToast({ message: t('فشل تحميل سجل مشتريات وتسديدات الزبون'), variant: 'error' })
     } finally {
       setIsTimelineLoading(false)
     }
@@ -265,18 +265,18 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
   const columns: Column<CustomerItem>[] = [
     {
       key: 'full_name',
-      header: 'اسم الزبون والتصنيف',
+      header: t('اسم الزبون والتصنيف'),
       sortable: true,
       render: (row) => {
         const spent = row.total_spent_dzd
         const tier =
           spent >= 500000
-            ? { label: '💎 VIP', color: 'bg-purple-100 text-purple-700 border-purple-200' }
+            ? { label: `💎 ${t('VIP')}`, color: 'bg-purple-100 text-purple-700 border-purple-200' }
             : spent >= 200000
-              ? { label: '🥇 ذهبي', color: 'bg-amber-100 text-amber-700 border-amber-200' }
+              ? { label: `🥇 ${t('ذهبي')}`, color: 'bg-amber-100 text-amber-700 border-amber-200' }
               : spent >= 50000
-                ? { label: '🥈 فضي', color: 'bg-slate-100 text-slate-700 border-slate-200' }
-                : { label: '🥉 عادي', color: 'bg-gray-100 text-gray-700 border-gray-200' }
+                ? { label: `🥈 ${t('فضي')}`, color: 'bg-slate-100 text-slate-700 border-slate-200' }
+                : { label: `🥉 ${t('عادي')}`, color: 'bg-gray-100 text-gray-700 border-gray-200' }
 
         return (
           <div className="flex items-center gap-3">
@@ -291,7 +291,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
                 </span>
               </div>
               <p className="text-[11px] text-text-tertiary">
-                إجمالي الشراء: <span className="font-bold text-accent">{spent.toLocaleString('ar-DZ')} دج</span> ({row.total_sales_count} زيارات)
+                {t('إجمالي الشراء:')} <span className="font-bold text-accent">{spent.toLocaleString('ar-DZ')} {t('دج')}</span> ({row.total_sales_count} {t('زيارات')})
               </p>
             </div>
           </div>
@@ -300,24 +300,24 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     },
     {
       key: 'phone',
-      header: 'رقم الهاتف',
+      header: t('رقم الهاتف'),
       sortable: true,
       render: (row) => (
         <span className="flex items-center gap-1.5 text-xs font-bold text-text-secondary font-mono">
           <Phone className="w-3.5 h-3.5 text-text-tertiary" />
-          <span>{row.phone ?? 'غير مسجل'}</span>
+          <span>{row.phone ?? t('غير مسجل')}</span>
         </span>
       ),
     },
     {
       key: 'total_debt_dzd',
-      header: 'الديون المستحقة',
+      header: t('الديون المستحقة'),
       sortable: true,
       render: (row) => (
         row.total_debt_dzd > 0 ? (
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-100 text-red-700 border border-red-200 text-xs font-black">
-              <span>{row.total_debt_dzd.toLocaleString('ar-DZ')} دج</span>
+              <span>{row.total_debt_dzd.toLocaleString('ar-DZ')} {t('دج')}</span>
             </span>
             <button
               onClick={() => {
@@ -326,7 +326,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
               }}
               className="px-2.5 py-1 rounded-lg bg-red-600 text-white text-xs font-black hover:bg-red-700 transition-colors btn-press shadow-sm"
             >
-              تسديد الدين
+              {t('تسديد الدين')}
             </button>
           </div>
         ) : (
@@ -336,12 +336,12 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     },
     {
       key: 'loyalty_points',
-      header: 'نقاط الولاء',
+      header: t('نقاط الولاء'),
       sortable: true,
       render: (row) => (
         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-extrabold">
           <Award className="w-3.5 h-3.5 text-amber-500" />
-          <span>{row.loyalty_points} نقطة</span>
+          <span>{row.loyalty_points} {t('نقطة')}</span>
         </span>
       ),
     },
@@ -353,23 +353,23 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center justify-end gap-1">
           <button
             onClick={() => handleOpenTimeline(row)}
-            aria-label="عرض سجل المشتريات"
+            aria-label={t('عرض سجل المشتريات')}
             className="flex items-center gap-1 text-xs text-accent font-bold bg-accent/10 hover:bg-accent/20 px-2 py-1 rounded-lg transition-colors btn-press"
           >
             <History className="w-3.5 h-3.5" />
-            <span>سجل</span>
+            <span>{t('سجل')}</span>
           </button>
           <button
             onClick={() => handleOpenEditCustomer(row)}
-            aria-label="تعديل الزبون"
+            aria-label={t('تعديل الزبون')}
             className="flex items-center gap-1 text-xs text-warning font-bold hover:bg-warning/10 px-2 py-1 rounded-lg transition-colors"
           >
             <Edit3 className="w-3.5 h-3.5" />
-            <span>تعديل</span>
+            <span>{t('تعديل')}</span>
           </button>
           <button
             onClick={() => handleDeleteCustomer(row.id, row.full_name)}
-            aria-label="حذف الزبون"
+            aria-label={t('حذف الزبون')}
             className="flex items-center gap-1 text-xs text-danger font-bold hover:bg-danger/10 px-2 py-1 rounded-lg transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -407,7 +407,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
 
       <div className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-ambient-sm">
         <Input
-          placeholder="ابحث باسم الزبون أو رقم الهاتف..."
+          placeholder={t('ابحث باسم الزبون أو رقم الهاتف...')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="bg-gray-50/80 border-gray-200 text-xs"
@@ -425,30 +425,30 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
           sortOrder={sortOrder}
           onSort={handleSort}
           emptyType="customers"
-          emptyMessage="لا يوجد زبائن مسجلين يطابقون البحث"
+          emptyMessage={t('لا يوجد زبائن مسجلين يطابقون البحث')}
         />
       </Card>
 
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="إضافة زبون جديد للمتجر"
+        title={t('إضافة زبون جديد للمتجر')}
         isDirty={fullName.trim().length > 0 || phone.trim().length > 0}
       >
         <form onSubmit={handleAddCustomer} className="space-y-4">
           <Input
-            label="اسم الزبون الكامل"
+            label={t('اسم الزبون الكامل')}
             placeholder="مثال: ياسمين بن علي"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             isValid={fullName.trim().length >= 2}
-            error={fullName.length > 0 && fullName.trim().length < 2 ? 'اسم الزبون يجب أن يحتوي على حرفين على الأقل' : undefined}
+            error={fullName.length > 0 && fullName.trim().length < 2 ? t('اسم الزبون يجب أن يحتوي على حرفين على الأقل') : undefined}
             required
             autoFocus
           />
 
           <Input
-            label="رقم الهاتف"
+            label={t('رقم الهاتف')}
             placeholder="مثال: 0661234567"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
@@ -460,14 +460,14 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
               disabled={isSubmitting}
               className="flex-1 py-3 rounded-xl bg-accent text-white text-sm font-bold shadow-ambient btn-press"
             >
-              حفظ الزبون
+              {t('حفظ الزبون')}
             </button>
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
               className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press"
             >
-              إلغاء
+              {t('إلغاء')}
             </button>
           </div>
         </form>
@@ -477,39 +477,39 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       <Modal
         isOpen={Boolean(selectedTimelineCustomer)}
         onClose={() => setSelectedTimelineCustomer(null)}
-        title={`📜 كشف حساب وجميع معاملات الزبون — ${selectedTimelineCustomer?.full_name ?? ''}`}
+        title={`${t('سجل مشتريات ودفعات الزبون')} — ${selectedTimelineCustomer?.full_name ?? ''}`}
         size="lg"
       >
         <div className="space-y-4">
           <div className="p-4 bg-accent/5 border border-accent/20 rounded-2xl grid grid-cols-3 gap-3 text-center">
             <div>
-              <p className="text-[11px] text-text-tertiary font-bold">إجمالي المشتريات التراكمي</p>
+              <p className="text-[11px] text-text-tertiary font-bold">{t('إجمالي المشتريات التراكمي')}</p>
               <p className="currency text-accent font-black text-base">
-                {selectedTimelineCustomer?.total_spent_dzd.toLocaleString('ar-DZ')} دج
+                {selectedTimelineCustomer?.total_spent_dzd.toLocaleString('ar-DZ')} {t('دج')}
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-text-tertiary font-bold">الدين المستحق الحالي</p>
+              <p className="text-[11px] text-text-tertiary font-bold">{t('الدين المستحق الحالي')}</p>
               <p className={`font-black text-base ${(selectedTimelineCustomer?.total_debt_dzd ?? 0) > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                {(selectedTimelineCustomer?.total_debt_dzd ?? 0).toLocaleString('ar-DZ')} دج
+                {(selectedTimelineCustomer?.total_debt_dzd ?? 0).toLocaleString('ar-DZ')} {t('دج')}
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-text-tertiary font-bold">عدد الفواتير والعمليات</p>
+              <p className="text-[11px] text-text-tertiary font-bold">{t('عدد الفواتير والعمليات')}</p>
               <p className="text-text-primary font-black text-base">
-                {selectedTimelineCustomer?.total_sales_count} زيارات
+                {selectedTimelineCustomer?.total_sales_count} {t('زيارات')}
               </p>
             </div>
           </div>
 
           {/* Sales History List */}
           <div className="space-y-2">
-            <h3 className="text-xs font-black text-text-primary">فواتير المبيعات:</h3>
+            <h3 className="text-xs font-black text-text-primary">{t('فواتير المبيعات:')}</h3>
             <div className="max-h-52 overflow-y-auto space-y-2 pr-1">
               {isTimelineLoading ? (
-                <p className="text-xs text-center py-4 text-text-tertiary font-bold">جاري تحميل السجل...</p>
+                <p className="text-xs text-center py-4 text-text-tertiary font-bold">{t('جاري تحميل السجل...')}</p>
               ) : customerSalesHistory.length === 0 ? (
-                <p className="text-xs text-center py-4 text-text-tertiary font-bold">لا توجد عمليات مبيعات سابقة لهذا الزبون.</p>
+                <p className="text-xs text-center py-4 text-text-tertiary font-bold">{t('لا توجد عمليات مبيعات سابقة لهذا الزبون.')}</p>
               ) : (
                 customerSalesHistory.map((sale) => (
                   <div key={sale.id} className="p-3 bg-gray-50 border border-gray-200/80 rounded-xl flex items-center justify-between">
@@ -518,21 +518,21 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
                         <Receipt className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="font-mono text-xs font-bold text-text-primary">فاتورة ID: #{sale.id.slice(0, 8)}</p>
+                        <p className="font-mono text-xs font-bold text-text-primary">{t('فاتورة ID:')} #{sale.id.slice(0, 8)}</p>
                         <p className="text-[11px] text-text-tertiary font-mono">
                           {new Date(sale.created_at).toLocaleString('ar-DZ')}
                         </p>
                       </div>
                     </div>
                     <div className="text-left">
-                      <p className="currency font-black text-accent text-xs">{sale.total_dzd.toLocaleString('ar-DZ')} دج</p>
+                      <p className="currency font-black text-accent text-xs">{sale.total_dzd.toLocaleString('ar-DZ')} {t('دج')}</p>
                       {sale.remaining_debt_dzd && sale.remaining_debt_dzd > 0 ? (
                         <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                          دين متبقي: {sale.remaining_debt_dzd.toLocaleString('ar-DZ')} دج
+                          {t('دين متبقي:')} {sale.remaining_debt_dzd.toLocaleString('ar-DZ')} {t('دج')}
                         </span>
                       ) : (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-text-secondary">
-                          {sale.payment_method === 'cash' ? 'نقداً' : sale.payment_method === 'card' ? 'بطاقة CIB' : sale.payment_method === 'credit' ? 'كريدي' : 'مزدوج'}
+                          {sale.payment_method === 'cash' ? t('نقداً') : sale.payment_method === 'card' ? t('بطاقة CIB') : sale.payment_method === 'credit' ? t('كريدي') : t('مزدوج')}
                         </span>
                       )}
                     </div>
@@ -545,13 +545,13 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
           {/* Payments History List */}
           {customerPaymentsHistory.length > 0 && (
             <div className="space-y-2 pt-2 border-t border-gray-200">
-              <h3 className="text-xs font-black text-emerald-800">دفوعات تسديد الديون المنسوبة:</h3>
+              <h3 className="text-xs font-black text-emerald-800">{t('دفوعات تسديد الديون المنسوبة:')}</h3>
               <div className="max-h-40 overflow-y-auto space-y-2 pr-1">
                 {customerPaymentsHistory.map((p) => (
                   <div key={p.id} className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-black text-emerald-900">تسديد مبلغ: {p.amount_dzd.toLocaleString('ar-DZ')} دج</p>
-                      <p className="text-[10px] text-emerald-700 font-mono">{new Date(p.created_at).toLocaleString('ar-DZ')} ({p.payment_method === 'cash' ? 'نقداً' : 'بطاقة'})</p>
+                      <p className="text-xs font-black text-emerald-900">{t('تسديد مبلغ:')} {p.amount_dzd.toLocaleString('ar-DZ')} {t('دج')}</p>
+                      <p className="text-[10px] text-emerald-700 font-mono">{new Date(p.created_at).toLocaleString('ar-DZ')} ({p.payment_method === 'cash' ? t('نقداً') : t('بطاقة')})</p>
                     </div>
                     {p.notes && <p className="text-[10px] text-emerald-800 font-semibold">{p.notes}</p>}
                   </div>
@@ -566,18 +566,18 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       <Modal
         isOpen={Boolean(payingDebtCustomer)}
         onClose={() => setPayingDebtCustomer(null)}
-        title={`💵 تسديد دين الزبون — ${payingDebtCustomer?.full_name ?? ''}`}
+        title={`${t('تسديد دين الزبون')} — ${payingDebtCustomer?.full_name ?? ''}`}
       >
         <form onSubmit={handleRepayDebt} className="space-y-4">
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between text-xs text-red-900 font-bold">
-            <span>إجمالي الدين المستحق حالياً:</span>
+            <span>{t('إجمالي الدين المستحق حالياً:')}</span>
             <span className="text-sm font-black text-red-700">
-              {(payingDebtCustomer?.total_debt_dzd ?? 0).toLocaleString('ar-DZ')} دج
+              {(payingDebtCustomer?.total_debt_dzd ?? 0).toLocaleString('ar-DZ')} {t('دج')}
             </span>
           </div>
 
           <Input
-            label="المبلغ المسدد (دج)"
+            label={t('المبلغ المسدد (دج)')}
             type="number"
             min={1}
             max={payingDebtCustomer?.total_debt_dzd ?? 999999}
@@ -588,20 +588,20 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
           />
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-text-primary">طريقة التسديد</label>
+            <label className="text-xs font-bold text-text-primary">{t('طريقة التسديد')}</label>
             <select
               value={repayMethod}
               onChange={(e) => setRepayMethod(e.target.value as 'cash' | 'card')}
               className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
             >
-              <option value="cash">💵 نقداً (Cash)</option>
-              <option value="card">💳 بطاقة CIB / الذهبية</option>
+              <option value="cash">{t('💵 نقداً (Cash)')}</option>
+              <option value="card">{t('💳 بطاقة CIB / الذهبية')}</option>
             </select>
           </div>
 
           <Input
-            label="ملاحظات التسديد (اختياري)"
-            placeholder="مثال: دفعة جزئية عن مشتريات الأسبوع"
+            label={t('ملاحظات التسديد (اختياري)')}
+            placeholder={t('مثال: دفعة جزئية عن مشتريات الأسبوع')}
             value={repayNotes}
             onChange={(e) => setRepayNotes(e.target.value)}
           />
@@ -612,33 +612,33 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
               disabled={isRepaying}
               className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-ambient"
             >
-              {isRepaying ? 'جاري التسجيل...' : 'تأكيد وحفظ تسديد الدين'}
+              {isRepaying ? t('جاري التسجيل...') : t('تأكيد وحفظ تسديد الدين')}
             </button>
             <button
               type="button"
               onClick={() => setPayingDebtCustomer(null)}
               className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-xs font-bold"
             >
-              إلغاء
+              {t('إلغاء')}
             </button>
           </div>
         </form>
       </Modal>
 
       {/* Edit Customer Modal */}
-      <Modal isOpen={editingCustomer !== null} onClose={() => setEditingCustomer(null)} title={`✏️ تعديل بيانات الزبون — ${editingCustomer?.full_name ?? ''}`}>
+      <Modal isOpen={editingCustomer !== null} onClose={() => setEditingCustomer(null)} title={`${t('تعديل بيانات الزبون')} — ${editingCustomer?.full_name ?? ''}`}>
         <div className="space-y-4">
-          <Input label="اسم الزبون الكامل" value={editFullName} onChange={(e) => setEditFullName(e.target.value)} required autoFocus />
-          <Input label="رقم الهاتف" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="مثال: 0661234567" />
+          <Input label={t('اسم الزبون الكامل')} value={editFullName} onChange={(e) => setEditFullName(e.target.value)} required autoFocus />
+          <Input label={t('رقم الهاتف')} value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder={t('مثال: 0661234567')} />
           {editingCustomer && editingCustomer.store_credit_balance > 0 && (
             <div className="p-3 bg-success/10 border border-success/20 rounded-xl text-xs text-success font-bold flex items-center gap-2">
               <Wallet className="w-4 h-4" />
-              <span>رصيد المتجر: {editingCustomer.store_credit_balance.toLocaleString('ar-DZ')} دج</span>
+              <span>{t('رصيد المتجر الحالي:')} {editingCustomer.store_credit_balance.toLocaleString('ar-DZ')} {t('دج')}</span>
             </div>
           )}
           <div className="flex gap-3 pt-2">
-            <button onClick={handleSaveEditCustomer} disabled={isEditSaving} className="flex-1 py-3 rounded-xl bg-accent text-white text-sm font-bold shadow-ambient btn-press">حفظ التعديلات</button>
-            <button onClick={() => setEditingCustomer(null)} className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press">إلغاء</button>
+            <button onClick={handleSaveEditCustomer} disabled={isEditSaving} className="flex-1 py-3 rounded-xl bg-accent text-white text-sm font-bold shadow-ambient btn-press">{t('حفظ التعديلات')}</button>
+            <button onClick={() => setEditingCustomer(null)} className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press">{t('إلغاء')}</button>
           </div>
         </div>
       </Modal>

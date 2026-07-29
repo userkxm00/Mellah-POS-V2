@@ -23,17 +23,17 @@ interface LocalUser {
 
 const roleMeta: Record<UserRole, { label: string; icon: React.ReactNode; color: string }> = {
   admin: {
-    label: 'مدير النظام',
+    label: useLanguageStore.getState().t('مدير النظام'),
     icon: <Crown className="w-4 h-4" />,
     color: 'bg-accent/10 text-accent border-accent/20',
   },
   manager: {
-    label: 'مشرف المتجر',
+    label: useLanguageStore.getState().t('مشرف المتجر'),
     icon: <Briefcase className="w-4 h-4" />,
     color: 'bg-warning/10 text-warning border-warning/20',
   },
   cashier: {
-    label: 'كاشير',
+    label: useLanguageStore.getState().t('كاشير'),
     icon: <UserCheck className="w-4 h-4" />,
     color: 'bg-success/10 text-success border-success/20',
   },

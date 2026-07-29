@@ -158,7 +158,7 @@ export function POSCheckoutPage({
     setAutoPrintReceipt(next)
     localStorage.setItem('mellah_auto_print', String(next))
     addToast({
-      message: next ? 'تم تفعيل الطباعة التلقائية للفواتير 🖨️' : 'تم إيقاف الطباعة التلقائية (يمكنك الطباعة يدوياً عند الحاجة)',
+      message: next ? t('تم تفعيل الطباعة التلقائية للفواتير') : t('تم إيقاف الطباعة التلقائية (يمكنك الطباعة يدوياً عند الحاجة)'),
       variant: 'info',
     })
   }
@@ -168,7 +168,7 @@ export function POSCheckoutPage({
     setAutoOpenDrawer(next)
     localStorage.setItem('mellah_auto_drawer', String(next))
     addToast({
-      message: next ? 'تم تفعيل فتح درج النقود تلقائياً بعد البيع 💵' : 'تم إيقاف فتح الدرج التلقائي (يمكن الفتح يدوياً)',
+      message: next ? t('تم تفعيل فتح درج النقود تلقائياً بعد البيع') : t('تم إيقاف فتح الدرج التلقائي (يمكن الفتح يدوياً)'),
       variant: 'info',
     })
   }
@@ -214,11 +214,11 @@ export function POSCheckoutPage({
       )
       setVariants(variantRows)
     } catch {
-      addToast({ message: 'فشل تحميل قائمة المنتجات والزبائن للفرع الحالي', variant: 'error' })
+      addToast({ message: t('فشل تحميل قائمة المنتجات والزبائن للفرع الحالي'), variant: 'error' })
     } finally {
       setIsLoadingVariants(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -238,24 +238,24 @@ export function POSCheckoutPage({
           addItem(match, match.product_name, match.default_price)
           soundService.playScan()
           addToast({
-            message: `تم إضافة ${match.product_name} (${match.size ?? ''} ${match.color ?? ''})`,
+            message: `${t('تم إضافة')} ${match.product_name} (${match.size ?? ''} ${match.color ?? ''})`,
             variant: 'success',
             duration: 2000,
           })
         } catch (err) {
           soundService.playError()
-          const msg = err instanceof Error ? err.message : 'عفواً تعذر إضافة المنتج'
+          const msg = err instanceof Error ? err.message : t('عفواً تعذر إضافة المنتج')
           addToast({ message: msg, variant: 'error' })
         }
       } else {
         soundService.playError()
         addToast({
-          message: `الباركود [${scannedBarcode}] غير موجود في القاعدة`,
+          message: `${t('الباركود')} [${scannedBarcode}] ${t('غير موجود في القاعدة')}`,
           variant: 'warning',
         })
       }
     },
-    [variants, addItem, addToast]
+    [variants, addItem, addToast, t]
   )
 
   useBarcodeScanner({ onScan: handleBarcodeScan })
@@ -266,14 +266,14 @@ export function POSCheckoutPage({
   // Hold current cart
   const handleHoldCart = useCallback((): void => {
     if (cartItems.length === 0) {
-      addToast({ message: 'السلة فارغة، لا يمكن تعليقها', variant: 'error' })
+      addToast({ message: t('السلة فارغة، لا يمكن تعليقها'), variant: 'error' })
       return
     }
     holdCart(cartItems, selectedCustomerObj?.full_name)
     clearCart()
     setSelectedCustomerId(null)
-    addToast({ message: 'تم تعليق السلة الحالية بنجاح (F2) ⏸️', variant: 'info' })
-  }, [cartItems, addToast, holdCart, clearCart, selectedCustomerObj?.full_name])
+    addToast({ message: t('تم تعليق السلة الحالية بنجاح (F2) ⏸️'), variant: 'info' })
+  }, [cartItems, addToast, holdCart, clearCart, selectedCustomerObj?.full_name, t])
 
   const filteredVariants = variants.filter((v) => {
     const matchesCategory = selectedCategoryId ? v.category_id === selectedCategoryId : true
@@ -314,7 +314,7 @@ export function POSCheckoutPage({
         )
       )
       setIsHeldModalOpen(false)
-      addToast({ message: 'تم استرجاع السلة المعلقة بنجاح! 🛒', variant: 'success' })
+      addToast({ message: t('تم استرجاع السلة المعلقة بنجاح! 🛒'), variant: 'success' })
     }
   }
 
@@ -324,7 +324,7 @@ export function POSCheckoutPage({
     const pointsToUse = Math.floor(selectedCustomerObj.loyalty_points / 100) * 100
     const discountVal = pointsToUse // 1 point = 1 DZD
     setDiscount(0, discountVal)
-    addToast({ message: `تم خصم ${discountVal} دج مقابل ${pointsToUse} نقطة ولاء 🎁`, variant: 'success' })
+    addToast({ message: `${t('تم خصم')} ${discountVal} ${t('دج مقابل')} ${pointsToUse} ${t('نقطة ولاء')}`, variant: 'success' })
   }
 
   // Apply Store Credit
@@ -334,14 +334,14 @@ export function POSCheckoutPage({
     const sub = getSubtotal()
     const discountVal = Math.min(credit, sub)
     setDiscount(0, discountVal)
-    addToast({ message: `تم تطبيق خصم من رصيد المتجر: ${formatCurrency(discountVal)} 💳`, variant: 'success' })
+    addToast({ message: `${t('تم تطبيق خصم من رصيد المتجر:')} ${formatCurrency(discountVal)}`, variant: 'success' })
   }
 
   // Quick Add Customer Handler
   const handleQuickAddCustomer = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     if (!newCustName.trim()) {
-      addToast({ message: 'يرجى كتابة اسم الزبون', variant: 'error' })
+      addToast({ message: t('يرجى كتابة اسم الزبون'), variant: 'error' })
       return
     }
 
@@ -353,14 +353,14 @@ export function POSCheckoutPage({
         [id, DEFAULT_BRANCH_ID, newCustName.trim(), newCustPhone.trim() || null, now, now]
       )
 
-      addToast({ message: 'تم إضافة الزبون بنجاح!', variant: 'success' })
+      addToast({ message: t('تم إضافة الزبون بنجاح!'), variant: 'success' })
       setIsQuickAddCustomerOpen(false)
       setNewCustName('')
       setNewCustPhone('')
       await loadData()
       setSelectedCustomerId(id)
     } catch {
-      addToast({ message: 'فشل إضافة الزبون', variant: 'error' })
+      addToast({ message: t('فشل إضافة الزبون'), variant: 'error' })
     }
   }
 
@@ -369,9 +369,9 @@ export function POSCheckoutPage({
     const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
     const ok = await window.electron.openCashDrawer(printerName)
     if (ok) {
-      addToast({ message: 'تم إرسال أمر فتح درج النقود بنجاح! 💵', variant: 'success' })
+      addToast({ message: t('تم إرسال أمر فتح درج النقود بنجاح! 💵'), variant: 'success' })
     } else {
-      addToast({ message: 'تم فتح الدرج (أو إرسال التنبيه المحلي للطابعة)', variant: 'info' })
+      addToast({ message: t('تم فتح الدرج (أو إرسال التنبيه المحلي للطابعة)'), variant: 'info' })
     }
   }
 
@@ -393,13 +393,13 @@ export function POSCheckoutPage({
       if (matched) {
         setIsManagerPinOpen(false)
         setManagerPin('')
-        addToast({ message: 'تمت موافقة المدير بنجاح ✅', variant: 'success' })
+        addToast({ message: t('تمت موافقة المدير بنجاح ✅'), variant: 'success' })
         executeSaleProcessing()
       } else {
-        addToast({ message: 'رمز PIN الخاص بالمدير غير صحيح', variant: 'error' })
+        addToast({ message: t('رمز PIN الخاص بالمدير غير صحيح'), variant: 'error' })
       }
     } catch {
-      addToast({ message: 'فشل التحقق من رمز المدير', variant: 'error' })
+      addToast({ message: t('فشل التحقق من رمز المدير'), variant: 'error' })
     } finally {
       setIsVerifyingPin(false)
     }
@@ -408,12 +408,12 @@ export function POSCheckoutPage({
   // Complete Sale Initiator
   const handleCompleteSale = async (): Promise<void> => {
     if (!activeShift) {
-      addToast({ message: 'لا توجد وردية مفتوحة لإتمام البيع', variant: 'error' })
+      addToast({ message: t('لا توجد وردية مفتوحة لإتمام البيع'), variant: 'error' })
       return
     }
 
     if (cartItems.length === 0) {
-      addToast({ message: 'السلة فارغة، أضف منتجات أولاً', variant: 'error' })
+      addToast({ message: t('السلة فارغة، أضف منتجات أولاً'), variant: 'error' })
       return
     }
 
@@ -482,7 +482,7 @@ export function POSCheckoutPage({
             storeName: useStoreSettingsStore.getState().settings.store_name,
             receiptId: res.saleId,
             date: new Date().toISOString(),
-            cashierName: currentUser?.full_name ?? 'كاشير الفرع',
+            cashierName: currentUser?.full_name ?? t('كاشير الفرع'),
             customerName: custObj?.full_name,
             items: cartItems.map((ci) => ({
               product_name: ci.product_name,
@@ -584,12 +584,11 @@ export function POSCheckoutPage({
     <div className="flex flex-col h-screen bg-[#F2F2F7] dark:bg-slate-950 overflow-hidden select-none relative animate-fade-in">
       {/* 5 Signature Delight Moments: Confetti Burst */}
       {showConfetti && <ConfettiBurst onComplete={() => setShowConfetti(false)} />}
-
       {/* Flying Receipt Badge animation */}
       {isReceiptFlying && (
         <div className="fixed bottom-24 right-24 z-70 bg-accent text-white px-4 py-2 rounded-2xl shadow-layered-deep text-xs font-black flex items-center gap-2 animate-bounce transition-all duration-700 transform -translate-y-96 opacity-90 pointer-events-none">
           <Printer className="w-4 h-4 animate-spin" />
-          <span>🧾 جاري ترحيل الفاتورة للطابعة...</span>
+          <span>{t('🧾 جاري ترحيل الفاتورة للطابعة...')}</span>
         </div>
       )}
 
@@ -624,7 +623,7 @@ export function POSCheckoutPage({
           {/* Quick Toggle: Auto Print */}
           <button
             onClick={toggleAutoPrint}
-            title={autoPrintReceipt ? 'الطباعة التلقائية مفعّلة' : 'الطباعة التلقائية معطّلة'}
+            title={autoPrintReceipt ? t('الطباعة التلقائية مفعّلة') : t('الطباعة التلقائية معطّلة')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all btn-press border ${
               autoPrintReceipt
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
@@ -639,7 +638,7 @@ export function POSCheckoutPage({
           {/* Quick Toggle: Auto Cash Drawer */}
           <button
             onClick={toggleAutoDrawer}
-            title={autoOpenDrawer ? 'فتح درج النقود مفعّل' : 'فتح درج النقود معطّل'}
+            title={autoOpenDrawer ? t('فتح درج النقود مفعّل') : t('فتح درج النقود معطّل')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all btn-press border ${
               autoOpenDrawer
                 ? 'bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100'
@@ -786,7 +785,7 @@ export function POSCheckoutPage({
                               {v.product_name}
                             </h3>
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent">
-                              {t(v.category_name ?? 'عام')}
+                              {v.category_name ? t(v.category_name) : t('عام')}
                             </span>
                           </div>
 
@@ -1220,7 +1219,7 @@ export function POSCheckoutPage({
                 const card = parseFloat(mixedCardInput) || 0
                 setMixedAmounts(cash, card)
                 setIsMixedModalOpen(false)
-                addToast({ message: 'تم حفظ تقسيم الدفع المختلط بنجاح!', variant: 'success' })
+                addToast({ message: t('تم حفظ تقسيم الدفع المختلط بنجاح!'), variant: 'success' })
               }}
             >
               اعتماد التقسيم

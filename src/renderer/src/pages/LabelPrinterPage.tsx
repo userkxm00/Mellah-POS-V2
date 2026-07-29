@@ -10,6 +10,7 @@ import {
 import { Card, Input } from '@/components/ui'
 import { formatCurrency } from '@/lib/format'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface ProductVariantItem {
   id: string
@@ -49,6 +50,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
   const addToast = useToastStore((s) => s.addToast)
+  const t = useLanguageStore((s) => s.t)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
@@ -103,11 +105,11 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
         setSelectedProductId(groupedList[0].product_id)
       }
     } catch {
-      addToast({ message: 'فشل تحميل المنتجات للطباعة', variant: 'error' })
+      addToast({ message: t('فشل تحميل المنتجات للطباعة'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   useEffect(() => {
     loadData()
@@ -159,7 +161,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
     }
 
     if (totalCount === 0) {
-      addToast({ message: 'يرجى تحديد عدد التيكيتات المراد طباعتها (أكبر من 0)', variant: 'warning' })
+      addToast({ message: t('يرجى تحديد عدد التيكيتات المراد طباعتها (أكبر من 0)'), variant: 'warning' })
       return
     }
 
@@ -386,7 +388,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                     <div>
                       <h4 className="text-xs font-black text-text-primary">{prod.product_name}</h4>
                       <p className="text-[10px] font-bold text-text-tertiary mt-0.5">
-                        {prod.category_name ?? 'بدون فئة'} • {prod.variants.length} خيارات (مقاس/لون)
+                        {prod.category_name ? t(prod.category_name) : t('بدون فئة')} • {prod.variants.length} {t('خيارات')}
                       </p>
                     </div>
 
@@ -397,7 +399,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                           : 'bg-danger/10 text-danger border-danger/20'
                       }`}
                     >
-                      {totalStock} قطعة بالمخزون
+                      {totalStock} {t('قطعة بالمخزون')}
                     </span>
                   </button>
                 )
@@ -415,7 +417,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                 <div>
                   <div className="inline-flex items-center gap-1.5 bg-accent/10 text-accent px-2.5 py-0.5 rounded-full text-[10px] font-extrabold mb-1">
                     <Sparkles className="w-3 h-3" />
-                    <span>طباعة التيكيتات لجميع الخيارات بالتسلسل</span>
+                    <span>{t('طباعة التيكيتات لجميع الخيارات بالتسلسل')}</span>
                   </div>
                   <h2 className="text-base font-black text-text-primary">
                     {selectedProduct.product_name}
@@ -438,7 +440,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                     className="px-5 py-3 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-extrabold shadow-ambient transition-all btn-press flex items-center gap-2"
                   >
                     <Printer className="w-4 h-4" />
-                    <span>طباعة باركود حقيقي ({currentTotalLabels})</span>
+                    <span>{t('طباعة باركود حقيقي')} ({currentTotalLabels})</span>
                   </button>
                 </div>
               </div>
@@ -446,7 +448,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
               {/* Variants Table */}
               <div className="space-y-3">
                 <p className="text-xs font-bold text-text-secondary">
-                  حدد عدد الملصقات لكل مقاس ولون (تم ملء العدد تلقائياً بناءً على الكمية بالمخزون):
+                  {t('حدد عدد الملصقات لكل مقاس ولون:')}
                 </p>
 
                 <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
@@ -461,11 +463,11 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-black text-text-primary">
-                              {variant.size ? `مقاس: ${variant.size}` : 'مقاس عادياً'} 
-                              {variant.color ? ` | لون: ${variant.color}` : ''}
+                              {variant.size ? `${t('مقاس:')} ${variant.size}` : t('مقاس عادي')} 
+                              {variant.color ? ` | ${t('لون:')} ${variant.color}` : ''}
                             </span>
                             <span className="text-[10px] font-mono font-bold text-text-tertiary bg-white px-2 py-0.5 rounded-md border border-gray-200">
-                              {variant.barcode ?? 'بدون باركود'}
+                              {variant.barcode ?? t('بدون باركود')}
                             </span>
                           </div>
                           <p className="text-[10px] font-bold text-text-secondary">

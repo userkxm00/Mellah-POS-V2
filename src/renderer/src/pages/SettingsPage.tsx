@@ -16,15 +16,15 @@ export interface PrinterInfo {
 }
 
 export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Element {
-  const [storeName, setStoreName] = useState<string>('بوتيك الملاح للملابس')
-  const [storeAddress, setStoreAddress] = useState<string>('')
-  const [storePhone, setStorePhone] = useState<string>('')
-  const [footerText, setFooterText] = useState<string>('شكراً لزيارتكم، البضاعة المباعة ترجع أو تبدل خلال 7 أيام مع إحضار الفاتورة.')
-  const [sessionTimeout, setSessionTimeout] = useState<number>(5)
-
   const currentLang = useLanguageStore((s) => s.language)
   const setLanguageStore = useLanguageStore((s) => s.setLanguage)
   const t = useLanguageStore((s) => s.t)
+
+  const [storeName, setStoreName] = useState<string>(t('بوتيك الملاح للملابس'))
+  const [storeAddress, setStoreAddress] = useState<string>('')
+  const [storePhone, setStorePhone] = useState<string>('')
+  const [footerText, setFooterText] = useState<string>(t('شكراً لزيارتكم، البضاعة المباعة ترجع أو تبدل خلال 7 أيام مع إحضار الفاتورة.'))
+  const [sessionTimeout, setSessionTimeout] = useState<number>(5)
 
   const theme = useThemeStore((s) => s.theme)
   const setTheme = useThemeStore((s) => s.setTheme)
@@ -97,7 +97,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
       )
 
       if (rows.length > 0) {
-        setStoreName(rows[0].store_name ?? 'بوتيك الملاح للملابس')
+        setStoreName(rows[0].store_name ?? t('بوتيك الملاح للملابس'))
         setStoreAddress(rows[0].store_address ?? '')
         setStorePhone(rows[0].store_phone ?? '')
         setFooterText(rows[0].receipt_footer_text ?? '')
@@ -165,13 +165,13 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
       // Refresh store settings in Zustand store
       useStoreSettingsStore.getState().loadSettings()
 
-      addToast({ message: 'تم حفظ إعدادات المتجر وطابعة الفواتير واللغة بنجاح! ✅', variant: 'success' })
+      addToast({ message: t('تم حفظ إعدادات المتجر وطابعة الفواتير واللغة بنجاح! ✅'), variant: 'success' })
 
       if (currentLang !== initialLang) {
         setIsRestartModalOpen(true)
       }
     } catch {
-      addToast({ message: 'فشل حفظ الإعدادات', variant: 'error' })
+      addToast({ message: t('فشل حفظ الإعدادات'), variant: 'error' })
     } finally {
       setIsSaving(false)
     }
@@ -181,14 +181,14 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
     try {
       await printThermalReceipt(
         {
-          storeName: storeName || 'بوتيك الملاح للملابس',
-          branchAddress: storeAddress || 'الجزائر العاصمة',
+          storeName: storeName || t('بوتيك الملاح للملابس'),
+          branchAddress: storeAddress || t('الجزائر العاصمة'),
           receiptId: 'TEST-123456',
           date: new Date().toISOString(),
-          cashierName: 'تجربة الطابعة',
+          cashierName: t('تجربة الطابعة'),
           items: [
-            { product_name: 'قميص رجالي فاخر (تجربة)', size: 'L', color: 'أزرق', quantity: 1, unit_price: 3500 },
-            { product_name: 'سروال جينز عصري (تجربة)', size: '42', color: 'أسود', quantity: 1, unit_price: 4200 },
+            { product_name: t('قميص رجالي فاخر (تجربة)'), size: 'L', color: t('أزرق'), quantity: 1, unit_price: 3500 },
+            { product_name: t('سروال جينز عصري (تجربة)'), size: '42', color: t('أسود'), quantity: 1, unit_price: 4200 },
           ],
           subtotalDzd: 7700,
           discountDzd: 200,
@@ -197,9 +197,9 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
         },
         { printerName: selectedPrinter || undefined, paperWidth, language: receiptLanguage }
       )
-      addToast({ message: 'تم إرسال أمر الطباعة التجريبية! 🖨️', variant: 'success' })
+      addToast({ message: t('تم إرسال أمر الطباعة التجريبية! 🖨️'), variant: 'success' })
     } catch {
-      addToast({ message: 'فشل إرسال الفاتورة التجريبية للطابعة', variant: 'error' })
+      addToast({ message: t('فشل إرسال الفاتورة التجريبية للطابعة'), variant: 'error' })
     }
   }
 
@@ -207,7 +207,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
     setIsExporting(true)
     try {
       const fileName = await exportDatabaseBackup()
-      addToast({ message: `تم تصدير النسخة الاحتياطية بنجاح: ${fileName}`, variant: 'success' })
+      addToast({ message: `${t('تم تصدير النسخة الاحتياطية بنجاح:')} ${fileName}`, variant: 'success' })
     } catch (err) {
       addToast({ message: (err as Error).message, variant: 'error' })
     } finally {
@@ -235,7 +235,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
     setIsImporting(true)
     try {
       const count = await importDatabaseBackup(pendingBackupContent)
-      addToast({ message: `تمت استعادة البيانات بنجاح! الإجمالي: ${count} سجل`, variant: 'success' })
+      addToast({ message: `${t('تمت استعادة البيانات بنجاح! الإجمالي:')} ${count} ${t('سجل')}`, variant: 'success' })
       setIsRestoreModalOpen(false)
       setPendingBackupContent(null)
       loadSettings()
@@ -250,9 +250,9 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
 
   const tabs = [
     { id: 'store', label: t('بيانات المتجر'), icon: <Store className="w-4 h-4" /> },
-    { id: 'printer', label: 'طابعة الفواتير', icon: <Printer className="w-4 h-4" /> },
-    { id: 'theme', label: 'المظهر والصوت', icon: <Sun className="w-4 h-4" /> },
-    { id: 'backup', label: 'النسخ الاحتياطي', icon: <Database className="w-4 h-4" /> },
+    { id: 'printer', label: t('طابعة الفواتير'), icon: <Printer className="w-4 h-4" /> },
+    { id: 'theme', label: t('المظهر والصوت'), icon: <Sun className="w-4 h-4" /> },
+    { id: 'backup', label: t('النسخ الاحتياطي'), icon: <Database className="w-4 h-4" /> },
     { id: 'language', label: t('اللغة والأمان'), icon: <Globe className="w-4 h-4" /> },
   ]
 
@@ -472,7 +472,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                     }`}
                   >
                     {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-                    <span>{soundEnabled ? 'مفعل' : 'صامت'}</span>
+                    <span>{soundEnabled ? t('مفعل') : t('صامت')}</span>
                   </button>
 
                   {soundEnabled && (
@@ -631,78 +631,55 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
           <Card className="p-6 space-y-4 border border-blue-200 bg-blue-50/30">
             <h2 className="text-sm font-black text-blue-900 flex items-center gap-2 pb-2 border-b border-blue-200">
               <HardDrive className="w-4 h-4 text-blue-600" />
-              <span>مجلد النسخ الاحتياطي التلقائي</span>
+              <span>{t('مجلد النسخ الاحتياطي التلقائي')}</span>
             </h2>
 
             <div className="space-y-2">
               <div className="p-3 rounded-xl bg-white border border-blue-100">
-                <p className="text-[11px] text-text-tertiary font-semibold mb-1">المسار النشط حالياً:</p>
+                <p className="text-[11px] text-text-tertiary font-semibold mb-1">{t('المسار النشط حالياً:')}</p>
                 <p className="text-xs text-text-primary font-bold break-all font-mono leading-relaxed" dir="ltr">{backupDir || '...'}</p>
               </div>
 
-              {isCustomMissing && (
-                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2 text-xs text-amber-900 font-semibold">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-extrabold text-amber-900">المجلد الخارجي غير متصل!</p>
-                    <p className="text-[11px] text-amber-800 leading-snug">
-                      المسار المخصص (<span className="font-mono" dir="ltr">{configuredDir}</span>) غير موجود حالياً. يتم حفظ النسخ الاحتياطية مؤقتاً في المجلد المحلي.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {backupCount > 0 && (
-                <div className="flex items-center gap-3 text-[11px] font-semibold text-blue-800">
-                  <span>📁 {backupCount} نسخة محفوظة</span>
-                  {lastBackupTime && <span>🕐 آخر نسخة: {lastBackupTime}</span>}
-                </div>
-              )}
-            </div>
-
-            <p className="text-[11px] text-blue-700 leading-relaxed font-semibold">
-              يمكنك توجيه النسخ لمجلد خارجي (USB، Google Drive، OneDrive) لحماية البيانات حتى لو تعطل الجهاز.
-            </p>
-
-            <div className="flex gap-2">
-              <button
-                onClick={async () => {
-                  setIsChangingDir(true)
-                  try {
-                    const picked = await window.electron.backup.pickFolder()
-                    if (!picked.cancelled && picked.folderPath) {
-                      const result = await window.electron.backup.setDir(picked.folderPath)
-                      if (result.success) {
-                        addToast({ message: `تم تغيير مجلد النسخ: ${result.activeDir}`, variant: 'success' })
-                        loadBackupInfo()
-                      } else {
-                        addToast({ message: `فشل: ${result.error}`, variant: 'error' })
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    setIsChangingDir(true)
+                    try {
+                      const picked = await window.electron.backup.pickFolder()
+                      if (!picked.cancelled && picked.folderPath) {
+                        const result = await window.electron.backup.setDir(picked.folderPath)
+                        if (result.success) {
+                          addToast({ message: `${t('تم تغيير مجلد النسخ:')} ${result.activeDir}`, variant: 'success' })
+                          loadBackupInfo()
+                        } else {
+                          addToast({ message: `${t('فشل:')} ${result.error}`, variant: 'error' })
+                        }
                       }
-                    }
-                  } catch { addToast({ message: 'فشل فتح اختيار المجلد', variant: 'error' }) }
-                  finally { setIsChangingDir(false) }
-                }}
-                disabled={isChangingDir}
-                className="flex-1 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-ambient transition-all btn-press flex items-center justify-center gap-2"
-              >
-                <FolderOpen className="w-4 h-4" />
-                <span>{isChangingDir ? 'جاري...' : 'اختر مجلد خارجي'}</span>
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    const result = await window.electron.backup.setDir(null)
-                    if (result.success) {
-                      addToast({ message: 'تم الرجوع للمجلد الافتراضي ✅', variant: 'success' })
-                      loadBackupInfo()
-                    }
-                  } catch { addToast({ message: 'فشل الرجوع للمجلد الافتراضي', variant: 'error' }) }
-                }}
-                className="py-3 px-4 rounded-2xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-text-secondary transition-all btn-press flex items-center justify-center gap-1"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>افتراضي</span>
-              </button>
+                    } catch { addToast({ message: t('فشل فتح اختيار المجلد'), variant: 'error' }) }
+                    finally { setIsChangingDir(false) }
+                  }}
+                  disabled={isChangingDir}
+                  className="flex-1 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-ambient transition-all btn-press flex items-center justify-center gap-2"
+                >
+                  <FolderOpen className="w-4 h-4" />
+                  <span>{isChangingDir ? t('جاري...') : t('اختر مجلد خارجي')}</span>
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const result = await window.electron.backup.setDir(null)
+                      if (result.success) {
+                        addToast({ message: t('تم الرجوع للمجلد الافتراضي'), variant: 'success' })
+                        loadBackupInfo()
+                      }
+                    } catch { addToast({ message: t('فشل الرجوع للمجلد الافتراضي'), variant: 'error' }) }
+                  }}
+                  className="py-3 px-4 rounded-2xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-text-secondary transition-all btn-press flex items-center justify-center gap-1"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>{t('افتراضي')}</span>
+                </button>
+              </div>
             </div>
           </Card>
 
@@ -815,7 +792,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
               disabled={isImporting}
               className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-ambient"
             >
-              {isImporting ? 'جاري الاسترجاع...' : 'تأكيد الاسترجاع والبدء'}
+              {isImporting ? t('جاري الاسترجاع...') : t('تأكيد الاسترجاع والبدء')}
             </button>
           </div>
         </div>
@@ -861,14 +838,14 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
               srcDoc={buildReceiptHtml(
                 {
                   storeName: storeName || 'MELLAH BOUTIQUE',
-                  branchAddress: storeAddress || 'الجزائر العاصمة، حي حسيبة بن بوعلي',
+                  branchAddress: storeAddress || t('الجزائر العاصمة، حي حسيبة بن بوعلي'),
                   receiptId: 'INV-2026-0042',
                   date: new Date().toISOString(),
-                  cashierName: 'أحمد المدير',
-                  customerName: 'Jean Dupont / محمد العماري',
+                  cashierName: t('أحمد المدير'),
+                  customerName: t('Jean Dupont / محمد العماري'),
                   items: [
-                    { product_name: 'قميص قطني فاخر / Chemise Coton', size: 'L', color: 'Bleu/أزرق', quantity: 2, unit_price: 3500 },
-                    { product_name: 'بنطلون جينز / Jean Classic', size: '42', color: 'Noir/أسود', quantity: 1, unit_price: 5800 },
+                    { product_name: t('قميص قطني فاخر / Chemise Coton'), size: 'L', color: t('Bleu/أزرق'), quantity: 2, unit_price: 3500 },
+                    { product_name: t('بنطلون جينز / Jean Classic'), size: '42', color: t('Noir/أسود'), quantity: 1, unit_price: 5800 },
                   ],
                   subtotalDzd: 12800,
                   discountDzd: 800,
@@ -886,21 +863,21 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
 
           <div className="flex gap-3 pt-2">
             <Button variant="secondary" onClick={() => setIsReceiptPreviewOpen(false)} className="flex-1">
-              إغلاق المعاينة
+              {t('إغلاق النافذة')}
             </Button>
             <Button
               variant="primary"
               onClick={() => {
                 const sampleData = {
                   storeName: storeName || 'MELLAH BOUTIQUE',
-                  branchAddress: storeAddress || 'الجزائر العاصمة، حي حسيبة بن بوعلي',
+                  branchAddress: storeAddress || t('الجزائر العاصمة، حي حسيبة بن بوعلي'),
                   receiptId: 'INV-2026-0042',
                   date: new Date().toISOString(),
-                  cashierName: 'أحمد المدير',
-                  customerName: 'Jean Dupont / محمد العماري',
+                  cashierName: t('أحمد المدير'),
+                  customerName: t('Jean Dupont / محمد العماري'),
                   items: [
-                    { product_name: 'قميص قطني فاخر / Chemise Coton', size: 'L', color: 'Bleu/أزرق', quantity: 2, unit_price: 3500 },
-                    { product_name: 'بنطلون جينز / Jean Classic', size: '42', color: 'Noir/أسود', quantity: 1, unit_price: 5800 },
+                    { product_name: t('قميص قطني فاخر / Chemise Coton'), size: 'L', color: t('Bleu/أزرق'), quantity: 2, unit_price: 3500 },
+                    { product_name: t('بنطلون جينز / Jean Classic'), size: '42', color: t('Noir/أسود'), quantity: 1, unit_price: 5800 },
                   ],
                   subtotalDzd: 12800,
                   discountDzd: 800,

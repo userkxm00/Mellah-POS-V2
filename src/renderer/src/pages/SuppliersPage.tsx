@@ -91,11 +91,11 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       `, [DEFAULT_BRANCH_ID]).catch(() => [])
       setSuppliers(rows)
     } catch {
-      addToast({ message: 'فشل تحميل قائمة الموردين', variant: 'error' })
+      addToast({ message: t('فشل تحميل قائمة الموردين'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   useEffect(() => {
     loadSuppliers()
@@ -104,7 +104,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
   const handleAddSupplier = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     if (!name.trim()) {
-      addToast({ message: 'يرجى كتابة اسم المورد', variant: 'error' })
+      addToast({ message: t('يرجى كتابة اسم المورد'), variant: 'error' })
       return
     }
 
@@ -118,7 +118,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         [id, DEFAULT_BRANCH_ID, name.trim(), phone.trim() || null, companyName.trim() || null, address.trim() || null, notes.trim() || null, now, now]
       )
 
-      addToast({ message: 'تم إضافة المورد بنجاح! 🚚', variant: 'success' })
+      addToast({ message: t('تم إضافة المورد بنجاح!'), variant: 'success' })
       setIsAddModalOpen(false)
       setName('')
       setCompanyName('')
@@ -127,7 +127,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       setNotes('')
       await loadSuppliers()
     } catch {
-      addToast({ message: 'فشل إضافة المورد', variant: 'error' })
+      addToast({ message: t('فشل إضافة المورد'), variant: 'error' })
     } finally {
       setIsSubmitting(false)
     }
@@ -139,7 +139,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     const total = parseFloat(purchaseTotalDzd)
     const paid = parseFloat(purchasePaidDzd) || 0
     if (!total || total <= 0) {
-      addToast({ message: 'يرجى كتابة إجمالي مبلغ الفاتورة', variant: 'error' })
+      addToast({ message: t('يرجى كتابة إجمالي مبلغ الفاتورة'), variant: 'error' })
       return
     }
 
@@ -155,7 +155,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         [purchaseId, DEFAULT_BRANCH_ID, purchasingSupplier.id, invoiceNo.trim() || null, total, paid, remainingDebt, purchaseNotes.trim() || null, now]
       )
 
-      addToast({ message: `تم تسجيل فاتورة الشراء وتحديث ديون المورد ${purchasingSupplier.name}! 📦`, variant: 'success' })
+      addToast({ message: `${t('تم تسجيل فاتورة الشراء وتحديث ديون المورد')} ${purchasingSupplier.name}!`, variant: 'success' })
       setPurchasingSupplier(null)
       setInvoiceNo('')
       setPurchaseTotalDzd('')
@@ -163,7 +163,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       setPurchaseNotes('')
       await loadSuppliers()
     } catch {
-      addToast({ message: 'فشل تسجيل فاتورة الشراء', variant: 'error' })
+      addToast({ message: t('فشل تسجيل فاتورة الشراء'), variant: 'error' })
     } finally {
       setIsSavingPurchase(false)
     }
@@ -174,7 +174,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     if (!repayingSupplier) return
     const amount = parseFloat(repayAmountDzd)
     if (!amount || amount <= 0) {
-      addToast({ message: 'يرجى كتابة مبلغ التسديد الصحيح', variant: 'error' })
+      addToast({ message: t('يرجى كتابة مبلغ التسديد الصحيح'), variant: 'error' })
       return
     }
 
@@ -189,13 +189,13 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         [paymentId, DEFAULT_BRANCH_ID, repayingSupplier.id, amount, repayMethod, repayNotes.trim() || null, now]
       )
 
-      addToast({ message: `تم تسجيل تسديد مستحقات المورد ${repayingSupplier.name} بمبلغ ${amount.toLocaleString('ar-DZ')} دج! 💵`, variant: 'success' })
+      addToast({ message: `${t('تم تسجيل تسديد مستحقات المورد')} ${repayingSupplier.name} ${t('بمبلغ')} ${amount.toLocaleString('ar-DZ')} ${t('دج!')}`, variant: 'success' })
       setRepayingSupplier(null)
       setRepayAmountDzd('')
       setRepayNotes('')
       await loadSuppliers()
     } catch {
-      addToast({ message: 'فشل تسجيل تسديد المستحقات', variant: 'error' })
+      addToast({ message: t('فشل تسجيل تسديد المستحقات'), variant: 'error' })
     } finally {
       setIsRepaying(false)
     }
@@ -223,7 +223,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       ).catch(() => [])
       setPaymentsHistory(payRows)
     } catch {
-      addToast({ message: 'فشل تحميل كشف حساب المورد', variant: 'error' })
+      addToast({ message: t('فشل تحميل كشف حساب المورد'), variant: 'error' })
     } finally {
       setIsStatementLoading(false)
     }
@@ -265,7 +265,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
   const columns: Column<SupplierItem>[] = [
     {
       key: 'name',
-      header: 'اسم المورد والشركة',
+      header: t('اسم المورد والشركة'),
       sortable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
@@ -288,24 +288,24 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     },
     {
       key: 'phone',
-      header: 'رقم الهاتف',
+      header: t('رقم الهاتف'),
       sortable: true,
       render: (row) => (
         <span className="flex items-center gap-1.5 text-xs font-bold text-text-secondary font-mono">
           <Phone className="w-3.5 h-3.5 text-text-tertiary" />
-          <span>{row.phone ?? 'غير مسجل'}</span>
+          <span>{row.phone ?? t('غير مسجل')}</span>
         </span>
       ),
     },
     {
       key: 'total_debt_dzd',
-      header: 'ديون المورد المستحقة',
+      header: t('ديون المورد المستحقة'),
       sortable: true,
       render: (row) => (
         row.total_debt_dzd > 0 ? (
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-xs font-black">
-              <span>{row.total_debt_dzd.toLocaleString('ar-DZ')} دج</span>
+              <span>{row.total_debt_dzd.toLocaleString('ar-DZ')} {t('دج')}</span>
             </span>
             <button
               onClick={() => {
@@ -314,11 +314,11 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
               }}
               className="px-2.5 py-1 rounded-lg bg-amber-600 text-white text-xs font-black hover:bg-amber-700 transition-colors btn-press shadow-sm"
             >
-              تسديد الدين
+              {t('تسديد الدين')}
             </button>
           </div>
         ) : (
-          <span className="text-xs text-emerald-600 font-extrabold">خالي من الديون ✅</span>
+          <span className="text-xs text-emerald-600 font-extrabold">{t('خالي من الديون')}</span>
         )
       ),
     },
@@ -336,20 +336,20 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
               setPurchasePaidDzd('')
               setPurchaseNotes('')
             }}
-            aria-label="إضافة فاتورة شراء"
+            aria-label={t('إضافة فاتورة شراء')}
             className="flex items-center gap-1 text-xs text-white font-bold bg-accent hover:bg-accent-hover px-2.5 py-1 rounded-lg transition-colors btn-press shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>فاتورة شراء</span>
+            <span>{t('فاتورة شراء')}</span>
           </button>
 
           <button
             onClick={() => handleOpenStatement(row)}
-            aria-label="كشف الحساب"
+            aria-label={t('كشف الحساب')}
             className="flex items-center gap-1 text-xs text-text-secondary font-bold bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-lg transition-colors"
           >
             <History className="w-3.5 h-3.5" />
-            <span>كشف حساب</span>
+            <span>{t('كشف حساب')}</span>
           </button>
         </div>
       ),
@@ -370,7 +370,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
             <ArrowRight className="w-3.5 h-3.5" />
             <span>{t('إغلاق النافذة')}</span>
           </button>
-          <h1 className="text-2xl font-black text-text-primary">إدارة الموردين ودين السلع (Dettes Fournisseurs)</h1>
+          <h1 className="text-2xl font-black text-text-primary">{t('إدارة الموردين والديون')}</h1>
         </div>
 
         <button
@@ -378,7 +378,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
           className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-bold shadow-ambient transition-all btn-press"
         >
           <Plus className="w-4 h-4" />
-          <span>إضافة مورد جديد</span>
+          <span>{t('إضافة مورد جديد')}</span>
         </button>
       </div>
 
@@ -388,7 +388,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
           <Search className="w-4 h-4 text-text-tertiary mr-2" />
           <input
             type="text"
-            placeholder="ابحث باسم المورد، اسم الشركة، أو رقم الهاتف..."
+            placeholder={t('ابحث باسم المورد، اسم الشركة، أو رقم الهاتف...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-transparent text-xs font-bold text-text-primary focus:outline-none"
@@ -404,82 +404,82 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
           sortOrder={sortOrder}
           onSort={handleSort}
           emptyType="search"
-          emptyMessage="لا يوجد موردين مسجلين يطابقون البحث. اضغط 'إضافة مورد جديد' للبدء."
+          emptyMessage={t('لا يوجد موردين مسجلين يطابقون البحث')}
         />
       </Card>
 
       {/* Add Supplier Modal */}
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="🚚 إضافة مورد سلع جديد">
+      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title={t('إضافة مورد سلع جديد')}>
         <form onSubmit={handleAddSupplier} className="space-y-4">
-          <Input label="اسم المورد أو الوكيل" placeholder="مثال: يوسف للملابس بالجملة" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
-          <Input label="اسم الشركة / العلامة (اختياري)" placeholder="مثال: EURL Mellah Textiles" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
-          <Input label="رقم الهاتف" placeholder="مثال: 0550123456" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <Input label="عنوان المقر / المحل" placeholder="مثال: العلمة، سطيف" value={address} onChange={(e) => setAddress(e.target.value)} />
-          <Input label="ملاحظات المورد" placeholder="مثال: مورد القمصان والجينز الأسبوعي" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <Input label={t('اسم المورد أو الوكيل')} placeholder="مثال: يوسف للملابس بالجملة" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+          <Input label={t('اسم الشركة / العلامة (اختياري)')} placeholder="مثال: EURL Mellah Textiles" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+          <Input label={t('رقم الهاتف')} placeholder="مثال: 0550123456" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <Input label={t('عنوان المقر / المحل')} placeholder="مثال: العلمة، سطيف" value={address} onChange={(e) => setAddress(e.target.value)} />
+          <Input label={t('ملاحظات المورد')} placeholder="مثال: مورد القمصان والجينز الأسبوعي" value={notes} onChange={(e) => setNotes(e.target.value)} />
 
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={isSubmitting} className="flex-1 py-3 rounded-xl bg-accent text-white text-xs font-bold shadow-ambient btn-press">
-              {isSubmitting ? 'جاري الحفظ...' : 'حفظ المورد'}
+              {isSubmitting ? t('جاري الحفظ...') : t('حفظ المورد')}
             </button>
             <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-xs font-bold">
-              إلغاء
+              {t('إلغاء')}
             </button>
           </div>
         </form>
       </Modal>
 
       {/* Add Purchase Invoice Modal */}
-      <Modal isOpen={Boolean(purchasingSupplier)} onClose={() => setPurchasingSupplier(null)} title={`📦 إضافة فاتورة شراء من المورد — ${purchasingSupplier?.name ?? ''}`}>
+      <Modal isOpen={Boolean(purchasingSupplier)} onClose={() => setPurchasingSupplier(null)} title={`${t('إضافة فاتورة شراء')} — ${purchasingSupplier?.name ?? ''}`}>
         <form onSubmit={handleCreatePurchaseInvoice} className="space-y-4">
-          <Input label="رقم فاتورة المورد (اختياري)" placeholder="مثال: FACT-2026-890" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} autoFocus />
-          <Input label="إجمالي مبلغ السلعة المشتراة (دج)" type="number" min={1} placeholder="مثال: 150000" value={purchaseTotalDzd} onChange={(e) => setPurchaseTotalDzd(e.target.value)} required />
-          <Input label="المبلغ المدفوع تسقيع / نقداً للمورد (دج)" type="number" min={0} placeholder="0 دج" value={purchasePaidDzd} onChange={(e) => setPurchasePaidDzd(e.target.value)} />
+          <Input label={t('رقم فاتورة المورد (اختياري)')} placeholder="مثال: FACT-2026-890" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} autoFocus />
+          <Input label={t('إجمالي مبلغ السلعة المشتراة (دج)')} type="number" min={1} placeholder="مثال: 150000" value={purchaseTotalDzd} onChange={(e) => setPurchaseTotalDzd(e.target.value)} required />
+          <Input label={t('المبلغ المدفوع تسقيع / نقداً للمورد (دج)')} type="number" min={0} placeholder="0 دج" value={purchasePaidDzd} onChange={(e) => setPurchasePaidDzd(e.target.value)} />
           
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-900 font-bold">
-            <span>المبلغ المتبقي كدين للمورد (Dette):</span>
+            <span>{t('المبلغ المتبقي كدين للمورد (Dette):')}</span>
             <span className="text-sm font-black text-amber-800">
-              {((parseFloat(purchaseTotalDzd) || 0) - (parseFloat(purchasePaidDzd) || 0)).toLocaleString('ar-DZ')} دج
+              {((parseFloat(purchaseTotalDzd) || 0) - (parseFloat(purchasePaidDzd) || 0)).toLocaleString('ar-DZ')} {t('دج')}
             </span>
           </div>
 
-          <Input label="ملاحظات الشراء" placeholder="مثال: طلبية قمصان قطنية تشكيلة الصيف" value={purchaseNotes} onChange={(e) => setPurchaseNotes(e.target.value)} />
+          <Input label={t('ملاحظات الشراء')} placeholder="مثال: طلبية قمصان قطنية تشكيلة الصيف" value={purchaseNotes} onChange={(e) => setPurchaseNotes(e.target.value)} />
 
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={isSavingPurchase} className="flex-1 py-3 rounded-xl bg-accent text-white text-xs font-bold shadow-ambient">
-              {isSavingPurchase ? 'جاري التسجيل...' : 'تسجيل فاتورة الشراء وتحديث الدين'}
+              {isSavingPurchase ? t('جاري التسجيل...') : t('تسجيل فاتورة الشراء وتحديث الدين')}
             </button>
             <button type="button" onClick={() => setPurchasingSupplier(null)} className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-xs font-bold">
-              إلغاء
+              {t('إلغاء')}
             </button>
           </div>
         </form>
       </Modal>
 
       {/* Pay Supplier Debt Modal */}
-      <Modal isOpen={Boolean(repayingSupplier)} onClose={() => setRepayingSupplier(null)} title={`💵 تسديد مستحقات المورد — ${repayingSupplier?.name ?? ''}`}>
+      <Modal isOpen={Boolean(repayingSupplier)} onClose={() => setRepayingSupplier(null)} title={`${t('تسديد مستحقات المورد')} — ${repayingSupplier?.name ?? ''}`}>
         <form onSubmit={handleRepaySupplierDebt} className="space-y-4">
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-900 font-bold">
-            <span>إجمالي المستحقات المتبقية للمورد:</span>
+            <span>{t('إجمالي المستحقات المتبقية للمورد:')}</span>
             <span className="text-sm font-black text-amber-800">
-              {(repayingSupplier?.total_debt_dzd ?? 0).toLocaleString('ar-DZ')} دج
+              {(repayingSupplier?.total_debt_dzd ?? 0).toLocaleString('ar-DZ')} {t('دج')}
             </span>
           </div>
 
-          <Input label="المبلغ المسدد (دج)" type="number" min={1} max={repayingSupplier?.total_debt_dzd ?? 9999999} value={repayAmountDzd} onChange={(e) => setRepayAmountDzd(e.target.value)} required autoFocus />
+          <Input label={t('المبلغ المسدد (دج)')} type="number" min={1} max={repayingSupplier?.total_debt_dzd ?? 9999999} value={repayAmountDzd} onChange={(e) => setRepayAmountDzd(e.target.value)} required autoFocus />
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-text-primary">طريقة الدفع</label>
+            <label className="text-xs font-bold text-text-primary">{t('طريقة الدفع')}</label>
             <select value={repayMethod} onChange={(e) => setRepayMethod(e.target.value as 'cash' | 'card')} className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent">
-              <option value="cash">💵 نقداً (Cash)</option>
-              <option value="card">💳 تحويل بنكي / CIB</option>
+              <option value="cash">{t('نقداً (Cash)')}</option>
+              <option value="card">{t('بطاقة CIB / الذهبية')}</option>
             </select>
           </div>
 
-          <Input label="ملاحظات التسديد" placeholder="مثال: تسديد دفعة فاتورة القمصان" value={repayNotes} onChange={(e) => setRepayNotes(e.target.value)} />
+          <Input label={t('ملاحظات التسديد')} placeholder="مثال: تسديد دفعة فاتورة القمصان" value={repayNotes} onChange={(e) => setRepayNotes(e.target.value)} />
 
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={isRepaying} className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-ambient">
-              {isRepaying ? 'جاري التسجيل...' : 'تأكيد وحفظ تسديد المستحقات'}
+              {isRepaying ? t('جاري التسجيل...') : t('تأكيد وحفظ تسديد المستحقات')}
             </button>
             <button type="button" onClick={() => setRepayingSupplier(null)} className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-xs font-bold">
               إلغاء

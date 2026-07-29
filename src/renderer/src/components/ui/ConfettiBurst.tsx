@@ -90,7 +90,7 @@ export function ConfettiBurst({ onComplete }: ConfettiBurstProps): React.JSX.Ele
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none z-70"
+      className="fixed inset-0 pointer-events-none z-[70]"
     />
   )
 }

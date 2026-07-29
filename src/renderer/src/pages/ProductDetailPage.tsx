@@ -110,7 +110,7 @@ export function ProductDetailPage({
       )
 
       if (prods.length === 0) {
-        addToast({ message: 'المنتج غير موجود في الفرع الحالي', variant: 'error' })
+        addToast({ message: t('المنتج غير موجود في الفرع الحالي'), variant: 'error' })
         onBack()
         return
       }
@@ -129,11 +129,11 @@ export function ProductDetailPage({
 
       setProduct({ ...p, variants })
     } catch {
-      addToast({ message: 'فشل تحميل تفاصيل المنتج', variant: 'error' })
+      addToast({ message: t('فشل تحميل تفاصيل المنتج'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
-  }, [productId, onBack, addToast])
+  }, [productId, onBack, addToast, t])
 
   const loadCategories = useCallback(async () => {
     try {
@@ -182,12 +182,12 @@ export function ProductDetailPage({
           product.id,
         ]
       )
-      addToast({ message: 'تم تحديث بيانات المنتج بنجاح ✅', variant: 'success' })
+      addToast({ message: t('تم تحديث بيانات المنتج بنجاح'), variant: 'success' })
       recordAuditLog('product_updated', 'products', `تعديل المنتج: ${editName.trim()}`, product.id).catch(() => {})
       setIsEditMode(false)
       await loadProductDetail()
     } catch {
-      addToast({ message: 'فشل حفظ التعديلات', variant: 'error' })
+      addToast({ message: t('فشل حفظ التعديلات'), variant: 'error' })
     } finally {
       setIsSaving(false)
     }
@@ -207,11 +207,11 @@ export function ProductDetailPage({
         `UPDATE product_variants SET deleted_at = ? WHERE product_id = ?`,
         [now, product.id]
       )
-      addToast({ message: `تم حذف المنتج "${product.name}" ✅`, variant: 'success' })
+      addToast({ message: `${t('تم حذف المنتج')} "${product.name}"`, variant: 'success' })
       recordAuditLog('product_deleted', 'products', `حذف المنتج: ${product.name}`, product.id).catch(() => {})
       onBack()
     } catch {
-      addToast({ message: 'فشل حذف المنتج', variant: 'error' })
+      addToast({ message: t('فشل حذف المنتج'), variant: 'error' })
     }
   }
 
@@ -240,7 +240,7 @@ export function ProductDetailPage({
           now,
         ]
       )
-      addToast({ message: 'تم إضافة خيار جديد للمنتج ✅', variant: 'success' })
+      addToast({ message: t('تم إضافة خيار جديد للمنتج'), variant: 'success' })
       setIsAddVariantOpen(false)
       setNewSize('')
       setNewColor('')
@@ -248,7 +248,7 @@ export function ProductDetailPage({
       setNewVariantPrice('')
       await loadProductDetail()
     } catch {
-      addToast({ message: 'فشل إضافة الخيار — تأكد من عدم تكرار الباركود', variant: 'error' })
+      addToast({ message: t('فشل إضافة الخيار — تأكد من عدم تكرار الباركود'), variant: 'error' })
     } finally {
       setIsAddingVariant(false)
     }
@@ -273,7 +273,7 @@ export function ProductDetailPage({
       )
       setStockMovements(rows)
     } catch {
-      addToast({ message: 'فشل تحميل سجل حركات المخزون', variant: 'error' })
+      addToast({ message: t('فشل تحميل سجل حركات المخزون'), variant: 'error' })
     } finally {
       setIsLoadingMovements(false)
     }

@@ -97,7 +97,7 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
   const columns: Column<AuditLogRow>[] = [
     {
       key: 'created_at',
-      header: 'التاريخ والوقت',
+      header: t('التاريخ والوقت'),
       sortable: true,
       render: (row) => (
         <span className="text-xs font-mono text-text-secondary">
@@ -107,30 +107,30 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
     },
     {
       key: 'user_name',
-      header: 'المستخدم / المنفذ',
+      header: t('المستخدم / المنفذ'),
       sortable: true,
       render: (row) => (
         <div className="flex items-center gap-1.5 font-bold text-xs text-text-primary">
           <User className="w-3.5 h-3.5 text-accent" />
-          <span>{row.user_name ?? 'النظام الآلي'}</span>
+          <span>{row.user_name ?? t('النظام الآلي')}</span>
         </div>
       ),
     },
     {
       key: 'action',
-      header: 'نوع العملية (Action)',
+      header: t('نوع العملية (Action)'),
       sortable: true,
       render: (row) => actionBadge(row.action),
     },
     {
       key: 'entity_name',
-      header: 'القسم / النطاق',
+      header: t('القسم / النطاق'),
       sortable: true,
       render: (row) => <span className="text-xs font-bold text-text-secondary">{row.entity_name}</span>,
     },
     {
       key: 'details',
-      header: 'تفاصيل العملية والتغييرات',
+      header: t('تفاصيل العملية والتغييرات'),
       render: (row) => <span className="text-xs text-text-primary font-semibold">{row.details ?? '-'}</span>,
     },
   ]
@@ -144,11 +144,11 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
             className="text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 mb-1.5 transition-colors"
           >
             <ArrowRight className="w-3.5 h-3.5" />
-            <span>إغلاق النافذة</span>
+            <span>{t('إغلاق النافذة')}</span>
           </button>
           <h1 className="text-2xl font-black text-text-primary flex items-center gap-2">
             <ClipboardList className="w-6 h-6 text-accent" />
-            <span>سجل التغييرات والعمليات (Audit Log Viewer)</span>
+            <span>{t('سجل التغييرات والعمليات (Audit Log Viewer)')}</span>
           </h1>
         </div>
       </div>
@@ -157,7 +157,7 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
       <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
         <div className="w-full md:w-80">
           <Input
-            placeholder="ابحث بالاسم، التفاصيل، أو العملية..."
+            placeholder={t('ابحث بالاسم، التفاصيل، أو العملية...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-gray-50 border-gray-200 text-xs"
@@ -166,7 +166,7 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
         </div>
 
         <div className="text-xs font-bold text-text-secondary">
-          إجمالي الحركات المسجلة: <span className="text-accent font-black text-sm">{filteredLogs.length}</span> عملية
+          {t('إجمالي الحركات المسجلة:')} <span className="text-accent font-black text-sm">{filteredLogs.length}</span> {t('عملية')}
         </div>
       </div>
 
@@ -181,7 +181,7 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
           sortOrder={sortOrder}
           onSort={handleSort}
           emptyType="search"
-          emptyMessage="لا توجد حركات مسجلة في سجل التدقيق تطابق البحث"
+          emptyMessage={t('لا توجد حركات مسجلة في سجل التدقيق تطابق البحث')}
         />
       </Card>
     </div>
