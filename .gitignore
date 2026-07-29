@@ -8,3 +8,9 @@ out/
 .env.local
 graphify-tool/
 graphify-out/
+
+# Scratch Audit Files
+used.txt
+dict.txt
+missing.txt
+
