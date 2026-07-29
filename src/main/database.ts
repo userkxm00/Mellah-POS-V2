@@ -151,12 +151,28 @@ export function initDatabase(): Promise<DbWrapper> {
     activeWrapper = wrapper
 
     await runMigrations(wrapper)
+    await ensureSalesColumnsExist(wrapper)
     await seedInitialData(wrapper)
 
     return wrapper
   })()
 
   return initPromise
+}
+
+async function ensureSalesColumnsExist(wrapper: DbWrapper): Promise<void> {
+  try {
+    const tableInfo = await wrapper.query<{ name: string }>('PRAGMA table_info(sales)')
+    const columns = new Set(tableInfo.map((c) => c.name))
+    if (!columns.has('voided_at')) {
+      await wrapper.exec('ALTER TABLE sales ADD COLUMN voided_at TEXT')
+    }
+    if (!columns.has('void_reason')) {
+      await wrapper.exec('ALTER TABLE sales ADD COLUMN void_reason TEXT')
+    }
+  } catch {
+    // Non-critical: sales table might not exist before migrations
+  }
 }
 
 async function runMigrations(wrapper: DbWrapper): Promise<void> {

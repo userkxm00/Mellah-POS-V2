@@ -1,9 +1,10 @@
--- Migration 0005: Fix sales payment_method CHECK constraint and customer_payments shift_id
+-- Migration 0006: Restore missing voided_at and void_reason columns on sales table
+-- Fixes "no such column: s.void_reason" error when loading Sales History on databases migrated via 0005
 
 PRAGMA foreign_keys = OFF;
 
--- 1. Recreate sales table with updated CHECK constraint allowing 'credit' and 'voided'
-CREATE TABLE sales_new (
+-- Recreate sales table ensuring voided_at, void_reason, and status 'voided' constraint exist
+CREATE TABLE IF NOT EXISTS sales_v6 (
   id TEXT PRIMARY KEY,
   branch_id TEXT NOT NULL REFERENCES branches(id),
   shift_id TEXT REFERENCES shifts(id),
@@ -25,8 +26,7 @@ CREATE TABLE sales_new (
   deleted_at TEXT
 );
 
--- 2. Copy existing data from sales to sales_new
-INSERT INTO sales_new (
+INSERT INTO sales_v6 (
   id, branch_id, shift_id, cashier_id, customer_id, 
   subtotal_dzd, discount_dzd, total_dzd, cash_amount_dzd, card_amount_dzd, 
   paid_amount_dzd, remaining_debt_dzd, payment_method, status, 
@@ -39,17 +39,13 @@ SELECT
   created_at, updated_at, deleted_at
 FROM sales;
 
--- 3. Drop old sales table and rename sales_new to sales
 DROP TABLE sales;
-ALTER TABLE sales_new RENAME TO sales;
+ALTER TABLE sales_v6 RENAME TO sales;
 
--- 4. Recreate indexes for performance
 CREATE INDEX IF NOT EXISTS idx_sales_branch ON sales(branch_id);
 CREATE INDEX IF NOT EXISTS idx_sales_shift ON sales(shift_id);
 CREATE INDEX IF NOT EXISTS idx_sales_customer ON sales(customer_id);
 CREATE INDEX IF NOT EXISTS idx_sales_created ON sales(created_at);
-
--- 5. Add shift_id column to customer_payments table
-ALTER TABLE customer_payments ADD COLUMN shift_id TEXT REFERENCES shifts(id);
+CREATE INDEX IF NOT EXISTS idx_sales_voided ON sales(voided_at);
 
 PRAGMA foreign_keys = ON;
