@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import bcrypt from 'bcryptjs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { initDatabase, closeDatabase, getDatabase, whenDatabaseReady, withTransaction } from './database'
+import { initDatabase, closeDatabase, whenDatabaseReady, withTransaction } from './database'
 import { initAutoUpdater, stopAutoUpdater } from './autoUpdater'
 
 const BCRYPT_ROUNDS = 10
@@ -85,7 +85,7 @@ function registerIpcHandlers(): void {
   // ── PIN Authentication & Legacy Auto-migration ──
   // Checks bcrypt hash first; if failed, checks legacy plaintext PIN and auto-hashes on match.
   ipcMain.handle('auth:verify-pin', async (_event, pin: string) => {
-    const db = getDatabase()
+    const db = await whenDatabaseReady()
     const users = await db.query<{
       id: string
       branch_id: string
@@ -326,7 +326,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('backup:run-auto', async () => {
     try {
-      const db = getDatabase()
+      const db = await whenDatabaseReady()
       const backupDir = getActiveBackupDir()
       ensureBackupDir(backupDir)
 
@@ -434,7 +434,7 @@ function registerIpcHandlers(): void {
   // ── Database Maintenance ──
   ipcMain.handle('maintenance:vacuum', async () => {
     try {
-      const db = getDatabase()
+      const db = await whenDatabaseReady()
       await db.exec('VACUUM')
       return { success: true }
     } catch (err) {
@@ -444,7 +444,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('maintenance:integrity', async () => {
     try {
-      const db = getDatabase()
+      const db = await whenDatabaseReady()
       const rows = await db.query<{ integrity_check: string }>('PRAGMA integrity_check')
       const ok = rows.length > 0 && rows[0]?.integrity_check === 'ok'
       return { success: ok, details: rows }
@@ -473,7 +473,7 @@ function registerIpcHandlers(): void {
     const results: Record<string, { success: boolean; error?: string }> = {}
     // 1. Integrity check
     try {
-      const db = getDatabase()
+      const db = await whenDatabaseReady()
       const rows = await db.query<{ integrity_check: string }>('PRAGMA integrity_check')
       results.integrity = { success: rows.length > 0 && rows[0]?.integrity_check === 'ok' }
     } catch (err) {
@@ -481,7 +481,7 @@ function registerIpcHandlers(): void {
     }
     // 2. VACUUM
     try {
-      const db = getDatabase()
+      const db = await whenDatabaseReady()
       await db.exec('VACUUM')
       results.vacuum = { success: true }
     } catch (err) {
