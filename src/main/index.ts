@@ -431,16 +431,24 @@ function registerIpcHandlers(): void {
     try {
       if (customDir) {
         const targetDir = path.resolve(path.normalize(customDir))
-        // Validate the directory exists or can be created
-        ensureBackupDir(targetDir)
-        // Resolve symlinks with fs.realpathSync before boundary check
-        const realTargetDir = fs.existsSync(targetDir) ? fs.realpathSync(targetDir) : targetDir
-        const testFile = path.resolve(realTargetDir, '.mellah-write-test')
-        if (!testFile.startsWith(realTargetDir)) {
+
+        // 1. Validate path traversal BEFORE creating or modifying directory on disk
+        const testFile = path.resolve(targetDir, '.mellah-write-test')
+        if (!testFile.startsWith(targetDir)) {
           throw new Error('Invalid path traversal detected')
         }
-        fs.writeFileSync(testFile, 'test', 'utf-8')
-        fs.unlinkSync(testFile)
+
+        // 2. Create/Ensure directory ONLY after validation passes
+        ensureBackupDir(targetDir)
+        const realTargetDir = fs.existsSync(targetDir) ? fs.realpathSync(targetDir) : targetDir
+        const realTestFile = path.resolve(realTargetDir, '.mellah-write-test')
+        if (!realTestFile.startsWith(realTargetDir)) {
+          throw new Error('Invalid path traversal detected')
+        }
+
+        // Test write access safely
+        fs.writeFileSync(realTestFile, 'test', 'utf-8')
+        fs.unlinkSync(realTestFile)
       }
       saveBackupConfig({ customDir })
       return { success: true, activeDir: getActiveBackupDir() }
