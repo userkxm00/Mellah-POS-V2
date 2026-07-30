@@ -169,6 +169,56 @@ async function verifyManagerPinHash(pinInput: string): Promise<boolean> {
   return false
 }
 
+async function updateCustomerStoreCredit(
+  customerId: string,
+  discountDzd: number,
+  currentCredit: number
+): Promise<void> {
+  if (!currentCredit || discountDzd <= 0) return
+  const usedCredit = Math.min(currentCredit, discountDzd)
+  await window.electron.db.execute(
+    `UPDATE customers SET store_credit_balance = store_credit_balance - ?, updated_at = ? WHERE id = ?`,
+    [usedCredit, new Date().toISOString(), customerId]
+  )
+}
+
+function buildReceiptPayload(
+  saleId: string,
+  cartItems: Array<{
+    product_name: string
+    variant_size: string | null
+    variant_color: string | null
+    quantity: number
+    unit_price_dzd: number
+  }>,
+  subtotal: number,
+  discountDzd: number,
+  totalDzd: number,
+  paymentMethod: string,
+  cashierName?: string,
+  customerName?: string,
+  storeName?: string
+) {
+  return {
+    storeName: storeName || 'بوتيك الملاح',
+    receiptId: saleId,
+    date: new Date().toISOString(),
+    cashierName: cashierName || 'كاشير الفرع',
+    customerName,
+    items: cartItems.map((ci) => ({
+      product_name: ci.product_name,
+      size: ci.variant_size,
+      color: ci.variant_color,
+      quantity: ci.quantity,
+      unit_price: ci.unit_price_dzd,
+    })),
+    subtotalDzd: subtotal,
+    discountDzd: discountDzd > 0 ? discountDzd : undefined,
+    totalDzd,
+    paymentMethod,
+  }
+}
+
 export function POSCheckoutPage({
   onNavigateToHome,
 }: {
@@ -497,13 +547,8 @@ export function POSCheckoutPage({
         creditDepositVal
       )
 
-      // Deduct used store credit if applied
-      if (custObj?.store_credit_balance && discountDzd > 0) {
-        const usedCredit = Math.min(custObj.store_credit_balance, discountDzd)
-        await window.electron.db.execute(
-          `UPDATE customers SET store_credit_balance = store_credit_balance - ?, updated_at = ? WHERE id = ?`,
-          [usedCredit, new Date().toISOString(), custObj.id]
-        )
+      if (custObj?.id && custObj?.store_credit_balance) {
+        await updateCustomerStoreCredit(custObj.id, discountDzd, custObj.store_credit_balance)
       }
 
       const loyaltyMsg = custObj ? ` • تم منح نقاط الولاء للزبون (${custObj.full_name})` : ''
@@ -515,39 +560,28 @@ export function POSCheckoutPage({
         duration: 4000,
       })
 
-      // Auto Cash Drawer Kick
       const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
       if (autoOpenDrawer) {
         window.electron.openCashDrawer(printerName).catch(() => {})
       }
 
-      // Auto-Thermal Printing
       const paperWidth = (localStorage.getItem('mellah_paper_width') as '80mm' | '58mm') ?? '80mm'
       const receiptLanguage = (localStorage.getItem('mellah_receipt_language') as 'ar' | 'fr' | 'en') ?? 'ar'
 
       if (autoPrintReceipt) {
         const currentUser = useAuthStore.getState().currentUser
-        printThermalReceipt(
-          {
-            storeName: useStoreSettingsStore.getState().settings.store_name,
-            receiptId: res.saleId,
-            date: new Date().toISOString(),
-            cashierName: currentUser?.full_name ?? t('كاشير الفرع'),
-            customerName: custObj?.full_name,
-            items: cartItems.map((ci) => ({
-              product_name: ci.product_name,
-              size: ci.variant_size,
-              color: ci.variant_color,
-              quantity: ci.quantity,
-              unit_price: ci.unit_price_dzd,
-            })),
-            subtotalDzd: getSubtotal(),
-            discountDzd: discountDzd > 0 ? discountDzd : undefined,
-            totalDzd: res.totalDzd,
-            paymentMethod,
-          },
-          { printerName, paperWidth, language: receiptLanguage }
-        ).catch(() => {
+        const payload = buildReceiptPayload(
+          res.saleId,
+          cartItems,
+          getSubtotal(),
+          discountDzd,
+          res.totalDzd,
+          paymentMethod,
+          currentUser?.full_name,
+          custObj?.full_name,
+          useStoreSettingsStore.getState().settings.store_name
+        )
+        printThermalReceipt(payload, { printerName, paperWidth, language: receiptLanguage }).catch(() => {
           addToast({
             message: t('تعذرت الطباعة — تحقق من اتصال الطابعة (يمكنك إعادة الطباعة من سجل المبيعات)'),
             variant: 'warning',

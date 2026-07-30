@@ -284,6 +284,11 @@ RETURNS UUID AS $$
   );
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
+CREATE OR REPLACE FUNCTION admin_role_name()
+RETURNS TEXT AS $$
+  SELECT 'admin'::text;
+$$ LANGUAGE sql IMMUTABLE SECURITY DEFINER;
+
 CREATE OR REPLACE FUNCTION is_authenticated()
 RETURNS BOOLEAN AS $$
   SELECT auth.role() = 'authenticated';
@@ -292,8 +297,8 @@ $$ LANGUAGE sql STABLE SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION is_admin()
 RETURNS BOOLEAN AS $$
   SELECT COALESCE(
-    (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin',
-    (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin',
+    (auth.jwt() -> 'user_metadata' ->> 'role') = admin_role_name(),
+    (auth.jwt() -> 'app_metadata' ->> 'role') = admin_role_name(),
     false
   );
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
