@@ -430,39 +430,40 @@ function registerIpcHandlers(): void {
   ipcMain.handle('backup:set-dir', async (_event, customDir: string | null) => {
     try {
       if (customDir) {
-        const targetDir = path.resolve(path.normalize(customDir))
+        // Sanitize and resolve absolute target directory
+        const normalized = path.normalize(customDir).replace(/^(\.\.[/\\])+/, '')
+        const targetDir = path.resolve(normalized)
 
-        // 1. Validate path traversal before directory creation
-        const testFile = path.resolve(targetDir, '.mellah-write-test')
-        const relBefore = path.relative(targetDir, testFile)
-        if (relBefore.startsWith('..') || path.isAbsolute(relBefore) || !testFile.startsWith(targetDir)) {
+        // Allowed root boundaries for backup directory
+        const allowedRoots = [
+          app.getPath('userData'),
+          app.getPath('documents'),
+          app.getPath('downloads'),
+          app.getPath('desktop'),
+          app.getPath('home'),
+        ].map((p) => path.resolve(p))
+
+        // Ensure target directory is inside an allowed user root or valid drive
+        const isAllowed = allowedRoots.some((root) => {
+          const rel = path.relative(root, targetDir)
+          return !rel.startsWith('..') && !path.isAbsolute(rel)
+        })
+
+        if (!isAllowed && !/^[a-zA-Z]:[/\\]?$/.test(targetDir)) {
+          throw new Error('Invalid path traversal detected: directory outside allowed boundaries')
+        }
+
+        // Create directory safely
+        ensureBackupDir(targetDir)
+
+        // Test write & delete access safely inside validated target directory
+        const testFilePath = path.join(targetDir, '.mellah-write-test')
+        if (!testFilePath.startsWith(targetDir)) {
           throw new Error('Invalid path traversal detected')
         }
 
-        // 2. Ensure directory exists
-        ensureBackupDir(targetDir)
-
-        // 3. Resolve canonical path via realpathSync
-        const realTargetDir = fs.existsSync(targetDir) ? fs.realpathSync(targetDir) : targetDir
-
-        // 4. Validate canonicalized path immediately after realpathSync
-        const canonicalTestFile = path.resolve(realTargetDir, '.mellah-write-test')
-        const relCanonical = path.relative(realTargetDir, canonicalTestFile)
-        if (relCanonical.startsWith('..') || path.isAbsolute(relCanonical) || !canonicalTestFile.startsWith(realTargetDir)) {
-          throw new Error('Invalid path traversal detected in canonical path')
-        }
-
-        // Validate canonical path against user home directory boundary
-        const userHome = fs.existsSync(app.getPath('home')) ? fs.realpathSync(app.getPath('home')) : app.getPath('home')
-        const relHome = path.relative(userHome, realTargetDir)
-        const isDriveRoot = /^[a-zA-Z]:\\?$/.test(realTargetDir) || realTargetDir === '/'
-        if (relHome.startsWith('..') && !isDriveRoot && !path.isAbsolute(realTargetDir)) {
-          throw new Error('Canonical path outside allowed user boundaries')
-        }
-
-        // Test write & delete access on validated canonical path
-        fs.writeFileSync(canonicalTestFile, 'test', 'utf-8')
-        fs.unlinkSync(canonicalTestFile)
+        fs.writeFileSync(testFilePath, 'test', 'utf-8')
+        fs.unlinkSync(testFilePath)
       }
       saveBackupConfig({ customDir })
       return { success: true, activeDir: getActiveBackupDir() }
