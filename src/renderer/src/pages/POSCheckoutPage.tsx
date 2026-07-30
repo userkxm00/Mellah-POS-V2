@@ -24,7 +24,7 @@ import { ConfettiBurst } from '@/components/ui/ConfettiBurst'
 import { soundService } from '@/services/soundService'
 import { formatCurrency } from '@/lib/format'
 import { sendSaleCompletedTelegramNotification } from '@/services/telegramService'
-import { useCartStore } from '@/stores/cartStore'
+import { useCartStore, type CartItem } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
@@ -275,6 +275,94 @@ function restoreHeldCartItems(
       item.unit_price_dzd
     )
   )
+}
+
+function checkSaleEligibility(
+  activeShift: unknown,
+  cartLength: number,
+  subtotal: number,
+  discountDzd: number,
+  userRole?: string,
+  t?: (key: string) => string
+): { eligible: boolean; requiresPin: boolean; errorMsg?: string } {
+  if (!activeShift) return { eligible: false, requiresPin: false, errorMsg: t?.('لا توجد وردية مفتوحة لإتمام البيع') }
+  if (cartLength === 0) return { eligible: false, requiresPin: false, errorMsg: t?.('السلة فارغة، أضف منتجات أولاً') }
+  const isHighDiscount = discountDzd > subtotal * 0.1 || discountDzd > 5000
+  if (isHighDiscount && userRole === 'cashier') return { eligible: true, requiresPin: true }
+  return { eligible: true, requiresPin: false }
+}
+
+async function dispatchSaleNotifications(
+  res: { saleId: string; totalDzd: number },
+  cartItems: CartItem[],
+  variants: ProductVariantItem[],
+  custObj: CustomerOption | undefined,
+  paymentMethod: string,
+  cashAmountDzd: number,
+  subtotalDzd: number,
+  discountDzd: number,
+  autoPrintReceipt: boolean,
+  autoOpenDrawer: boolean,
+  t: (key: string) => string,
+  addToast: (toast: { message: string; variant: 'success' | 'warning' | 'error' | 'info'; duration?: number }) => void
+): Promise<void> {
+  const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
+  if (autoOpenDrawer) {
+    window.electron.openCashDrawer(printerName).catch(() => {})
+  }
+
+  const paperWidth = (localStorage.getItem('mellah_paper_width') as '80mm' | '58mm') ?? '80mm'
+  const receiptLanguage = (localStorage.getItem('mellah_receipt_language') as 'ar' | 'fr' | 'en') ?? 'ar'
+
+  if (autoPrintReceipt) {
+    const currentUser = useAuthStore.getState().currentUser
+    const payload = buildReceiptPayload(
+      res.saleId,
+      cartItems,
+      subtotalDzd,
+      discountDzd,
+      res.totalDzd,
+      paymentMethod,
+      currentUser?.full_name,
+      custObj?.full_name,
+      useStoreSettingsStore.getState().settings.store_name
+    )
+    printThermalReceipt(payload, { printerName, paperWidth, language: receiptLanguage }).catch(() => {
+      addToast({
+        message: t('تعذرت الطباعة — تحقق من اتصال الطابعة (يمكنك إعادة الطباعة من سجل المبيعات)'),
+        variant: 'warning',
+        duration: 6000,
+      })
+    })
+  }
+
+  const currentUser = useAuthStore.getState().currentUser
+  const currentBranch = useAuthStore.getState().currentBranch
+  sendSaleCompletedTelegramNotification({
+    invoiceNumber: res.saleId.slice(0, 8).toUpperCase(),
+    branchName: currentBranch?.name || 'الفرع الرئيسي',
+    cashierName: currentUser?.full_name || 'الكاشير',
+    customerName: custObj?.full_name || null,
+    paymentMethod,
+    subtotalDzd,
+    discountDzd,
+    totalDzd: res.totalDzd,
+    paidAmountDzd: paymentMethod === 'cash' ? (cashAmountDzd ?? res.totalDzd) : res.totalDzd,
+    remainingChangeDzd: paymentMethod === 'cash' ? Math.max(0, (cashAmountDzd ?? 0) - res.totalDzd) : 0,
+    items: cartItems.map((ci) => {
+      const matchedVariant = variants.find((v) => v.id === ci.variant_id)
+      const variantText = [ci.variant_size, ci.variant_color].filter(Boolean).join(' / ')
+      return {
+        name: ci.product_name,
+        variantName: variantText || undefined,
+        quantity: ci.quantity,
+        unitPriceDzd: ci.unit_price_dzd,
+        totalPriceDzd: ci.unit_price_dzd * ci.quantity,
+        imageUrl: matchedVariant?.image_url || null,
+      }
+    }),
+    createdAt: new Date().toISOString(),
+  })
 }
 
 export function POSCheckoutPage({
@@ -541,21 +629,16 @@ export function POSCheckoutPage({
 
   // Complete Sale Initiator
   const handleCompleteSale = async (): Promise<void> => {
-    if (!activeShift) {
-      addToast({ message: t('لا توجد وردية مفتوحة لإتمام البيع'), variant: 'error' })
-      return
-    }
-
-    if (cartItems.length === 0) {
-      addToast({ message: t('السلة فارغة، أضف منتجات أولاً'), variant: 'error' })
-      return
-    }
-
     const sub = getSubtotal()
-    const isHighDiscount = discountDzd > sub * 0.1 || discountDzd > 5000
     const currentUser = useAuthStore.getState().currentUser
+    const status = checkSaleEligibility(activeShift, cartItems.length, sub, discountDzd, currentUser?.role, t)
 
-    if (isHighDiscount && currentUser?.role === 'cashier') {
+    if (!status.eligible) {
+      if (status.errorMsg) addToast({ message: status.errorMsg, variant: 'error' })
+      return
+    }
+
+    if (status.requiresPin) {
       setIsManagerPinOpen(true)
       return
     }
@@ -586,7 +669,6 @@ export function POSCheckoutPage({
       }
 
       const loyaltyMsg = custObj ? ` • تم منح نقاط الولاء للزبون (${custObj.full_name})` : ''
-
       soundService.playSuccess()
       addToast({
         message: `تم إتمام عملية البيع بنجاح! الإجمالي: ${formatCurrency(res.totalDzd)}${loyaltyMsg}`,
@@ -594,94 +676,35 @@ export function POSCheckoutPage({
         duration: 4000,
       })
 
-      const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
-      if (autoOpenDrawer) {
-        window.electron.openCashDrawer(printerName).catch(() => {})
-      }
-
-      const paperWidth = (localStorage.getItem('mellah_paper_width') as '80mm' | '58mm') ?? '80mm'
-      const receiptLanguage = (localStorage.getItem('mellah_receipt_language') as 'ar' | 'fr' | 'en') ?? 'ar'
-
-      if (autoPrintReceipt) {
-        const currentUser = useAuthStore.getState().currentUser
-        const payload = buildReceiptPayload(
-          res.saleId,
-          cartItems,
-          getSubtotal(),
-          discountDzd,
-          res.totalDzd,
-          paymentMethod,
-          currentUser?.full_name,
-          custObj?.full_name,
-          useStoreSettingsStore.getState().settings.store_name
-        )
-        printThermalReceipt(payload, { printerName, paperWidth, language: receiptLanguage }).catch(() => {
-          addToast({
-            message: t('تعذرت الطباعة — تحقق من اتصال الطابعة (يمكنك إعادة الطباعة من سجل المبيعات)'),
-            variant: 'warning',
-            duration: 6000,
-          })
-        })
-      }
-
-      // Automated Telegram Sale Completed Notification with Items & Images
-      const currentUser = useAuthStore.getState().currentUser
-      const currentBranch = useAuthStore.getState().currentBranch
-      sendSaleCompletedTelegramNotification({
-        invoiceNumber: res.saleId.slice(0, 8).toUpperCase(),
-        branchName: currentBranch?.name || 'الفرع الرئيسي',
-        cashierName: currentUser?.full_name || 'الكاشير',
-        customerName: custObj?.full_name || null,
+      await dispatchSaleNotifications(
+        res,
+        cartItems,
+        variants,
+        custObj,
         paymentMethod,
-        subtotalDzd: getSubtotal(),
+        cashAmountDzd ?? 0,
+        getSubtotal(),
         discountDzd,
-        totalDzd: res.totalDzd,
-        paidAmountDzd: paymentMethod === 'cash' ? (cashAmountDzd ?? res.totalDzd) : res.totalDzd,
-        remainingChangeDzd: paymentMethod === 'cash' ? Math.max(0, (cashAmountDzd ?? 0) - res.totalDzd) : 0,
-        items: cartItems.map((ci) => {
-          const matchedVariant = variants.find((v) => v.id === ci.variant_id)
-          const variantText = [ci.variant_size, ci.variant_color].filter(Boolean).join(' / ')
-          return {
-            name: ci.product_name,
-            variantName: variantText || undefined,
-            quantity: ci.quantity,
-            unitPriceDzd: ci.unit_price_dzd,
-            totalPriceDzd: ci.unit_price_dzd * ci.quantity,
-            imageUrl: matchedVariant?.image_url || null,
-          }
-        }),
-        createdAt: new Date().toISOString(),
-      }).catch(() => {})
+        autoPrintReceipt,
+        autoOpenDrawer,
+        t,
+        addToast
+      )
 
       // 5 Signature Delight Moments Trigger
       setShowConfetti(true)
       setIsReceiptFlying(true)
       setTimeout(() => setIsReceiptFlying(false), 800)
 
-      // Milestone Toast Check
-      try {
-        const todayStr = new Date().toISOString().split('T')[0]
-        const [{ count }] = await window.electron.db.query<{ count: number }>(
-          `SELECT COUNT(*) as count FROM sales WHERE DATE(created_at) = ? AND deleted_at IS NULL`,
-          [todayStr]
-        )
-        const milestoneTargets = [5, 10, 25, 50, 100]
-        if (milestoneTargets.includes(count)) {
-          addToast({
-            message: `🎉 مبروك! تم تحقيق ${count} مبيعات لهذا اليوم! استمر في الإنجاز!`,
-            variant: 'success',
-            duration: 5000,
-          })
-        }
-      } catch (err) {// eslint-disable-next-line no-console
-      console.error("[POSCheckoutPage]", err); // non-blocking
-      }
-
       clearCart()
       setSelectedCustomerId(null)
       setTenderedCashInput('')
       setCreditDepositInput('')
       await loadData()
+    } catch (err) {
+      soundService.playError()
+      const msg = err instanceof Error ? err.message : t('حدث خطأ أثناء معالجة عملية البيع')
+      addToast({ message: msg, variant: 'error' })
     } finally {
       setIsProcessingSale(false)
     }
