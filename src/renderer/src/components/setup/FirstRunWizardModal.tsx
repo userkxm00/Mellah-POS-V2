@@ -109,24 +109,20 @@ export function FirstRunWizardModal(): React.JSX.Element | null {
               <span>مرحباً بك في نظام الملاح POS! يرجى إدخال معلومات محلك التجاري.</span>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-text-primary">اسم المتجر / المحل:</label>
-              <Input
-                value={storeName}
-                onChange={(e) => setStoreName(e.target.value)}
-                placeholder="مثلاً: بوتيك الملاح للملابس"
-                required
-              />
-            </div>
+            <Input
+              label="اسم المتجر / المحل:"
+              value={storeName}
+              onChange={(e) => setStoreName(e.target.value)}
+              placeholder="مثلاً: بوتيك الملاح للملابس"
+              required
+            />
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-text-primary">رقم الهاتف للطباعة بالفاتورة:</label>
-              <Input
-                value={storePhone}
-                onChange={(e) => setStorePhone(e.target.value)}
-                placeholder="05XXXXXXXX"
-              />
-            </div>
+            <Input
+              label="رقم الهاتف للطباعة بالفاتورة:"
+              value={storePhone}
+              onChange={(e) => setStorePhone(e.target.value)}
+              placeholder="05XXXXXXXX"
+            />
 
             <div className="flex justify-end pt-3">
               <Button
@@ -153,16 +149,14 @@ export function FirstRunWizardModal(): React.JSX.Element | null {
               سيتم استخدام رمز الـ PIN لحماية الحساب الإداري وإلغاء قفل الجلسة والتقارير.
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-text-primary">رمز PIN الإداري (افتراضي: 1234):</label>
-              <Input
-                type="password"
-                maxLength={6}
-                value={adminPin}
-                onChange={(e) => setAdminPin(e.target.value)}
-                placeholder="****"
-              />
-            </div>
+            <Input
+              label="رمز PIN الإداري (افتراضي: 1234):"
+              type="password"
+              maxLength={6}
+              value={adminPin}
+              onChange={(e) => setAdminPin(e.target.value)}
+              placeholder="****"
+            />
 
             <div className="flex justify-between pt-3">
               <Button type="button" variant="secondary" onClick={() => setStep(1)}>
@@ -179,7 +173,7 @@ export function FirstRunWizardModal(): React.JSX.Element | null {
         {step === 3 && (
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-text-primary">عرض ورق الطابعة الحرارية:</label>
+              <span className="text-xs font-bold text-text-primary">عرض ورق الطابعة الحرارية:</span>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -206,8 +200,9 @@ export function FirstRunWizardModal(): React.JSX.Element | null {
 
             {printers.length > 0 && (
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-text-primary">اختر طابعة الفواتير الحرارية:</label>
+                <span className="text-xs font-bold text-text-primary">اختر طابعة الفواتير الحرارية:</span>
                 <select
+                  aria-label="اختر طابعة الفواتير الحرارية"
                   value={selectedPrinter}
                   onChange={(e) => setSelectedPrinter(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl text-xs font-bold bg-white border border-gray-200"

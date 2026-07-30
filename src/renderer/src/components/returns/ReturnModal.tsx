@@ -236,7 +236,7 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
             {/* Refund options */}
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-text-secondary">طريقة الاسترداد:</label>
+                <span className="text-xs font-semibold text-text-secondary">طريقة الاسترداد:</span>
                 <div className="flex gap-2">
                   <button
                     type="button"

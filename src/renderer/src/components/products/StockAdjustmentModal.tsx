@@ -5,27 +5,27 @@ import { useToastStore } from '@/stores/toastStore'
 
 interface StockAdjustmentModalProps {
   readonly isOpen: boolean
+  readonly onClose: () => void
   readonly variantId: string | null
   readonly variantTitle: string
-  readonly onClose: () => void
   readonly onSuccess: () => void
 }
 
 export function StockAdjustmentModal({
   isOpen,
+  onClose,
   variantId,
   variantTitle,
-  onClose,
   onSuccess,
 }: StockAdjustmentModalProps): React.JSX.Element | null {
   const [type, setType] = useState<'restock' | 'adjustment'>('restock')
-  const [quantity, setQuantity] = useState<string>('10')
+  const [quantity, setQuantity] = useState<string>('1')
   const [note, setNote] = useState<string>('')
   const [isLoading, setIsLoading] = useState<boolean>(false)
 
   const addToast = useToastStore((s) => s.addToast)
 
-  if (!variantId) return null
+  if (!isOpen || !variantId) return null
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
@@ -56,7 +56,7 @@ export function StockAdjustmentModal({
     <Modal isOpen={isOpen} onClose={onClose} title={`تعديل مخزون — ${variantTitle}`}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-text-primary">نوع الحركة:</label>
+          <span className="text-sm font-medium text-text-primary">نوع الحركة:</span>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"

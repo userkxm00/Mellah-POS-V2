@@ -10,6 +10,24 @@ interface CloseShiftModalProps {
   readonly onClose: () => void
 }
 
+function getShiftDifferenceBadgeText(diff: number): string {
+  if (diff === 0) return '0 DA (متطابق)'
+  if (diff > 0) return `+ ${formatCurrency(diff)} (فائض)`
+  return `- ${formatCurrency(Math.abs(diff))} (عجز)`
+}
+
+function getShiftDifferenceBadgeStyle(diff: number): string {
+  if (diff === 0) return 'bg-success/10 text-success border-success/20'
+  if (diff > 0) return 'bg-warning/10 text-warning border-warning/20'
+  return 'bg-danger/10 text-danger border-danger/20'
+}
+
+function getShiftCloseToastMessage(diff: number): string {
+  if (diff === 0) return 'متطابق 100%'
+  if (diff > 0) return `فائض بمبلغ ${formatCurrency(diff)}`
+  return `عجز بمبلغ ${formatCurrency(Math.abs(diff))}`
+}
+
 export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): React.JSX.Element | null {
   const activeShift = useShiftStore((s) => s.activeShift)
   const closeShift = useShiftStore((s) => s.closeShift)
@@ -66,12 +84,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): Reac
 
     try {
       const res = await closeShift(closingCashNum)
-      const diffText =
-        res.difference === 0
-          ? 'متطابق 100%'
-          : res.difference > 0
-            ? `فائض بمبلغ ${formatCurrency(res.difference)}`
-            : `عجز بمبلغ ${formatCurrency(Math.abs(res.difference))}`
+      const diffText = getShiftCloseToastMessage(res.difference)
 
       addToast({
         message: `تم قفل الصندوق بنجاح! النتيجة: ${diffText}`,
@@ -133,19 +146,9 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): Reac
           <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-200/80">
             <span className="text-sm font-bold text-text-secondary">الفرق (العد الفعلي - المتوقع):</span>
             <span
-              className={`currency font-black text-sm px-3 py-1 rounded-full border ${
-                difference === 0
-                  ? 'bg-success/10 text-success border-success/20'
-                  : difference > 0
-                    ? 'bg-warning/10 text-warning border-warning/20'
-                    : 'bg-danger/10 text-danger border-danger/20'
-              }`}
+              className={`currency font-black text-sm px-3 py-1 rounded-full border ${getShiftDifferenceBadgeStyle(difference)}`}
             >
-              {difference === 0
-                ? '0 DA (متطابق)'
-                : difference > 0
-                  ? `+ ${formatCurrency(difference)} (فائض)`
-                  : `- ${formatCurrency(Math.abs(difference))} (عجز)`}
+              {getShiftDifferenceBadgeText(difference)}
             </span>
           </div>
         </div>
