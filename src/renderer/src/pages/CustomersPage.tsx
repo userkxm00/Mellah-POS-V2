@@ -230,10 +230,12 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
          WHERE customer_id = ?
          ORDER BY created_at DESC`,
         [customer.id]
-      ).catch(() => [])
+      )
       setCustomerPaymentsHistory(paymentRows)
-    } catch (err) {// eslint-disable-next-line no-console
-      console.error("[CustomersPage]", err); addToast({ message: t('فشل تحميل سجل مشتريات وتسديدات الزبون'), variant: 'error' })
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[CustomersPage]', err)
+      addToast({ message: t('فشل تحميل سجل مشتريات وتسديدات الزبون'), variant: 'error' })
     } finally {
       setIsTimelineLoading(false)
     }
