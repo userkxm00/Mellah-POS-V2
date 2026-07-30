@@ -468,7 +468,9 @@ export function POSCheckoutPage({
   const [showConfetti, setShowConfetti] = useState<boolean>(false)
   const [isReceiptFlying, setIsReceiptFlying] = useState<boolean>(false)
 
-  // Mixed payment inputs
+  // Discount source tracking
+  const [redeemedPoints, setRedeemedPoints] = useState<number>(0)
+  const [appliedDiscountSource, setAppliedDiscountSource] = useState<'none' | 'loyalty' | 'store_credit' | 'manual'>('none')
   const [isMixedModalOpen, setIsMixedModalOpen] = useState<boolean>(false)
   const [mixedCashInput, setMixedCashInput] = useState<string>('')
   const [mixedCardInput, setMixedCardInput] = useState<string>('')
@@ -576,12 +578,23 @@ export function POSCheckoutPage({
 
   const filteredVariants = filterVariantsList(variants, selectedCategoryId, searchQuery)
 
-  // Restore held cart
-  const handleRestoreCart = (id: string): void => {
+  // Restore held cart with real-time stock verification
+  const handleRestoreCart = async (id: string): Promise<void> => {
     const items = restoreCart(id)
     if (items) {
+      const activeBranch = useAuthStore.getState().currentBranch
+      const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
       clearCart()
-      restoreHeldCartItems(items, addItem)
+      for (const item of items) {
+        const stockRows = await window.electron.db.query<{ current_stock: number }>(
+          `SELECT COALESCE(SUM(quantity_change), 0) as current_stock 
+           FROM stock_movements 
+           WHERE variant_id = ? AND branch_id = ?`,
+          [item.variant_id, branchId]
+        )
+        const realStock = stockRows[0]?.current_stock ?? 0
+        restoreHeldCartItems([{ ...item, available_stock: realStock }], addItem)
+      }
       setIsHeldModalOpen(false)
       addToast({ message: t('تم استرجاع السلة المعلقة بنجاح! 🛒'), variant: 'success' })
     }
@@ -593,6 +606,8 @@ export function POSCheckoutPage({
     const pointsToUse = Math.floor(selectedCustomerObj.loyalty_points / 100) * 100
     const discountVal = pointsToUse // 1 point = 1 DZD
     setDiscount(0, discountVal)
+    setRedeemedPoints(pointsToUse)
+    setAppliedDiscountSource('loyalty')
     addToast({ message: `${t('تم خصم')} ${discountVal} ${t('دج مقابل')} ${pointsToUse} ${t('نقطة ولاء')}`, variant: 'success' })
   }
 
@@ -603,6 +618,7 @@ export function POSCheckoutPage({
     const sub = getSubtotal()
     const discountVal = Math.min(credit, sub)
     setDiscount(0, discountVal)
+    setAppliedDiscountSource('store_credit')
     addToast({ message: `${t('تم تطبيق خصم من رصيد المتجر:')} ${formatCurrency(discountVal)}`, variant: 'success' })
   }
 
@@ -696,10 +712,11 @@ export function POSCheckoutPage({
         cashAmountDzd,
         cardAmountDzd,
         discountDzd,
-        creditDepositVal
+        creditDepositVal,
+        appliedDiscountSource === 'loyalty' ? redeemedPoints : 0
       )
 
-      if (custObj?.id && custObj?.store_credit_balance) {
+      if (appliedDiscountSource === 'store_credit' && custObj?.id && custObj?.store_credit_balance) {
         await updateCustomerStoreCredit(custObj.id, discountDzd, custObj.store_credit_balance)
       }
 
@@ -735,6 +752,8 @@ export function POSCheckoutPage({
       setSelectedCustomerId(null)
       setTenderedCashInput('')
       setCreditDepositInput('')
+      setRedeemedPoints(0)
+      setAppliedDiscountSource('none')
       await loadData()
     } catch (err) {
       soundService.playError()

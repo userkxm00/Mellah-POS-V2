@@ -21,7 +21,8 @@ export async function processSale(
   mixedCashDzd?: number | null,
   mixedCardDzd?: number | null,
   discountDzd?: number,
-  creditDepositDzd?: number | null
+  creditDepositDzd?: number | null,
+  redeemedPointsDzd?: number
 ): Promise<CreateSaleResult> {
   if (items.length === 0) {
     throw new Error('السلة فارغة')
@@ -107,15 +108,16 @@ export async function processSale(
     ],
   })
 
-  // 1b. Update Customer Loyalty Points
+  // 1b. Update Customer Loyalty Points (Add points earned, deduct points redeemed)
   if (customerId) {
     const pointsEarned = Math.floor(totalDzd / 100)
+    const pointsDeducted = Math.max(0, Math.floor(redeemedPointsDzd ?? 0))
     operations.push({
       sql: `UPDATE customers 
-            SET loyalty_points = loyalty_points + ?, 
+            SET loyalty_points = MAX(0, loyalty_points + ? - ?), 
                 updated_at = ? 
             WHERE id = ?`,
-      params: [pointsEarned, now, customerId],
+      params: [pointsEarned, pointsDeducted, now, customerId],
     })
   }
 
