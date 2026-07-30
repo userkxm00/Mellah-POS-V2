@@ -84,15 +84,23 @@ function registerIpcHandlers(): void {
   // Supports optional userId for direct user matching and auto-migrates legacy unhashed PINs.
   // ── PIN Authentication & Legacy Auto-migration ──
   // Checks bcrypt hash first; if failed, checks legacy plaintext PIN and auto-hashes on match.
-  ipcMain.handle('auth:verify-pin', async (_event, pin: string) => {
+  ipcMain.handle('auth:verify-pin', async (_event, pin: string, userId?: string) => {
     const db = await whenDatabaseReady()
-    const users = await db.query<{
-      id: string
-      branch_id: string
-      full_name: string
-      role: 'admin' | 'cashier'
-      pin_hash: string
-    }>('SELECT id, branch_id, full_name, role, pin_hash FROM users')
+    const users = userId
+      ? await db.query<{
+          id: string
+          branch_id: string
+          full_name: string
+          role: 'admin' | 'cashier'
+          pin_hash: string
+        }>('SELECT id, branch_id, full_name, role, pin_hash FROM users WHERE id = ?', [userId])
+      : await db.query<{
+          id: string
+          branch_id: string
+          full_name: string
+          role: 'admin' | 'cashier'
+          pin_hash: string
+        }>('SELECT id, branch_id, full_name, role, pin_hash FROM users')
 
     for (const user of users) {
       let isMatch = false

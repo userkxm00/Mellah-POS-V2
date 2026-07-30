@@ -69,6 +69,7 @@ export function initDatabase(): Promise<DbWrapper> {
     }
 
     // Enable WAL mode & foreign keys (WASM SQLite requires manual configuration)
+    rawDb.run('PRAGMA journal_mode = WAL;')
     rawDb.run('PRAGMA foreign_keys = ON;')
 
     const wrapper: DbWrapper = {

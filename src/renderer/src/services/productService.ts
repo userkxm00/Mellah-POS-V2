@@ -32,6 +32,15 @@ function validateCreateProductInput(input: CreateProductInput): void {
   if (barcodes.length !== new Set(barcodes).size) {
     throw new Error('يوجد مكرر في الباركود المدخل ضمن الخيارات')
   }
+  for (const v of input.variants) {
+    const cleanBarcode = v.barcode.trim()
+    if (!cleanBarcode) {
+      throw new Error('يرجى إدخال رمز الباركود لكل خيار')
+    }
+    if (cleanBarcode.length > 256) {
+      throw new Error('رمز الباركود طويل جداً (الحد الأقصى 256 حرف)')
+    }
+  }
 }
 
 export async function createProductWithVariants(

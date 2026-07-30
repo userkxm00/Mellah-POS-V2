@@ -155,11 +155,11 @@ async function quickAddCustomerToDb(name: string, phone: string): Promise<string
 }
 
 async function verifyManagerPinHash(pinInput: string): Promise<boolean> {
-  const managers = await window.electron.db.query<{ pin_hash: string }>(
-    `SELECT pin_hash FROM users WHERE role IN ('admin', 'manager') AND deleted_at IS NULL`
+  const managers = await window.electron.db.query<{ id: string; pin_hash: string }>(
+    `SELECT id, pin_hash FROM users WHERE role IN ('admin', 'manager') AND deleted_at IS NULL`
   )
   for (const m of managers) {
-    if (await window.electron.verifyPin(pinInput, m.pin_hash)) {
+    if (await window.electron.verifyPin(pinInput, m.id)) {
       return true
     }
   }
