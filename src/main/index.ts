@@ -432,29 +432,37 @@ function registerIpcHandlers(): void {
       if (customDir) {
         const targetDir = path.resolve(path.normalize(customDir))
 
-        // 1. Path traversal validation BEFORE directory creation
+        // 1. Validate path traversal before directory creation
         const testFile = path.resolve(targetDir, '.mellah-write-test')
         const relBefore = path.relative(targetDir, testFile)
         if (relBefore.startsWith('..') || path.isAbsolute(relBefore) || !testFile.startsWith(targetDir)) {
           throw new Error('Invalid path traversal detected')
         }
 
-        // 2. Ensure directory
+        // 2. Ensure directory exists
         ensureBackupDir(targetDir)
 
-        // 3. Resolve canonical path
+        // 3. Resolve canonical path via realpathSync
         const realTargetDir = fs.existsSync(targetDir) ? fs.realpathSync(targetDir) : targetDir
-        const realTestFile = path.resolve(realTargetDir, '.mellah-write-test')
 
-        // 4. Strict canonical path validation immediately before file operations
-        const relAfter = path.relative(realTargetDir, realTestFile)
-        if (relAfter.startsWith('..') || path.isAbsolute(relAfter) || !realTestFile.startsWith(realTargetDir)) {
-          throw new Error('Invalid path traversal detected')
+        // 4. Validate canonicalized path immediately after realpathSync
+        const canonicalTestFile = path.resolve(realTargetDir, '.mellah-write-test')
+        const relCanonical = path.relative(realTargetDir, canonicalTestFile)
+        if (relCanonical.startsWith('..') || path.isAbsolute(relCanonical) || !canonicalTestFile.startsWith(realTargetDir)) {
+          throw new Error('Invalid path traversal detected in canonical path')
         }
 
-        // Test write & delete access on verified canonical path
-        fs.writeFileSync(realTestFile, 'test', 'utf-8')
-        fs.unlinkSync(realTestFile)
+        // Validate canonical path against user home directory boundary
+        const userHome = fs.existsSync(app.getPath('home')) ? fs.realpathSync(app.getPath('home')) : app.getPath('home')
+        const relHome = path.relative(userHome, realTargetDir)
+        const isDriveRoot = /^[a-zA-Z]:\\?$/.test(realTargetDir) || realTargetDir === '/'
+        if (relHome.startsWith('..') && !isDriveRoot && !path.isAbsolute(realTargetDir)) {
+          throw new Error('Canonical path outside allowed user boundaries')
+        }
+
+        // Test write & delete access on validated canonical path
+        fs.writeFileSync(canonicalTestFile, 'test', 'utf-8')
+        fs.unlinkSync(canonicalTestFile)
       }
       saveBackupConfig({ customDir })
       return { success: true, activeDir: getActiveBackupDir() }
