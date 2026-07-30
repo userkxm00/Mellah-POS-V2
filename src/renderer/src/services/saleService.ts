@@ -128,11 +128,10 @@ export async function processSale(
     operations.push(
       {
         sql: `INSERT INTO sale_items 
-              (id, branch_id, sale_id, variant_id, quantity, unit_price_dzd, created_at) 
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              (id, sale_id, variant_id, quantity, unit_price_dzd, created_at) 
+              VALUES (?, ?, ?, ?, ?, ?)`,
         params: [
           saleItemId,
-          branchId,
           saleId,
           item.variant_id,
           item.quantity,
