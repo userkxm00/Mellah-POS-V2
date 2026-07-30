@@ -107,7 +107,11 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
         },
         { printerName, paperWidth }
       ).catch(() => {
-        addToast({ message: 'تعذرت طباعة وصل المرتجع تلقائياً — يمكنك الطباعة من سجل المرتجعات', variant: 'warning' })
+        addToast({
+          message: 'تعذرت طباعة وصل المرتجع — تم تسجيل المرتجع بنجاح، يمكنك إعادة الطباعة من سجل المرتجعات',
+          variant: 'warning',
+          duration: 6000,
+        })
       })
 
       addToast({

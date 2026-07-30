@@ -28,11 +28,16 @@ export function FirstRunWizardModal(): React.JSX.Element | null {
       setIsOpen(true)
       // Fetch available printers
       if (window.electron?.getPrinters) {
-        window.electron.getPrinters().then((list) => {
-          setPrinters(list)
-          const def = list.find((p) => p.isDefault)
-          if (def) setSelectedPrinter(def.name)
-        }).catch(() => {})
+        window.electron
+          .getPrinters()
+          .then((list) => {
+            setPrinters(list)
+            const def = list.find((p) => p.isDefault)
+            if (def) setSelectedPrinter(def.name)
+          })
+          .catch(() => {
+            // First run fallback: user can set printer later in settings
+          })
       }
     }
   }, [])

@@ -122,13 +122,17 @@ export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.E
 
   // Fetch list of past shifts
   useEffect(() => {
-    window.electron.db
-      .query<ShiftOption>(`SELECT id, opened_at, closed_at, status FROM shifts ORDER BY opened_at DESC LIMIT 20`)
-      .then((rows) => {
+    void (async () => {
+      try {
+        const rows = await window.electron.db.query<ShiftOption>(
+          'SELECT id, opened_at, closed_at, status FROM shifts ORDER BY opened_at DESC LIMIT 20'
+        )
         setShiftsList(rows)
         if (rows.length > 0) setSelectedShiftId(rows[0].id)
-      })
-      .catch(() => {})
+      } catch {
+        // Non-critical shifts dropdown load fallback
+      }
+    })()
   }, [])
 
   const loadSalesHistory = useCallback(async () => {
