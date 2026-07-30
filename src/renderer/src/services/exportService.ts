@@ -12,7 +12,7 @@ export function downloadCSV(filename: string, csvContent: string): void {
   link.setAttribute('download', filename)
   document.body.appendChild(link)
   link.click()
-  document.body.removeChild(link)
+  link.remove()
 }
 
 export function exportSalesToCSV(sales: Array<{

@@ -119,40 +119,40 @@ export async function processReturn(
 
     if (!firstReturnId) firstReturnId = returnId
 
-    // 1. Insert Return record
-    operations.push({
-      sql: `INSERT INTO returns 
-            (id, branch_id, original_sale_id, variant_id, quantity, refund_method, reason, processed_by, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      params: [
-        returnId,
-        DEFAULT_BRANCH_ID,
-        saleId,
-        item.variant_id,
-        item.quantity,
-        refundMethod,
-        reason.trim() || 'إرجاع بضاعة كاشير',
-        DEFAULT_CASHIER_ID,
-        now,
-      ],
-    })
-
-    // 2. Insert Stock Movement Ledger Entry (+quantity restock)
-    operations.push({
-      sql: `INSERT INTO stock_movements 
-            (id, branch_id, variant_id, type, quantity_change, reference_id, note, created_by, created_at) 
-            VALUES (?, ?, ?, 'return', ?, ?, ?, ?, ?)`,
-      params: [
-        movementId,
-        DEFAULT_BRANCH_ID,
-        item.variant_id,
-        item.quantity,
-        saleId,
-        `إرجاع بضاعة: ${reason.trim() || 'مرتجع'}`,
-        DEFAULT_CASHIER_ID,
-        now,
-      ],
-    })
+    // 1. Insert Return Entry & 2. Insert Stock Movement Ledger Entry (+quantity restock)
+    operations.push(
+      {
+        sql: `INSERT INTO returns 
+              (id, branch_id, original_sale_id, variant_id, quantity, refund_method, reason, processed_by, created_at) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        params: [
+          returnId,
+          DEFAULT_BRANCH_ID,
+          saleId,
+          item.variant_id,
+          item.quantity,
+          refundMethod,
+          reason.trim() || 'إرجاع بضاعة كاشير',
+          DEFAULT_CASHIER_ID,
+          now,
+        ],
+      },
+      {
+        sql: `INSERT INTO stock_movements 
+              (id, branch_id, variant_id, type, quantity_change, reference_id, note, created_by, created_at) 
+              VALUES (?, ?, ?, 'return', ?, ?, ?, ?, ?)`,
+        params: [
+          movementId,
+          DEFAULT_BRANCH_ID,
+          item.variant_id,
+          item.quantity,
+          saleId,
+          `إرجاع بضاعة: ${reason.trim() || 'مرتجع'}`,
+          DEFAULT_CASHIER_ID,
+          now,
+        ],
+      }
+    )
   }
 
   // 3. If refund method is store_credit, calculate total refund amount and credit customer

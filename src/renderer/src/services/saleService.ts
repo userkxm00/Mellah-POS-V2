@@ -124,36 +124,37 @@ export async function processSale(
     const saleItemId = generateUUID()
     const movementId = generateUUID()
 
-    // Sale item
-    operations.push({
-      sql: `INSERT INTO sale_items 
-            (id, sale_id, variant_id, quantity, unit_price_dzd, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?)`,
-      params: [
-        saleItemId,
-        saleId,
-        item.variant_id,
-        item.quantity,
-        item.unit_price_dzd,
-        now,
-      ],
-    })
-
-    // Stock movement (negative change for sales)
-    operations.push({
-      sql: `INSERT INTO stock_movements 
-            (id, branch_id, variant_id, type, quantity_change, reference_id, note, created_by, created_at) 
-            VALUES (?, ?, ?, 'sale', ?, ?, 'عملية بيع كاشير', ?, ?)`,
-      params: [
-        movementId,
-        branchId,
-        item.variant_id,
-        -item.quantity, // Negative deduction
-        saleId,
-        cashierId,
-        now,
-      ],
-    })
+    // Sale item & Stock movement (negative change for sales)
+    operations.push(
+      {
+        sql: `INSERT INTO sale_items 
+              (id, branch_id, sale_id, variant_id, quantity, unit_price_dzd, created_at) 
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        params: [
+          saleItemId,
+          branchId,
+          saleId,
+          item.variant_id,
+          item.quantity,
+          item.unit_price_dzd,
+          now,
+        ],
+      },
+      {
+        sql: `INSERT INTO stock_movements 
+              (id, branch_id, variant_id, type, quantity_change, reference_id, note, created_by, created_at) 
+              VALUES (?, ?, ?, 'sale', ?, ?, 'عملية بيع كاشير', ?, ?)`,
+        params: [
+          movementId,
+          branchId,
+          item.variant_id,
+          -item.quantity, // Negative deduction
+          saleId,
+          cashierId,
+          now,
+        ],
+      }
+    )
   }
 
   try {
