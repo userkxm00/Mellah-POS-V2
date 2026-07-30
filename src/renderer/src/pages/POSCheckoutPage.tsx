@@ -147,6 +147,28 @@ async function fetchPOSBranchData(branchId: string): Promise<{
   return { categories: catRows, customers: custRows, variants: variantRows }
 }
 
+async function quickAddCustomerToDb(name: string, phone: string): Promise<string> {
+  const id = generateUUID()
+  const now = new Date().toISOString()
+  await window.electron.db.execute(
+    'INSERT INTO customers (id, branch_id, full_name, phone, loyalty_points, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?)',
+    [id, DEFAULT_BRANCH_ID, name.trim(), phone.trim() || null, now, now]
+  )
+  return id
+}
+
+async function verifyManagerPinHash(pinInput: string): Promise<boolean> {
+  const managers = await window.electron.db.query<{ pin_hash: string }>(
+    `SELECT pin_hash FROM users WHERE role IN ('admin', 'manager') AND deleted_at IS NULL`
+  )
+  for (const m of managers) {
+    if (await window.electron.verifyPin(pinInput, m.pin_hash)) {
+      return true
+    }
+  }
+  return false
+}
+
 export function POSCheckoutPage({
   onNavigateToHome,
 }: {
@@ -386,21 +408,17 @@ export function POSCheckoutPage({
     }
 
     try {
-      const id = generateUUID()
-      const now = new Date().toISOString()
-      await window.electron.db.execute(
-        'INSERT INTO customers (id, branch_id, full_name, phone, loyalty_points, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?)',
-        [id, DEFAULT_BRANCH_ID, newCustName.trim(), newCustPhone.trim() || null, now, now]
-      )
-
+      const id = await quickAddCustomerToDb(newCustName, newCustPhone)
       addToast({ message: t('تم إضافة الزبون بنجاح!'), variant: 'success' })
       setIsQuickAddCustomerOpen(false)
       setNewCustName('')
       setNewCustPhone('')
       await loadData()
       setSelectedCustomerId(id)
-    } catch (err) {// eslint-disable-next-line no-console
-      console.error("[POSCheckoutPage]", err); addToast({ message: t('فشل إضافة الزبون'), variant: 'error' })
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[POSCheckoutPage]', err)
+      addToast({ message: t('فشل إضافة الزبون'), variant: 'error' })
     }
   }
 
@@ -419,17 +437,7 @@ export function POSCheckoutPage({
   const handleVerifyManagerPin = async (): Promise<void> => {
     setIsVerifyingPin(true)
     try {
-      const managers = await window.electron.db.query<{ pin_hash: string }>(
-        `SELECT pin_hash FROM users WHERE role IN ('admin', 'manager') AND deleted_at IS NULL`
-      )
-      let matched = false
-      for (const m of managers) {
-        if (await window.electron.verifyPin(managerPin, m.pin_hash)) {
-          matched = true
-          break
-        }
-      }
-
+      const matched = await verifyManagerPinHash(managerPin)
       if (matched) {
         setIsManagerPinOpen(false)
         setManagerPin('')
@@ -438,8 +446,10 @@ export function POSCheckoutPage({
       } else {
         addToast({ message: t('رمز PIN الخاص بالمدير غير صحيح'), variant: 'error' })
       }
-    } catch (err) {// eslint-disable-next-line no-console
-      console.error("[POSCheckoutPage]", err); addToast({ message: t('فشل التحقق من رمز المدير'), variant: 'error' })
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[POSCheckoutPage]', err)
+      addToast({ message: t('فشل التحقق من رمز المدير'), variant: 'error' })
     } finally {
       setIsVerifyingPin(false)
     }

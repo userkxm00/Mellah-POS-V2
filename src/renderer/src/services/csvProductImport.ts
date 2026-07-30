@@ -44,14 +44,76 @@ function parseCSVHeader(headerLine: string): CSVHeaderIndices {
   }
 }
 
+function processCSVLine(
+  cols: string[],
+  indices: CSVHeaderIndices,
+  categoryMap: Map<string, string>,
+  productMap: Map<string, string>,
+  now: string,
+  operations: Array<{ sql: string; params: unknown[] }>
+): boolean {
+  const productName = cols[indices.nameIdx]?.trim()
+  const priceDzd = parseFloat(cols[indices.priceIdx]) || 0
+  if (!productName || priceDzd <= 0) return false
+
+  const categoryName = indices.categoryIdx !== -1 ? cols[indices.categoryIdx]?.trim() : ''
+  const costDzd = indices.costIdx !== -1 ? parseFloat(cols[indices.costIdx]) || 0 : 0
+  const size = indices.sizeIdx !== -1 ? cols[indices.sizeIdx]?.trim() : null
+  const color = indices.colorIdx !== -1 ? cols[indices.colorIdx]?.trim() : null
+  const barcode = indices.barcodeIdx !== -1 ? cols[indices.barcodeIdx]?.trim() : null
+  const stock = indices.stockIdx !== -1 ? parseInt(cols[indices.stockIdx]) || 0 : 0
+
+  let categoryId: string | null = null
+  if (categoryName) {
+    const catKey = categoryName.toLowerCase()
+    if (categoryMap.has(catKey)) {
+      categoryId = categoryMap.get(catKey)!
+    } else {
+      categoryId = generateUUID()
+      categoryMap.set(catKey, categoryId)
+      operations.push({
+        sql: 'INSERT INTO categories (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
+        params: [categoryId, categoryName, now, now],
+      })
+    }
+  }
+
+  const prodKey = `${productName.toLowerCase()}_${categoryId ?? ''}`
+  let productId: string
+  if (productMap.has(prodKey)) {
+    productId = productMap.get(prodKey)!
+  } else {
+    productId = generateUUID()
+    productMap.set(prodKey, productId)
+    operations.push({
+      sql: `INSERT INTO products (id, category_id, name, price_dzd, cost_dzd, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      params: [productId, categoryId, productName, priceDzd, costDzd, now, now],
+    })
+  }
+
+  const variantId = generateUUID()
+  operations.push({
+    sql: `INSERT INTO product_variants (id, product_id, branch_id, size, color, barcode, price_dzd, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    params: [variantId, productId, DEFAULT_BRANCH_ID, size || null, color || null, barcode || null, priceDzd, now, now],
+  })
+
+  if (stock > 0) {
+    operations.push({
+      sql: `INSERT INTO stock_movements (id, branch_id, variant_id, type, quantity_change, note, created_at) VALUES (?, ?, ?, 'restock', ?, ?, ?)`,
+      params: [generateUUID(), DEFAULT_BRANCH_ID, variantId, stock, 'استيراد أولي من ملف CSV', now],
+    })
+  }
+
+  return true
+}
+
 export async function importProductsFromCSV(csvContent: string): Promise<number> {
   const lines = csvContent.split(/\r?\n/).filter((l) => l.trim().length > 0)
   if (lines.length <= 1) {
     throw new Error('ملف CSV فارغ أو لا يحتوي على صفوف بيانات')
   }
 
-  const { nameIdx, priceIdx, costIdx, categoryIdx, sizeIdx, colorIdx, barcodeIdx, stockIdx } = parseCSVHeader(lines[0])
-
+  const indices = parseCSVHeader(lines[0])
   const now = new Date().toISOString()
   const operations: Array<{ sql: string; params: unknown[] }> = []
 
@@ -68,64 +130,8 @@ export async function importProductsFromCSV(csvContent: string): Promise<number>
 
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(',').map((c) => c.trim().replace(/^"|"$/g, ''))
-    const productName = cols[nameIdx]?.trim()
-    const priceDzd = parseFloat(cols[priceIdx]) || 0
-    if (!productName || priceDzd <= 0) continue
-
-    const categoryName = categoryIdx !== -1 ? cols[categoryIdx]?.trim() : ''
-    const costDzd = costIdx !== -1 ? parseFloat(cols[costIdx]) || 0 : 0
-    const size = sizeIdx !== -1 ? cols[sizeIdx]?.trim() : null
-    const color = colorIdx !== -1 ? cols[colorIdx]?.trim() : null
-    const barcode = barcodeIdx !== -1 ? cols[barcodeIdx]?.trim() : null
-    const stock = stockIdx !== -1 ? parseInt(cols[stockIdx]) || 0 : 0
-
-    // Resolve Category ID
-    let categoryId: string | null = null
-    if (categoryName) {
-      const catKey = categoryName.toLowerCase()
-      if (categoryMap.has(catKey)) {
-        categoryId = categoryMap.get(catKey)!
-      } else {
-        categoryId = generateUUID()
-        categoryMap.set(catKey, categoryId)
-        operations.push({
-          sql: 'INSERT INTO categories (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
-          params: [categoryId, categoryName, now, now],
-        })
-      }
-    }
-
-    // Resolve Product ID
-    let productId: string
-    const prodKey = `${productName.toLowerCase()}_${categoryId ?? ''}`
-    if (productMap.has(prodKey)) {
-      productId = productMap.get(prodKey)!
-    } else {
-      productId = generateUUID()
-      productMap.set(prodKey, productId)
-      operations.push({
-        sql: `INSERT INTO products (id, category_id, name, price_dzd, cost_dzd, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        params: [productId, categoryId, productName, priceDzd, costDzd, now, now],
-      })
-    }
-
-    // Insert Product Variant
-    const variantId = generateUUID()
-    operations.push({
-      sql: `INSERT INTO product_variants (id, product_id, branch_id, size, color, barcode, price_dzd, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      params: [variantId, productId, DEFAULT_BRANCH_ID, size || null, color || null, barcode || null, priceDzd, now, now],
-    })
-
-    // Insert initial stock movement if stock > 0
-    if (stock > 0) {
-      const movementId = generateUUID()
-      operations.push({
-        sql: `INSERT INTO stock_movements (id, branch_id, variant_id, type, quantity_change, note, created_at) VALUES (?, ?, ?, 'restock', ?, ?, ?)`,
-        params: [movementId, DEFAULT_BRANCH_ID, variantId, stock, 'استيراد أولي من ملف CSV', now],
-      })
-    }
-
-    importedCount++
+    const imported = processCSVLine(cols, indices, categoryMap, productMap, now, operations)
+    if (imported) importedCount++
   }
 
   if (operations.length === 0) {

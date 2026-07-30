@@ -34,11 +34,17 @@ CREATE TABLE branches (
   deleted_at TIMESTAMPTZ
 );
 
+DO $$ BEGIN
+  CREATE TYPE user_role AS ENUM ('admin', 'manager', 'cashier');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
 CREATE TABLE users (
   id UUID PRIMARY KEY,
   branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
   full_name TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('admin','manager','cashier')),
+  role user_role NOT NULL,
   pin_hash TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
