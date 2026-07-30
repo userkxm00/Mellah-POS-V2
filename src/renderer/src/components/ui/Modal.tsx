@@ -102,9 +102,15 @@ export function Modal({
   return createPortal(
     <div
       ref={overlayRef}
+      role="presentation"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none"
       onClick={(e) => {
         if (e.target === overlayRef.current) {
+          handleRequestClose()
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
           handleRequestClose()
         }
       }}

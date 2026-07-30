@@ -63,40 +63,51 @@ export function parseChatIds(rawInput: string | null | undefined): string[] {
   )
 }
 
+async function fetchDbTelegramSettings(): Promise<{
+  botToken?: string
+  rawChatIds?: string
+  notifyAppLaunch?: boolean
+  notifySale?: boolean
+  notifyShift?: boolean
+}> {
+  try {
+    if (typeof window === 'undefined' || !window.electron?.db) return {}
+    const rows = await window.electron.db.query<{
+      telegram_bot_token: string | null
+      telegram_chat_ids: string | null
+      telegram_notify_app_launch: number | null
+      telegram_notify_sale: number | null
+      telegram_notify_shift: number | null
+    }>(
+      `SELECT telegram_bot_token, telegram_chat_ids, telegram_notify_app_launch, telegram_notify_sale, telegram_notify_shift FROM store_settings WHERE branch_id = ?`,
+      [DEFAULT_BRANCH_ID]
+    )
+
+    if (rows.length === 0) return {}
+    const r = rows[0]
+    return {
+      botToken: r.telegram_bot_token || undefined,
+      rawChatIds: r.telegram_chat_ids || undefined,
+      notifyAppLaunch: r.telegram_notify_app_launch !== null ? r.telegram_notify_app_launch === 1 : undefined,
+      notifySale: r.telegram_notify_sale !== null ? r.telegram_notify_sale === 1 : undefined,
+      notifyShift: r.telegram_notify_shift !== null ? r.telegram_notify_shift === 1 : undefined,
+    }
+  } catch {
+    return {}
+  }
+}
+
 /**
  * Fetches Telegram configuration credentials from DB store_settings with localStorage fallback.
  */
 export async function getTelegramCredentials(): Promise<TelegramCredentials> {
-  let botToken = localStorage.getItem('mellah_telegram_bot_token') || import.meta.env.VITE_TELEGRAM_BOT_TOKEN || ''
-  let rawChatIds = localStorage.getItem('mellah_telegram_chat_ids') || localStorage.getItem('mellah_telegram_chat_id') || import.meta.env.VITE_TELEGRAM_CHAT_ID || ''
-  let notifyAppLaunch = localStorage.getItem('mellah_telegram_notify_app_launch') !== 'false'
-  let notifySale = localStorage.getItem('mellah_telegram_notify_sale') !== 'false'
-  let notifyShift = localStorage.getItem('mellah_telegram_notify_shift') !== 'false'
+  const dbSettings = await fetchDbTelegramSettings()
 
-  try {
-    if (typeof window !== 'undefined' && window.electron?.db) {
-      const rows = await window.electron.db.query<{
-        telegram_bot_token: string | null
-        telegram_chat_ids: string | null
-        telegram_notify_app_launch: number | null
-        telegram_notify_sale: number | null
-        telegram_notify_shift: number | null
-      }>(
-        `SELECT telegram_bot_token, telegram_chat_ids, telegram_notify_app_launch, telegram_notify_sale, telegram_notify_shift FROM store_settings WHERE branch_id = ?`,
-        [DEFAULT_BRANCH_ID]
-      )
-
-      if (rows.length > 0) {
-        if (rows[0].telegram_bot_token) botToken = rows[0].telegram_bot_token
-        if (rows[0].telegram_chat_ids) rawChatIds = rows[0].telegram_chat_ids
-        if (rows[0].telegram_notify_app_launch !== null) notifyAppLaunch = rows[0].telegram_notify_app_launch === 1
-        if (rows[0].telegram_notify_sale !== null) notifySale = rows[0].telegram_notify_sale === 1
-        if (rows[0].telegram_notify_shift !== null) notifyShift = rows[0].telegram_notify_shift === 1
-      }
-    }
-  } catch {
-    // Fall back to localStorage credentials
-  }
+  let botToken = dbSettings.botToken || localStorage.getItem('mellah_telegram_bot_token') || import.meta.env.VITE_TELEGRAM_BOT_TOKEN || ''
+  const rawChatIds = dbSettings.rawChatIds || localStorage.getItem('mellah_telegram_chat_ids') || localStorage.getItem('mellah_telegram_chat_id') || import.meta.env.VITE_TELEGRAM_CHAT_ID || ''
+  const notifyAppLaunch = dbSettings.notifyAppLaunch ?? (localStorage.getItem('mellah_telegram_notify_app_launch') !== 'false')
+  const notifySale = dbSettings.notifySale ?? (localStorage.getItem('mellah_telegram_notify_sale') !== 'false')
+  const notifyShift = dbSettings.notifyShift ?? (localStorage.getItem('mellah_telegram_notify_shift') !== 'false')
 
   if (botToken && typeof window !== 'undefined' && window.electron?.safeStorage?.decrypt) {
     try {

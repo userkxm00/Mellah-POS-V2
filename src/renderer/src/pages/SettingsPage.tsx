@@ -81,16 +81,21 @@ export function SettingsPage({ onBack }: { readonly onBack: () => void }): React
   const [telegramNotifyShift, setTelegramNotifyShift] = useState<boolean>(true)
   const [isTestingTelegram, setIsTestingTelegram] = useState<boolean>(false)
 
-  // Fetch printers and store settings
+async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
+  if (typeof window !== 'undefined' && window.electron?.getPrinters) {
+    return await window.electron.getPrinters()
+  }
+  return []
+}
+
+// Fetch printers and store settings
   const loadSettings = useCallback(async () => {
     try {
-      if (window.electron?.getPrinters) {
-        const printerList = await window.electron.getPrinters()
-        setPrinters(printerList)
-        if (!selectedPrinter && printerList.length > 0) {
-          const defaultP = printerList.find((p) => p.isDefault) ?? printerList[0]
-          setSelectedPrinter(defaultP.name)
-        }
+      const printerList = await fetchSystemPrinters()
+      setPrinters(printerList)
+      if (!selectedPrinter && printerList.length > 0) {
+        const defaultP = printerList.find((p) => p.isDefault) ?? printerList[0]
+        setSelectedPrinter(defaultP.name)
       }
 
       const rows = await window.electron.db.query<{
@@ -117,12 +122,10 @@ export function SettingsPage({ onBack }: { readonly onBack: () => void }): React
         setFooterText(rows[0].receipt_footer_text ?? '')
         if (rows[0].default_language) {
           setInitialLang(rows[0].default_language as Language)
+          setLanguageStore(rows[0].default_language as Language)
         }
         if (rows[0].session_timeout_minutes) {
           setSessionTimeout(rows[0].session_timeout_minutes)
-        }
-        if (rows[0].default_language) {
-          setLanguageStore(rows[0].default_language as Language)
         }
 
         let tokenVal = rows[0].telegram_bot_token ?? localStorage.getItem('mellah_telegram_bot_token') ?? ''

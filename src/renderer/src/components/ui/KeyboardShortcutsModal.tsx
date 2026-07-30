@@ -42,12 +42,18 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
 
   return (
     <div
+      role="presentation"
       className="fixed inset-0 z-[999999] bg-black/55 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose()
+      }}
     >
       <div
+        role="presentation"
         className="w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-layered-lg overflow-hidden p-6"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-200/60 dark:border-slate-800">
           <div className="flex items-center gap-3">

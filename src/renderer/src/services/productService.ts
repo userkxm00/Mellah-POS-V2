@@ -21,23 +21,23 @@ export interface CreateProductInput {
   variants: VariantInput[]
 }
 
-export async function createProductWithVariants(
-  input: CreateProductInput
-): Promise<string> {
+function validateCreateProductInput(input: CreateProductInput): void {
   if (!input.name.trim()) {
     throw new Error('يرجى إدخال اسم المنتج')
   }
-
   if (input.variants.length === 0) {
     throw new Error('يرجى إضافة خيار (Variant) واحد على الأقل للمنتج')
   }
-
-  // Check unique barcodes in input
   const barcodes = input.variants.map((v) => v.barcode.trim())
-  const uniqueBarcodes = new Set(barcodes)
-  if (barcodes.length !== uniqueBarcodes.size) {
+  if (barcodes.length !== new Set(barcodes).size) {
     throw new Error('يوجد مكرر في الباركود المدخل ضمن الخيارات')
   }
+}
+
+export async function createProductWithVariants(
+  input: CreateProductInput
+): Promise<string> {
+  validateCreateProductInput(input)
 
   const productId = generateUUID()
   const now = new Date().toISOString()

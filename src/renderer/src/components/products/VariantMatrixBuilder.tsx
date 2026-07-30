@@ -15,6 +15,57 @@ interface MatrixRow extends VariantInput {
   key: string
 }
 
+// Helper to generate a 12-digit barcode: 690 + crypto random 9 digits
+const generateBarcode = (): string => {
+  const array = new Uint32Array(1)
+  window.crypto.getRandomValues(array)
+  const randomVal = (array[0] % 900000000) + 100000000
+  return `690${randomVal}`
+}
+
+function buildMatrixRows(
+  selectedSizes: string[],
+  selectedColors: string[],
+  existingRows: MatrixRow[]
+): MatrixRow[] {
+  if (selectedSizes.length === 0 && selectedColors.length === 0) {
+    return [{
+      key: 'default-variant',
+      size: null,
+      color: null,
+      barcode: generateBarcode(),
+      sku: 'SKU-DEFAULT',
+      price_dzd: null,
+      initial_stock: 10,
+    }]
+  }
+
+  const sizesToUse = selectedSizes.length > 0 ? selectedSizes : [null]
+  const colorsToUse = selectedColors.length > 0 ? selectedColors : [null]
+  const result: MatrixRow[] = []
+  let counter = 1
+
+  for (const s of sizesToUse) {
+    for (const c of colorsToUse) {
+      const rowKey = `${s ?? 'NOSIZE'}-${c ?? 'NOCOLOR'}`
+      const existing = existingRows.find((r) => r.key === rowKey)
+      result.push(
+        existing ?? {
+          key: rowKey,
+          size: s,
+          color: c,
+          barcode: generateBarcode(),
+          sku: `SKU-${counter++}`,
+          price_dzd: null,
+          initial_stock: 10,
+        }
+      )
+    }
+  }
+
+  return result
+}
+
 export function VariantMatrixBuilder({
   basePrice,
   onChange,
@@ -25,59 +76,10 @@ export function VariantMatrixBuilder({
   const [customColorInput, setCustomColorInput] = useState<string>('')
   const [matrixRows, setMatrixRows] = useState<MatrixRow[]>([])
 
-  // Helper to generate a 12-digit barcode: 690 + crypto random 9 digits
-  const generateBarcode = (): string => {
-    const array = new Uint32Array(1)
-    window.crypto.getRandomValues(array)
-    const randomVal = (array[0] % 900000000) + 100000000
-    return `690${randomVal}`
-  }
-
   // Regenerate matrix when selected sizes or colors change
   useEffect(() => {
-    const newRows: MatrixRow[] = []
-
-    if (selectedSizes.length === 0 && selectedColors.length === 0) {
-      // Standard single default variant
-      newRows.push({
-        key: 'default-variant',
-        size: null,
-        color: null,
-        barcode: generateBarcode(),
-        sku: 'SKU-DEFAULT',
-        price_dzd: null,
-        initial_stock: 10,
-      })
-    } else {
-      const sizesToUse = selectedSizes.length > 0 ? selectedSizes : [null]
-      const colorsToUse = selectedColors.length > 0 ? selectedColors : [null]
-
-      let counter = 1
-      for (const s of sizesToUse) {
-        for (const c of colorsToUse) {
-          const rowKey = `${s ?? 'NOSIZE'}-${c ?? 'NOCOLOR'}`
-          // Preserve existing user edits if present
-          const existing = matrixRows.find((r) => r.key === rowKey)
-
-          if (existing) {
-            newRows.push(existing)
-          } else {
-            newRows.push({
-              key: rowKey,
-              size: s,
-              color: c,
-              barcode: generateBarcode(),
-              sku: `SKU-${counter++}`,
-              price_dzd: null,
-              initial_stock: 10,
-            })
-          }
-        }
-      }
-    }
-
-    setMatrixRows(newRows)
-  }, [selectedSizes, selectedColors]) // eslint-disable-line react-hooks/exhaustive-deps
+    setMatrixRows((prev) => buildMatrixRows(selectedSizes, selectedColors, prev))
+  }, [selectedSizes, selectedColors])
 
   // Notify parent on matrix update
   useEffect(() => {

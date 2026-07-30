@@ -186,10 +186,19 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-md flex items-start justify-center pt-20 px-4 animate-fade-in">
+    <div
+      role="presentation"
+      className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-md flex items-start justify-center pt-20 px-4 animate-fade-in"
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose()
+      }}
+    >
       <div
+        role="presentation"
         className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-hero-glow overflow-hidden flex flex-col max-h-[80vh] transition-all duration-150"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header Search Input */}
         <div className="p-4 border-b border-gray-200/70 dark:border-slate-800/80 flex items-center gap-3 bg-gray-50/50 dark:bg-slate-800/40">

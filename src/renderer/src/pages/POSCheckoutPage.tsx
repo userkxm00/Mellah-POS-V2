@@ -116,6 +116,37 @@ function getPaymentMethodLabel(pm: PaymentMethod, t: (k: string) => string): str
   }
 }
 
+async function fetchPOSBranchData(branchId: string): Promise<{
+  categories: CategoryItem[]
+  customers: CustomerOption[]
+  variants: ProductVariantItem[]
+}> {
+  const catRows = await window.electron.db.query<CategoryItem>(
+    `SELECT id, name FROM categories WHERE branch_id = ? AND deleted_at IS NULL ORDER BY name`,
+    [branchId]
+  )
+  const custRows = await window.electron.db.query<CustomerOption>(
+    `SELECT id, full_name, phone, loyalty_points, COALESCE(store_credit_balance, 0) as store_credit_balance FROM customers WHERE branch_id = ? AND deleted_at IS NULL ORDER BY full_name`,
+    [branchId]
+  )
+  const variantRows = await window.electron.db.query<ProductVariantItem>(
+    `SELECT 
+       v.id, v.product_id, v.branch_id, v.size, v.color, v.barcode, v.sku, v.price_dzd, v.created_at, v.updated_at, v.deleted_at,
+       p.name as product_name, p.category_id, p.price_dzd as default_price, p.image_url,
+       c.name as category_name,
+       COALESCE(SUM(sm.quantity_change), 0) as current_stock
+     FROM product_variants v
+     JOIN products p ON p.id = v.product_id
+     LEFT JOIN categories c ON c.id = p.category_id
+     LEFT JOIN stock_movements sm ON sm.variant_id = v.id AND sm.branch_id = ?
+     WHERE v.branch_id = ? AND v.deleted_at IS NULL AND p.deleted_at IS NULL
+     GROUP BY v.id
+     ORDER BY p.name, v.size, v.color`,
+    [branchId, branchId]
+  )
+  return { categories: catRows, customers: custRows, variants: variantRows }
+}
+
 export function POSCheckoutPage({
   onNavigateToHome,
 }: {
@@ -227,37 +258,14 @@ export function POSCheckoutPage({
     try {
       const activeBranch = useAuthStore.getState().currentBranch
       const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
-
-      const catRows = await window.electron.db.query<CategoryItem>(
-        `SELECT id, name FROM categories WHERE branch_id = ? AND deleted_at IS NULL ORDER BY name`,
-        [branchId]
-      )
-      setCategories(catRows)
-
-      const custRows = await window.electron.db.query<CustomerOption>(
-        `SELECT id, full_name, phone, loyalty_points, COALESCE(store_credit_balance, 0) as store_credit_balance FROM customers WHERE branch_id = ? AND deleted_at IS NULL ORDER BY full_name`,
-        [branchId]
-      )
-      setCustomers(custRows)
-
-      const variantRows = await window.electron.db.query<ProductVariantItem>(
-        `SELECT 
-           v.id, v.product_id, v.branch_id, v.size, v.color, v.barcode, v.sku, v.price_dzd, v.created_at, v.updated_at, v.deleted_at,
-           p.name as product_name, p.category_id, p.price_dzd as default_price, p.image_url,
-           c.name as category_name,
-           COALESCE(SUM(sm.quantity_change), 0) as current_stock
-         FROM product_variants v
-         JOIN products p ON p.id = v.product_id
-         LEFT JOIN categories c ON c.id = p.category_id
-         LEFT JOIN stock_movements sm ON sm.variant_id = v.id AND sm.branch_id = ?
-         WHERE v.branch_id = ? AND v.deleted_at IS NULL AND p.deleted_at IS NULL
-         GROUP BY v.id
-         ORDER BY p.name, v.size, v.color`,
-        [branchId, branchId]
-      )
-      setVariants(variantRows)
-    } catch (err) {// eslint-disable-next-line no-console
-      console.error("[POSCheckoutPage]", err); addToast({ message: t('فشل تحميل قائمة المنتجات والزبائن للفرع الحالي'), variant: 'error' })
+      const data = await fetchPOSBranchData(branchId)
+      setCategories(data.categories)
+      setCustomers(data.customers)
+      setVariants(data.variants)
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[POSCheckoutPage]', err)
+      addToast({ message: t('فشل تحميل قائمة المنتجات والزبائن للفرع الحالي'), variant: 'error' })
     } finally {
       setIsLoadingVariants(false)
     }

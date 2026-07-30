@@ -121,6 +121,46 @@ export async function ensureSupabaseAuth(): Promise<boolean> {
   }
 }
 
+async function processSingleSyncEntry(
+  entry: SyncQueueEntry,
+  hasRealSupabase: boolean,
+  now: string
+): Promise<boolean> {
+  try {
+    let payloadObj: Record<string, unknown> = {}
+    try {
+      payloadObj = JSON.parse(entry.payload)
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[syncEngine]', err)
+      payloadObj = {}
+    }
+
+    if (hasRealSupabase) {
+      if (entry.operation === 'insert' || entry.operation === 'update') {
+        const { error } = await supabase.from(entry.table_name).upsert(payloadObj)
+        if (error) throw new Error(error.message)
+      } else if (entry.operation === 'delete') {
+        const { error } = await supabase
+          .from(entry.table_name)
+          .delete()
+          .eq('id', (payloadObj as { id?: string }).id ?? '')
+        if (error) throw new Error(error.message)
+      }
+    }
+
+    await window.electron.db.execute(`UPDATE sync_queue SET synced_at = ? WHERE id = ?`, [now, entry.id])
+    return true
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'فشل المزامنة'
+    await window.electron.db.execute(
+      `UPDATE sync_queue SET retry_count = retry_count + 1, last_error = ? WHERE id = ?`,
+      [errorMsg, entry.id]
+    )
+    return false
+  }
+}
+
 /**
  * Background queue processor.
  * Pushes pending sync_queue entries in chronological order.
@@ -160,42 +200,8 @@ export async function processSyncQueue(): Promise<number> {
     const now = new Date().toISOString()
 
     for (const entry of pendingEntries) {
-      try {
-        let payloadObj: Record<string, unknown> = {}
-        try {
-          payloadObj = JSON.parse(entry.payload)
-        } catch (err) {// eslint-disable-next-line no-console
-      console.error("[syncEngine]", err); payloadObj = {}
-        }
-
-        // If actual Supabase credentials exist, push to remote Supabase DB
-        if (hasRealSupabase) {
-          if (entry.operation === 'insert' || entry.operation === 'update') {
-            const { error } = await supabase.from(entry.table_name).upsert(payloadObj)
-            if (error) throw new Error(error.message)
-          } else if (entry.operation === 'delete') {
-            const { error } = await supabase
-              .from(entry.table_name)
-              .delete()
-              .eq('id', (payloadObj as { id?: string }).id ?? '')
-            if (error) throw new Error(error.message)
-          }
-        }
-
-        // Mark as synced locally
-        await window.electron.db.execute(
-          `UPDATE sync_queue SET synced_at = ?, attempts = attempts + 1, last_error = NULL WHERE id = ?`,
-          [now, entry.id]
-        )
-        processedCount++
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'فشل الرفع للسحابة'
-        logger.error('Failed to sync queue entry', { id: entry.id, err })
-        await window.electron.db.execute(
-          `UPDATE sync_queue SET attempts = attempts + 1, last_error = ? WHERE id = ?`,
-          [errorMsg, entry.id]
-        )
-      }
+      const ok = await processSingleSyncEntry(entry, !!hasRealSupabase, now)
+      if (ok) processedCount++
     }
 
     // Bi-directional pull from Supabase for multi-branch catalog sync

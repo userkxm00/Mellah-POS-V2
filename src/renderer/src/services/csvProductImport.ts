@@ -14,25 +14,43 @@ export interface CSVProductRow {
   initial_stock?: number
 }
 
+interface CSVHeaderIndices {
+  nameIdx: number
+  priceIdx: number
+  costIdx: number
+  categoryIdx: number
+  sizeIdx: number
+  colorIdx: number
+  barcodeIdx: number
+  stockIdx: number
+}
+
+function parseCSVHeader(headerLine: string): CSVHeaderIndices {
+  const header = headerLine.toLowerCase().split(',').map((h) => h.trim().replace(/^"|"$/g, ''))
+  const nameIdx = header.findIndex((h) => h.includes('name') || h.includes('اسم') || h.includes('منتج'))
+  const priceIdx = header.findIndex((h) => h.includes('price') || h.includes('سعر'))
+  if (nameIdx === -1 || priceIdx === -1) {
+    throw new Error('يجب أن يحتوي ملف CSV على عمود اسم المنتج (Name) وسعر البيع (Price)')
+  }
+  return {
+    nameIdx,
+    priceIdx,
+    costIdx: header.findIndex((h) => h.includes('cost') || h.includes('تكلفة')),
+    categoryIdx: header.findIndex((h) => h.includes('category') || h.includes('فئة')),
+    sizeIdx: header.findIndex((h) => h.includes('size') || h.includes('مقاس')),
+    colorIdx: header.findIndex((h) => h.includes('color') || h.includes('لون')),
+    barcodeIdx: header.findIndex((h) => h.includes('barcode') || h.includes('باركود')),
+    stockIdx: header.findIndex((h) => h.includes('stock') || h.includes('مخزون') || h.includes('كمية')),
+  }
+}
+
 export async function importProductsFromCSV(csvContent: string): Promise<number> {
   const lines = csvContent.split(/\r?\n/).filter((l) => l.trim().length > 0)
   if (lines.length <= 1) {
     throw new Error('ملف CSV فارغ أو لا يحتوي على صفوف بيانات')
   }
 
-  const header = lines[0].toLowerCase().split(',').map((h) => h.trim().replace(/^"|"$/g, ''))
-  const nameIdx = header.findIndex((h) => h.includes('name') || h.includes('اسم') || h.includes('منتج'))
-  const priceIdx = header.findIndex((h) => h.includes('price') || h.includes('سعر'))
-  const costIdx = header.findIndex((h) => h.includes('cost') || h.includes('تكلفة'))
-  const categoryIdx = header.findIndex((h) => h.includes('category') || h.includes('فئة'))
-  const sizeIdx = header.findIndex((h) => h.includes('size') || h.includes('مقاس'))
-  const colorIdx = header.findIndex((h) => h.includes('color') || h.includes('لون'))
-  const barcodeIdx = header.findIndex((h) => h.includes('barcode') || h.includes('باركود'))
-  const stockIdx = header.findIndex((h) => h.includes('stock') || h.includes('مخزون') || h.includes('كمية'))
-
-  if (nameIdx === -1 || priceIdx === -1) {
-    throw new Error('يجب أن يحتوي ملف CSV على عمود اسم المنتج (Name) وسعر البيع (Price)')
-  }
+  const { nameIdx, priceIdx, costIdx, categoryIdx, sizeIdx, colorIdx, barcodeIdx, stockIdx } = parseCSVHeader(lines[0])
 
   const now = new Date().toISOString()
   const operations: Array<{ sql: string; params: unknown[] }> = []
