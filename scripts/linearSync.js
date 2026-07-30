@@ -100,9 +100,13 @@ export async function createIssue({ title, description, stateId, priority = 0 })
 if (process.argv[1].endsWith('linearSync.js')) {
   getTeamInfo('MEL')
     .then((team) => {
-      const safeName = (team.name || '').replace(/[\r\n]/g, '')
-      console.log('✅ Connected to Linear Team:', safeName, `(${team.key})`)
-      console.log('Available States:', team.states.nodes.map((s) => `${s.name} (${s.type})`).join(', '))
+      const safeName = String(team.name || '').replace(/[^\w\s-]/g, '')
+      const safeStates = team.states.nodes
+        .map((s) => String(s.name || '').replace(/[^\w\s-]/g, ''))
+        .filter(Boolean)
+        .join(', ')
+      console.log(`✅ Connected to Linear Team: ${safeName}`)
+      console.log(`Available States: ${safeStates}`)
     })
-    .catch((err) => console.error('❌ Linear Sync Error:', err.message))
+    .catch((err) => console.error('❌ Linear Sync Error:', String(err.message || '').replace(/[\r\n]/g, '')))
 }

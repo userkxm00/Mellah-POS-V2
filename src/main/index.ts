@@ -432,21 +432,27 @@ function registerIpcHandlers(): void {
       if (customDir) {
         const targetDir = path.resolve(path.normalize(customDir))
 
-        // 1. Validate path traversal BEFORE creating or modifying directory on disk
+        // 1. Path traversal validation BEFORE directory creation
         const testFile = path.resolve(targetDir, '.mellah-write-test')
-        if (!testFile.startsWith(targetDir)) {
+        const relBefore = path.relative(targetDir, testFile)
+        if (relBefore.startsWith('..') || path.isAbsolute(relBefore) || !testFile.startsWith(targetDir)) {
           throw new Error('Invalid path traversal detected')
         }
 
-        // 2. Create/Ensure directory ONLY after validation passes
+        // 2. Ensure directory
         ensureBackupDir(targetDir)
+
+        // 3. Resolve canonical path
         const realTargetDir = fs.existsSync(targetDir) ? fs.realpathSync(targetDir) : targetDir
         const realTestFile = path.resolve(realTargetDir, '.mellah-write-test')
-        if (!realTestFile.startsWith(realTargetDir)) {
+
+        // 4. Strict canonical path validation immediately before file operations
+        const relAfter = path.relative(realTargetDir, realTestFile)
+        if (relAfter.startsWith('..') || path.isAbsolute(relAfter) || !realTestFile.startsWith(realTargetDir)) {
           throw new Error('Invalid path traversal detected')
         }
 
-        // Test write access safely
+        // Test write & delete access on verified canonical path
         fs.writeFileSync(realTestFile, 'test', 'utf-8')
         fs.unlinkSync(realTestFile)
       }
