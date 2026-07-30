@@ -106,7 +106,9 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
           reason: reason.trim() || 'مرتجع بضاعة',
         },
         { printerName, paperWidth }
-      ).catch(() => {})
+      ).catch(() => {
+        addToast({ message: 'تعذرت طباعة وصل المرتجع تلقائياً — يمكنك الطباعة من سجل المرتجعات', variant: 'warning' })
+      })
 
       addToast({
         message: `تم تسجيل المرتجع وتوليد وصل الإرجاع الحراري بنجاح! 🧾`,
