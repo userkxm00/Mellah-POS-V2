@@ -137,13 +137,25 @@ describe('Shift & Cash Drawer Management (Phase 2)', () => {
       "INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, payment_method, status) VALUES ('sale-s1', ?, ?, ?, 2000, 'cash', 'completed')"
     ).run(branchId, shiftIdShort, cashierId)
 
-    // Expected: 3000 + 2000 = 5000
-    // Physical count: 4800 (Shortage of 200 DA)
-    const expected = 5000
-    const physical = 4800
-    const diff = physical - expected
+    // Query actual expected cash calculation from DB
+    const cashSalesRow = db.prepare(`
+      SELECT 
+        COALESCE(SUM(CASE 
+          WHEN payment_method = 'cash' THEN total_dzd
+          WHEN payment_method = 'mixed' THEN cash_amount_dzd
+          WHEN payment_method = 'credit' THEN cash_amount_dzd
+          ELSE 0
+        END), 0) as cash_total
+      FROM sales
+      WHERE shift_id = ? AND status = 'completed'
+    `).get(shiftIdShort) as { cash_total: number }
 
-    expect(diff).toBe(-200) // Shortage
+    const actualExpected = openingCash + cashSalesRow.cash_total
+    const physical = 4800
+    const diff = physical - actualExpected
+
+    expect(actualExpected).toBe(5000)
+    expect(diff).toBe(-200) // Shortage verified via real shift calculation query
   })
 
   it('correctly includes mixed sales, credit cash portions, and customer debt cash repayments in expected cash', () => {
