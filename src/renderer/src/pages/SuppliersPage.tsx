@@ -213,7 +213,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
          WHERE supplier_id = ?
          ORDER BY created_at DESC`,
         [supplier.id]
-      ).catch(() => [])
+      )
       setPurchasesHistory(purRows)
 
       const payRows = await window.electron.db.query<SupplierPaymentRow>(
@@ -222,10 +222,12 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
          WHERE supplier_id = ?
          ORDER BY created_at DESC`,
         [supplier.id]
-      ).catch(() => [])
+      )
       setPaymentsHistory(payRows)
-    } catch (err) {// eslint-disable-next-line no-console
-      console.error("[SuppliersPage]", err); addToast({ message: t('فشل تحميل كشف حساب المورد'), variant: 'error' })
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[SuppliersPage]', err)
+      addToast({ message: t('فشل تحميل كشف حساب المورد'), variant: 'error' })
     } finally {
       setIsStatementLoading(false)
     }
