@@ -88,10 +88,12 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         FROM suppliers s
         WHERE s.branch_id = ?
         ORDER BY total_debt_dzd DESC, s.name ASC
-      `, [DEFAULT_BRANCH_ID]).catch(() => [])
+      `, [DEFAULT_BRANCH_ID])
       setSuppliers(rows)
-    } catch (err) {// eslint-disable-next-line no-console
-      console.error("[SuppliersPage]", err); addToast({ message: t('فشل تحميل قائمة الموردين'), variant: 'error' })
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[SuppliersPage]", err)
+      addToast({ message: t('فشل تحميل قائمة الموردين'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
