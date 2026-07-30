@@ -219,6 +219,64 @@ function buildReceiptPayload(
   }
 }
 
+function processBarcodeMatch(
+  match: ProductVariantItem,
+  addItem: (variant: ProductVariantItem, name: string, price: number) => void,
+  t: (key: string) => string
+): { success: boolean; message: string; variant: 'success' | 'error' } {
+  try {
+    addItem(match, match.product_name, match.default_price)
+    return {
+      success: true,
+      message: `${t('تم إضافة')} ${match.product_name} (${match.size ?? ''} ${match.color ?? ''})`,
+      variant: 'success',
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : t('عفواً تعذر إضافة المنتج')
+    return { success: false, message: msg, variant: 'error' }
+  }
+}
+
+function restoreHeldCartItems(
+  items: Array<{
+    variant_id: string
+    product_id: string
+    variant_size: string | null
+    variant_color: string | null
+    barcode: string | null
+    unit_price_dzd: number
+    available_stock: number
+    product_name: string
+  }>,
+  addItem: (variant: ProductVariantItem, name: string, price: number) => void
+): void {
+  items.forEach((item) =>
+    addItem(
+      {
+        id: item.variant_id,
+        product_id: item.product_id,
+        branch_id: DEFAULT_BRANCH_ID,
+        size: item.variant_size,
+        color: item.variant_color,
+        barcode: item.barcode ?? '',
+        sku: null,
+        price_dzd: item.unit_price_dzd,
+        cost_dzd: null,
+        product_name: item.product_name,
+        category_id: null,
+        default_price: item.unit_price_dzd,
+        category_name: null,
+        created_at: '',
+        updated_at: '',
+        deleted_at: null,
+        current_stock: item.available_stock,
+      },
+      item.product_name,
+      item.unit_price_dzd
+    )
+  )
+}
+
 export function POSCheckoutPage({
   onNavigateToHome,
 }: {
@@ -357,18 +415,13 @@ export function POSCheckoutPage({
       )
 
       if (match) {
-        try {
-          addItem(match, match.product_name, match.default_price)
+        const res = processBarcodeMatch(match, addItem, t)
+        if (res.success) {
           soundService.playScan()
-          addToast({
-            message: `${t('تم إضافة')} ${match.product_name} (${match.size ?? ''} ${match.color ?? ''})`,
-            variant: 'success',
-            duration: 2000,
-          })
-        } catch (err) {
+          addToast({ message: res.message, variant: 'success', duration: 2000 })
+        } else {
           soundService.playError()
-          const msg = err instanceof Error ? err.message : t('عفواً تعذر إضافة المنتج')
-          addToast({ message: msg, variant: 'error' })
+          addToast({ message: res.message, variant: 'error' })
         }
       } else {
         soundService.playError()
@@ -405,26 +458,7 @@ export function POSCheckoutPage({
     const items = restoreCart(id)
     if (items) {
       clearCart()
-      items.forEach((item) =>
-        addItem(
-          {
-            id: item.variant_id,
-            product_id: item.product_id,
-            branch_id: DEFAULT_BRANCH_ID,
-            size: item.variant_size,
-            color: item.variant_color,
-            barcode: item.barcode,
-            sku: null,
-            price_dzd: item.unit_price_dzd,
-            created_at: '',
-            updated_at: '',
-            deleted_at: null,
-            current_stock: item.available_stock,
-          },
-          item.product_name,
-          item.unit_price_dzd
-        )
-      )
+      restoreHeldCartItems(items, addItem)
       setIsHeldModalOpen(false)
       addToast({ message: t('تم استرجاع السلة المعلقة بنجاح! 🛒'), variant: 'success' })
     }
