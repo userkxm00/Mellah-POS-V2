@@ -27,6 +27,7 @@ import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 interface ProductRow {
   id: string
   name: string
+  image_url?: string | null
   category_name: string | null
   category_id: string | null
   price_dzd: number
@@ -166,7 +167,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
 
       const prodRows = await window.electron.db.query<ProductRow>(
         `SELECT 
-           p.id, p.name, p.price_dzd, p.cost_dzd, p.category_id,
+           p.id, p.name, p.image_url, p.price_dzd, p.cost_dzd, p.category_id,
            c.name as category_name,
            COUNT(DISTINCT v.id) as variant_count,
            COALESCE(SUM(sm.quantity_change), 0) as total_stock
@@ -254,9 +255,17 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
       sortable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-accent/10 text-accent border border-accent/20">
-            <Package className="w-4 h-4" />
-          </div>
+          {row.image_url ? (
+            <img
+              src={row.image_url}
+              alt={row.name}
+              className="w-9 h-9 rounded-xl object-cover shrink-0 border border-gray-200/80"
+            />
+          ) : (
+            <div className="p-2.5 rounded-xl bg-accent/10 text-accent border border-accent/20 shrink-0">
+              <Package className="w-4 h-4" />
+            </div>
+          )}
           <div>
             <p className="font-extrabold text-[#1C2B3A] dark:text-slate-100 text-sm">{row.name}</p>
             <p className="text-xs font-semibold text-[#6B7A8D] dark:text-slate-400">{row.category_name ?? t('بدون فئة')}</p>

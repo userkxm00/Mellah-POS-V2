@@ -251,3 +251,42 @@
     transform: none !important;
   }
 }
+
+/* Responsive POS Layout */
+@media (max-width: 1280px) {
+  .pos-layout {
+    flex-direction: column;
+  }
+  .pos-catalog-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .pos-cart-panel {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+}
+
+/* Enhanced Dark Mode Glass Glow */
+html.dark .glass-card {
+  background: rgba(30, 41, 59, 0.85);
+  backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 2px rgba(0,0,0,0.4), 0 10px 24px rgba(0,0,0,0.5), 0 0 30px rgba(10, 132, 255, 0.05);
+}
+
+/* Toast Animations */
+.toast-enter {
+  animation: slide-in-left 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toast-exit {
+  animation: slide-out-left 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slide-in-left {
+  0% { opacity: 0; transform: translateX(100%); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-out-left {
+  0% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(100%); }
+}

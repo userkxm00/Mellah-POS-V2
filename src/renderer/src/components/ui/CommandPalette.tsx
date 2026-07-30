@@ -130,8 +130,25 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
       item => item.title.toLowerCase().includes(q) || (item.subtitle && item.subtitle.toLowerCase().includes(q))
     )
 
+    const isBarcodeSearch = q.length >= 8 && /^\d{8,}$/.test(q)
+    if (isBarcodeSearch) {
+      const exactBarcodeMatches: CommandItem[] = products
+        .filter(p => p.barcode && p.barcode.toLowerCase().includes(q))
+        .map(p => ({
+          id: `prod-${p.id}`,
+          title: p.name,
+          subtitle: `باركود: ${p.barcode} | السعر: ${p.price} د.ج`,
+          category: 'منتجات',
+          icon: '📊',
+          action: () => { onNavigate?.(`/products/${p.id}`); onClose() }
+        }))
+      if (exactBarcodeMatches.length > 0) {
+        return [...exactBarcodeMatches, ...navMatches]
+      }
+    }
+
     const prodMatches: CommandItem[] = products
-      .filter(p => p.name.toLowerCase().includes(q) || p.barcode.toLowerCase().includes(q))
+      .filter(p => p.name.toLowerCase().includes(q) || (p.barcode && p.barcode.toLowerCase().includes(q)))
       .slice(0, 8)
       .map(p => ({
         id: `prod-${p.id}`,

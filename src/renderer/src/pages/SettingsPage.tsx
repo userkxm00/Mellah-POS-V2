@@ -637,6 +637,35 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                 </div>
               </div>
 
+              {/* Brand Theme Color Accent Picker */}
+              <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-100 dark:border-slate-800">
+                <label className="text-xs font-bold text-text-primary dark:text-slate-200">
+                  {t('لون الهوية المعتمد (Brand Accent Color)')}
+                </label>
+                <div className="flex items-center gap-3">
+                  {[
+                    { name: t('أزرق ملاح (افتراضي)'), value: '#0A84FF' },
+                    { name: t('أخضر زمردي'), value: '#30D158' },
+                    { name: t('بنفسجي ملكي'), value: '#BF5AF2' },
+                    { name: t('برتقالي دافئ'), value: '#FF9F0A' },
+                    { name: t('أحمر قرمزي'), value: '#FF453A' },
+                  ].map((color) => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => {
+                        document.documentElement.style.setProperty('--color-accent', color.value)
+                        localStorage.setItem('mellah_brand_color', color.value)
+                        addToast({ message: `${t('تم اختيار')} ${color.name} ${t('كلون للنظام الرئيسي!')} 🎨`, variant: 'success', duration: 2000 })
+                      }}
+                      title={color.name}
+                      className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-800 shadow-md transition-transform hover:scale-110 focus:outline-none ring-2 ring-transparent hover:ring-accent"
+                      style={{ backgroundColor: color.value }}
+                    />
+                  ))}
+                </div>
+              </div>
+
               {/* Sound Controls */}
               <div className="flex flex-col gap-1.5">
                 <div className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200 flex items-center justify-between">
