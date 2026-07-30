@@ -219,6 +219,63 @@ function buildReceiptPayload(
   }
 }
 
+function executeBarcodeScan(
+  scannedBarcode: string,
+  variants: ProductVariantItem[],
+  addItem: (variant: ProductVariantItem, name: string, price: number) => void,
+  addToast: (toast: { message: string; variant: 'success' | 'warning' | 'error' | 'info'; duration?: number }) => void,
+  t: (key: string) => string
+): void {
+  const match = variants.find((v) => v.barcode === scannedBarcode || v.sku === scannedBarcode)
+  if (!match) {
+    soundService.playError()
+    addToast({
+      message: `${t('الباركود')} [${scannedBarcode}] ${t('غير موجود في القاعدة')}`,
+      variant: 'warning',
+    })
+    return
+  }
+
+  const res = processBarcodeMatch(match, addItem, t)
+  if (res.success) {
+    soundService.playScan()
+    addToast({ message: res.message, variant: 'success', duration: 2000 })
+  } else {
+    soundService.playError()
+    addToast({ message: res.message, variant: 'error' })
+  }
+}
+
+function handleGlobalPOSKeyDown(
+  e: KeyboardEvent,
+  opts: {
+    focusSearch: () => void
+    openDrawer: () => void
+    clearCart: () => void
+    completeSale: () => void
+    hasCartItems: boolean
+    isProcessingSale: boolean
+    hasActiveModals: boolean
+  }
+): void {
+  if (e.key === 'F2') {
+    e.preventDefault()
+    opts.focusSearch()
+  } else if (e.key === 'F4') {
+    e.preventDefault()
+    opts.openDrawer()
+  } else if (e.key === 'Escape') {
+    if (!opts.hasActiveModals && opts.hasCartItems) {
+      opts.clearCart()
+    }
+  } else if (e.key === 'F12') {
+    e.preventDefault()
+    if (opts.hasCartItems && !opts.isProcessingSale) {
+      opts.completeSale()
+    }
+  }
+}
+
 function processBarcodeMatch(
   match: ProductVariantItem,
   addItem: (variant: ProductVariantItem, name: string, price: number) => void,
@@ -498,26 +555,7 @@ export function POSCheckoutPage({
   // Handle Barcode Scanner input
   const handleBarcodeScan = useCallback(
     (scannedBarcode: string) => {
-      const match = variants.find(
-        (v) => v.barcode === scannedBarcode || v.sku === scannedBarcode
-      )
-
-      if (match) {
-        const res = processBarcodeMatch(match, addItem, t)
-        if (res.success) {
-          soundService.playScan()
-          addToast({ message: res.message, variant: 'success', duration: 2000 })
-        } else {
-          soundService.playError()
-          addToast({ message: res.message, variant: 'error' })
-        }
-      } else {
-        soundService.playError()
-        addToast({
-          message: `${t('الباركود')} [${scannedBarcode}] ${t('غير موجود في القاعدة')}`,
-          variant: 'warning',
-        })
-      }
+      executeBarcodeScan(scannedBarcode, variants, addItem, addToast, t)
     },
     [variants, addItem, addToast, t]
   )
@@ -713,31 +751,28 @@ export function POSCheckoutPage({
   // Keyboard Shortcuts (F2: Search Focus, F4: Cash Drawer, F12: Finish Sale, ESC: Clear Cart)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F2') {
-        e.preventDefault()
-        searchInputRef.current?.focus()
-        addToast({ message: t('F2: تم التوجيه لبحث المنتجات والباركود'), variant: 'info', duration: 1500 })
-      } else if (e.key === 'F4') {
-        e.preventDefault()
-        const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
-        window.electron?.openCashDrawer(printerName).then(() => {
-          addToast({ message: t('F4: تم إرسال أمر فتح درج النقود'), variant: 'success', duration: 1500 })
-        }).catch((err) => {
-          addToast({ message: t('تعذر فتح درج النقود: ') + ((err as Error)?.message || t('تأكد من توصيل الطابعة/الدرج')), variant: 'warning', duration: 3000 })
-        })
-      } else if (e.key === 'Escape') {
-        if (!isMixedModalOpen && !isHeldModalOpen && !isManagerPinOpen) {
-          if (cartItems.length > 0) {
-            clearCart()
-            addToast({ message: t('ESC: تم تفريغ السلة'), variant: 'info', duration: 1500 })
-          }
-        }
-      } else if (e.key === 'F12') {
-        e.preventDefault()
-        if (cartItems.length > 0 && !isProcessingSale) {
-          handleCompleteSale()
-        }
-      }
+      handleGlobalPOSKeyDown(e, {
+        focusSearch: () => {
+          searchInputRef.current?.focus()
+          addToast({ message: t('F2: تم التوجيه لبحث المنتجات والباركود'), variant: 'info', duration: 1500 })
+        },
+        openDrawer: () => {
+          const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
+          window.electron?.openCashDrawer(printerName).then(() => {
+            addToast({ message: t('F4: تم إرسال أمر فتح درج النقود'), variant: 'success', duration: 1500 })
+          }).catch((err) => {
+            addToast({ message: t('تعذر فتح درج النقود: ') + ((err as Error)?.message || t('تأكد من توصيل الطابعة/الدرج')), variant: 'warning', duration: 3000 })
+          })
+        },
+        clearCart: () => {
+          clearCart()
+          addToast({ message: t('ESC: تم تفريغ السلة'), variant: 'info', duration: 1500 })
+        },
+        completeSale: handleCompleteSale,
+        hasCartItems: cartItems.length > 0,
+        isProcessingSale,
+        hasActiveModals: isMixedModalOpen || isHeldModalOpen || isManagerPinOpen,
+      })
     }
 
     window.addEventListener('keydown', handleKeyDown)
