@@ -1,10 +1,10 @@
 import React from 'react'
 
 interface AnimatedBrandLogoProps {
-  size?: 'sm' | 'md' | 'lg' | 'xl'
-  showText?: boolean
-  className?: string
-  subtitle?: string
+  readonly size?: 'sm' | 'md' | 'lg' | 'xl'
+  readonly showText?: boolean
+  readonly className?: string
+  readonly subtitle?: string
 }
 
 export function AnimatedBrandLogo({

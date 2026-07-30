@@ -1,7 +1,7 @@
 import React from 'react'
 
 interface SkeletonProps {
-  className?: string
+  readonly className?: string
 }
 
 /**
@@ -17,7 +17,7 @@ export function Skeleton({ className = '' }: SkeletonProps): React.JSX.Element {
 export function SkeletonLine({
   width = 'w-3/4',
 }: {
-  width?: string
+  readonly width?: string
 }): React.JSX.Element {
   return <Skeleton className={`h-4 ${width} rounded-lg`} />
 }
@@ -59,11 +59,11 @@ export function SkeletonStatCard(): React.JSX.Element {
 /**
  * Skeleton for table rows.
  */
-export function SkeletonTableRow({ cols = 5 }: { cols?: number }): React.JSX.Element {
+export function SkeletonTableRow({ cols = 5 }: { readonly cols?: number }): React.JSX.Element {
   return (
     <tr className="border-b border-gray-100 dark:border-slate-800">
       {Array.from({ length: cols }).map((_, i) => (
-        <td key={i} className="py-4 px-4">
+        <td key={`skel-td-${i}`} className="py-4 px-4">
           <Skeleton className="h-4 w-4/5 rounded-md" />
         </td>
       ))}
@@ -77,7 +77,7 @@ export function SkeletonTableRow({ cols = 5 }: { cols?: number }): React.JSX.Ele
 export function SkeletonCircle({
   size = 'w-10 h-10',
 }: {
-  size?: string
+  readonly size?: string
 }): React.JSX.Element {
   return <Skeleton className={`${size} rounded-full`} />
 }

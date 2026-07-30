@@ -84,12 +84,22 @@ export function App(): React.JSX.Element {
     if (isAuthenticated && currentUser && !hasSentLaunchNotif && !secondaryModule) {
       setHasSentLaunchNotif(true)
       const branch = useAuthStore.getState().currentBranch
-      const version = window.electron?.appInfo?.getVersion ? `v${window.electron.appInfo.getVersion()} (Windows Desktop)` : 'v1.0.1 (Windows Desktop)'
-      sendAppLaunchTelegramNotification({
-        branchName: branch?.name || 'الفرع الرئيسي',
-        userName: currentUser.full_name,
-        appVersion: version,
-      }).catch(() => {})
+      const sendNotif = (verStr: string): void => {
+        sendAppLaunchTelegramNotification({
+          branchName: branch?.name || 'الفرع الرئيسي',
+          userName: currentUser.full_name,
+          appVersion: verStr,
+        }).catch(() => {})
+      }
+
+      if (window.electron?.appInfo?.getVersion) {
+        window.electron.appInfo
+          .getVersion()
+          .then((v) => sendNotif(`v${v} (Windows Desktop)`))
+          .catch(() => sendNotif('v1.0.1 (Windows Desktop)'))
+      } else {
+        sendNotif('v1.0.1 (Windows Desktop)')
+      }
     }
   }, [isAuthenticated, currentUser, hasSentLaunchNotif, secondaryModule])
 

@@ -115,6 +115,7 @@ export function UpdateNotificationBanner(): React.JSX.Element | null {
       <div className="flex items-center gap-2">
         {update.status === 'available' && (
           <button
+            type="button"
             onClick={handleDownload}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-bold shadow-ambient transition-all btn-press"
           >
@@ -125,6 +126,7 @@ export function UpdateNotificationBanner(): React.JSX.Element | null {
 
         {update.status === 'downloaded' && (
           <button
+            type="button"
             onClick={handleInstall}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-success hover:bg-success/90 text-white text-xs font-bold shadow-ambient transition-all btn-press"
           >
@@ -134,6 +136,7 @@ export function UpdateNotificationBanner(): React.JSX.Element | null {
         )}
 
         <button
+          type="button"
           onClick={() => setDismissed(true)}
           className="p-1.5 rounded-lg hover:bg-gray-200/80 text-text-tertiary transition-colors"
           title={t('إغلاق')}

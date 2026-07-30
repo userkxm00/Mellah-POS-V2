@@ -15,17 +15,17 @@ export interface Column<T> {
 }
 
 export interface TableProps<T> {
-  columns: Column<T>[]
-  data: T[]
-  loading?: boolean
-  emptyMessage?: string
-  emptyType?: 'cart' | 'search' | 'sales' | 'customers'
-  onRowClick?: (row: T) => void
-  rowKey: (row: T) => string
-  sortKey?: string
-  sortOrder?: 'asc' | 'desc'
-  onSort?: (key: string) => void
-  className?: string
+  readonly columns: Column<T>[]
+  readonly data: T[]
+  readonly loading?: boolean
+  readonly emptyMessage?: string
+  readonly emptyType?: 'cart' | 'search' | 'sales' | 'customers'
+  readonly onRowClick?: (row: T) => void
+  readonly rowKey: (row: T) => string
+  readonly sortKey?: string
+  readonly sortOrder?: 'asc' | 'desc'
+  readonly onSort?: (key: string) => void
+  readonly className?: string
 }
 
 // ----- Component -----

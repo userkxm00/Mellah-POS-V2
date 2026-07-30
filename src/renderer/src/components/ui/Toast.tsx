@@ -35,7 +35,7 @@ const variantIconBg: Record<ToastType['variant'], string> = {
   warning: 'bg-amber-500 text-white',
 }
 
-function ToastItem({ toast }: { toast: ToastType }): React.JSX.Element {
+function ToastItem({ toast }: { readonly toast: ToastType }): React.JSX.Element {
   const removeToast = useToastStore((s) => s.removeToast)
   const styles = variantStyles[toast.variant]
 

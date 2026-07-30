@@ -2,7 +2,7 @@ import React, { Component, ReactNode, ErrorInfo } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 
 interface Props {
-  children: ReactNode
+  readonly children: ReactNode
 }
 
 interface State {
@@ -11,7 +11,7 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
+  public readonly state: State = {
     hasError: false,
     error: null,
   }
@@ -45,6 +45,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </p>
             </div>
             <button
+              type="button"
               onClick={this.handleReset}
               className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-accent text-white text-xs font-bold shadow-ambient hover:bg-accent-hover transition-all btn-press"
             >

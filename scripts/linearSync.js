@@ -100,7 +100,8 @@ export async function createIssue({ title, description, stateId, priority = 0 })
 if (process.argv[1].endsWith('linearSync.js')) {
   getTeamInfo('MEL')
     .then((team) => {
-      console.log('✅ Connected to Linear Team:', team.name, `(${team.key})`)
+      const safeName = (team.name || '').replace(/[\r\n]/g, '')
+      console.log('✅ Connected to Linear Team:', safeName, `(${team.key})`)
       console.log('Available States:', team.states.nodes.map((s) => `${s.name} (${s.type})`).join(', '))
     })
     .catch((err) => console.error('❌ Linear Sync Error:', err.message))

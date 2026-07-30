@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 
 interface CountUpNumberProps {
-  value: number
-  duration?: number
-  formatter?: (val: number) => string
-  className?: string
+  readonly value: number
+  readonly duration?: number
+  readonly formatter?: (val: number) => string
+  readonly className?: string
 }
 
 export function CountUpNumber({
