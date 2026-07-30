@@ -18,6 +18,7 @@ import { SettingsPage } from '@/pages/SettingsPage'
 import { AuditLogPage } from '@/pages/AuditLogPage'
 import { MaintenancePage } from '@/pages/MaintenancePage'
 import { initAutoBackupScheduler } from '@/services/backupService'
+import { sendAppLaunchTelegramNotification } from '@/services/telegramService'
 import { ToastContainer } from '@/components/ui'
 import { CommandPalette } from '@/components/ui/CommandPalette'
 import { KeyboardShortcutsModal } from '@/components/ui/KeyboardShortcutsModal'
@@ -75,6 +76,22 @@ export function App(): React.JSX.Element {
       stopAutoBackup()
     }
   }, [checkAuthSession])
+
+  // Send App Launch Telegram Notification once per main window session
+  const [hasSentLaunchNotif, setHasSentLaunchNotif] = useState<boolean>(false)
+
+  useEffect(() => {
+    if (isAuthenticated && currentUser && !hasSentLaunchNotif && !secondaryModule) {
+      setHasSentLaunchNotif(true)
+      const branch = useAuthStore.getState().currentBranch
+      const version = window.electron?.appInfo?.getVersion ? `v${window.electron.appInfo.getVersion()} (Windows Desktop)` : 'v1.0.1 (Windows Desktop)'
+      sendAppLaunchTelegramNotification({
+        branchName: branch?.name || 'الفرع الرئيسي',
+        userName: currentUser.full_name,
+        appVersion: version,
+      }).catch(() => {})
+    }
+  }, [isAuthenticated, currentUser, hasSentLaunchNotif, secondaryModule])
 
   // Handle navigation from launcher / command palette
   const handleLauncherNavigate = useCallback((moduleId: string) => {

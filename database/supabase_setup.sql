@@ -172,6 +172,11 @@ CREATE TABLE store_settings (
   receipt_footer_text TEXT,
   default_language TEXT DEFAULT 'ar',
   session_timeout_minutes INTEGER DEFAULT 5,
+  telegram_bot_token TEXT,
+  telegram_chat_ids TEXT,
+  telegram_notify_app_launch INTEGER DEFAULT 1,
+  telegram_notify_sale INTEGER DEFAULT 1,
+  telegram_notify_shift INTEGER DEFAULT 1,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

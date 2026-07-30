@@ -106,6 +106,8 @@ export function initAutoUpdater(win: BrowserWindow): void {
       const result = await autoUpdater.checkForUpdates()
       return result?.updateInfo?.version ?? null
     } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[AutoUpdater] Failed to check for updates:', err)
       return null
     }
   })

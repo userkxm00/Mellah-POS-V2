@@ -3,12 +3,12 @@ import { createPortal } from 'react-dom'
 import { X, AlertTriangle } from 'lucide-react'
 
 export interface ModalProps {
-  isOpen: boolean
-  onClose: () => void
-  title?: string
-  children: React.ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl'
-  isDirty?: boolean
+  readonly isOpen: boolean
+  readonly onClose: () => void
+  readonly title?: string
+  readonly children: React.ReactNode
+  readonly size?: 'sm' | 'md' | 'lg' | 'xl'
+  readonly isDirty?: boolean
 }
 
 const sizeStyles: Record<string, string> = {
@@ -130,6 +130,7 @@ export function Modal({
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50">
             <h2 className="text-base font-black text-[#1C2B3A] dark:text-slate-100 tracking-tight">{title}</h2>
             <button
+              type="button"
               onClick={handleRequestClose}
               className="p-2 rounded-xl text-[#6B7A8D] dark:text-slate-400 hover:text-danger hover:bg-danger/10 transition-colors btn-press focus-visible:ring-2 focus-visible:ring-accent"
               aria-label="إغلاق النافذة"

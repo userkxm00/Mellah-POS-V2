@@ -17,6 +17,7 @@ export interface CreateProductInput {
   description: string | null
   price_dzd: number
   cost_dzd: number | null
+  image_url?: string | null
   variants: VariantInput[]
 }
 
@@ -46,13 +47,14 @@ export async function createProductWithVariants(
   operations.push({
     sql: `INSERT INTO products 
           (id, branch_id, category_id, name, description, image_url, price_dzd, cost_dzd, created_at, updated_at) 
-          VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?)`,
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     params: [
       productId,
       DEFAULT_BRANCH_ID,
       input.category_id,
       input.name.trim(),
       input.description ? input.description.trim() : null,
+      input.image_url || null,
       input.price_dzd,
       input.cost_dzd,
       now,

@@ -18,10 +18,12 @@ import {
 } from 'lucide-react'
 import { Card, Input, Modal, Button, ToastContainer } from '@/components/ui'
 import { CountUpNumber } from '@/components/ui/CountUpNumber'
+import { AnimatedBrandLogo } from '@/components/brand/AnimatedBrandLogo'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ConfettiBurst } from '@/components/ui/ConfettiBurst'
 import { soundService } from '@/services/soundService'
 import { formatCurrency } from '@/lib/format'
+import { sendSaleCompletedTelegramNotification } from '@/services/telegramService'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
@@ -56,6 +58,7 @@ interface ProductVariantItem {
   default_price: number
   category_name: string | null
   current_stock: number
+  image_url?: string | null
 }
 
 interface CategoryItem {
@@ -71,12 +74,52 @@ interface CustomerOption {
   store_credit_balance?: number
 }
 
-import { AnimatedBrandLogo } from '@/components/brand/AnimatedBrandLogo'
+function filterVariantsList(
+  variants: ProductVariantItem[],
+  selectedCategoryId: string | null,
+  searchQuery: string
+): ProductVariantItem[] {
+  const q = searchQuery.trim().toLowerCase()
+  return variants.filter((v) => {
+    const matchesCategory = selectedCategoryId ? v.category_id === selectedCategoryId : true
+    const matchesSearch =
+      q === '' ||
+      v.product_name.toLowerCase().includes(q) ||
+      v.barcode?.includes(q) ||
+      v.size?.toLowerCase().includes(q) ||
+      v.color?.toLowerCase().includes(q)
+
+    return matchesCategory && matchesSearch
+  })
+}
+
+const SKELETON_KEYS = ['skel-var-1', 'skel-var-2', 'skel-var-3', 'skel-var-4', 'skel-var-5', 'skel-var-6']
+
+function getStockPillStyle(isOut: boolean, stock: number): string {
+  if (isOut) return 'bg-danger-light text-danger'
+  if (stock <= 5) return 'bg-warning-light text-warning'
+  return 'bg-success-light text-success'
+}
+
+function getPaymentMethodLabel(pm: PaymentMethod, t: (k: string) => string): string {
+  switch (pm) {
+    case 'cash':
+      return t('نقد')
+    case 'card':
+      return 'CIB'
+    case 'mixed':
+      return t('مزدوج')
+    case 'credit':
+      return t('كريدي')
+    default:
+      return pm
+  }
+}
 
 export function POSCheckoutPage({
   onNavigateToHome,
 }: {
-  onNavigateToHome?: () => void
+  readonly onNavigateToHome?: () => void
 }): React.JSX.Element {
   const {
     items: cartItems,
@@ -200,7 +243,7 @@ export function POSCheckoutPage({
       const variantRows = await window.electron.db.query<ProductVariantItem>(
         `SELECT 
            v.id, v.product_id, v.branch_id, v.size, v.color, v.barcode, v.sku, v.price_dzd, v.created_at, v.updated_at, v.deleted_at,
-           p.name as product_name, p.category_id, p.price_dzd as default_price,
+           p.name as product_name, p.category_id, p.price_dzd as default_price, p.image_url,
            c.name as category_name,
            COALESCE(SUM(sm.quantity_change), 0) as current_stock
          FROM product_variants v
@@ -275,18 +318,7 @@ export function POSCheckoutPage({
     addToast({ message: t('تم تعليق السلة الحالية بنجاح (F2) ⏸️'), variant: 'info' })
   }, [cartItems, addToast, holdCart, clearCart, selectedCustomerObj?.full_name, t])
 
-  const filteredVariants = variants.filter((v) => {
-    const matchesCategory = selectedCategoryId ? v.category_id === selectedCategoryId : true
-    const q = searchQuery.trim().toLowerCase()
-    const matchesSearch =
-      q === '' ||
-      v.product_name.toLowerCase().includes(q) ||
-      (v.barcode && v.barcode.includes(q)) ||
-      (v.size && v.size.toLowerCase().includes(q)) ||
-      (v.color && v.color.toLowerCase().includes(q))
-
-    return matchesCategory && matchesSearch
-  })
+  const filteredVariants = filterVariantsList(variants, selectedCategoryId, searchQuery)
 
   // Restore held cart
   const handleRestoreCart = (id: string): void => {
@@ -329,7 +361,7 @@ export function POSCheckoutPage({
 
   // Apply Store Credit
   const handleApplyStoreCredit = (): void => {
-    if (!selectedCustomerObj || !selectedCustomerObj.store_credit_balance) return
+    if (!selectedCustomerObj?.store_credit_balance) return
     const credit = selectedCustomerObj.store_credit_balance
     const sub = getSubtotal()
     const discountVal = Math.min(credit, sub)
@@ -434,7 +466,7 @@ export function POSCheckoutPage({
     setIsProcessingSale(true)
     try {
       const custObj = customers.find((c) => c.id === selectedCustomerId)
-      const creditDepositVal = parseFloat(creditDepositInput) || 0
+      const creditDepositVal = Number.parseFloat(creditDepositInput) || 0
 
       const res = await processSale(
         cartItems,
@@ -448,7 +480,7 @@ export function POSCheckoutPage({
       )
 
       // Deduct used store credit if applied
-      if (custObj && custObj.store_credit_balance && discountDzd > 0) {
+      if (custObj?.store_credit_balance && discountDzd > 0) {
         const usedCredit = Math.min(custObj.store_credit_balance, discountDzd)
         await window.electron.db.execute(
           `UPDATE customers SET store_credit_balance = store_credit_balance - ?, updated_at = ? WHERE id = ?`,
@@ -505,6 +537,35 @@ export function POSCheckoutPage({
           })
         })
       }
+
+      // Automated Telegram Sale Completed Notification with Items & Images
+      const currentUser = useAuthStore.getState().currentUser
+      const currentBranch = useAuthStore.getState().currentBranch
+      sendSaleCompletedTelegramNotification({
+        invoiceNumber: res.saleId.slice(0, 8).toUpperCase(),
+        branchName: currentBranch?.name || 'الفرع الرئيسي',
+        cashierName: currentUser?.full_name || 'الكاشير',
+        customerName: custObj?.full_name || null,
+        paymentMethod,
+        subtotalDzd: getSubtotal(),
+        discountDzd,
+        totalDzd: res.totalDzd,
+        paidAmountDzd: paymentMethod === 'cash' ? (cashAmountDzd ?? res.totalDzd) : res.totalDzd,
+        remainingChangeDzd: paymentMethod === 'cash' ? Math.max(0, (cashAmountDzd ?? 0) - res.totalDzd) : 0,
+        items: cartItems.map((ci) => {
+          const matchedVariant = variants.find((v) => v.id === ci.variant_id)
+          const variantText = [ci.variant_size, ci.variant_color].filter(Boolean).join(' / ')
+          return {
+            name: ci.product_name,
+            variantName: variantText || undefined,
+            quantity: ci.quantity,
+            unitPriceDzd: ci.unit_price_dzd,
+            totalPriceDzd: ci.unit_price_dzd * ci.quantity,
+            imageUrl: matchedVariant?.image_url || null,
+          }
+        }),
+        createdAt: new Date().toISOString(),
+      }).catch(() => {})
 
       // 5 Signature Delight Moments Trigger
       setShowConfetti(true)
@@ -577,7 +638,7 @@ export function POSCheckoutPage({
 
   const cartSubtotal = getSubtotal()
   const cartTotal = getTotal()
-  const tenderedCashNum = parseFloat(tenderedCashInput) || 0
+  const tenderedCashNum = Number.parseFloat(tenderedCashInput) || 0
   const changeDzd = Math.max(0, tenderedCashNum - cartTotal)
 
   return (
@@ -738,8 +799,8 @@ export function POSCheckoutPage({
           <div className="flex-1 overflow-y-auto pr-1">
             {isLoadingVariants ? (
               <div className="grid grid-cols-3 gap-4">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="skeleton h-32 rounded-2xl" />
+                {SKELETON_KEYS.map((sKey) => (
+                  <div key={sKey} className="skeleton h-32 rounded-2xl" />
                 ))}
               </div>
             ) : filteredVariants.length === 0 ? (
@@ -800,13 +861,10 @@ export function POSCheckoutPage({
                             {formatCurrency(itemPrice)}
                           </span>
                           <span
-                            className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                              isOutOfStock
-                                ? 'bg-danger-light text-danger'
-                                : v.current_stock <= 5
-                                  ? 'bg-warning-light text-warning'
-                                  : 'bg-success-light text-success'
-                            }`}
+                            className={`text-[10px] font-black px-2 py-0.5 rounded-full ${getStockPillStyle(
+                              isOutOfStock,
+                              v.current_stock
+                            )}`}
                           >
                             {isOutOfStock ? t('نفد') : `${v.current_stock} ${t('قطعة')}`}
                           </span>
@@ -971,7 +1029,7 @@ export function POSCheckoutPage({
                       : 'bg-white border border-gray-200 text-text-secondary hover:bg-gray-100'
                   }`}
                 >
-                  {pm === 'cash' ? t('نقد') : pm === 'card' ? 'CIB' : pm === 'mixed' ? t('مزدوج') : t('كريدي')}
+                  {getPaymentMethodLabel(pm, t)}
                 </button>
               ))}
             </div>
@@ -1015,7 +1073,7 @@ export function POSCheckoutPage({
                 <div className="flex items-center justify-between p-2 rounded-lg bg-amber-100/80 border border-amber-300 text-xs font-black text-amber-900">
                   <span>المبلغ المتبقي كدين (Dette):</span>
                   <span className="text-sm font-extrabold text-red-600">
-                    {formatCurrency(Math.max(0, cartTotal - (parseFloat(creditDepositInput) || 0)))}
+                    {formatCurrency(Math.max(0, cartTotal - (Number.parseFloat(creditDepositInput) || 0)))}
                   </span>
                 </div>
                 {!selectedCustomerId && (
@@ -1034,7 +1092,7 @@ export function POSCheckoutPage({
                 min={0}
                 placeholder="0 دج"
                 value={discountDzd || ''}
-                onChange={(e) => setDiscount(0, parseFloat(e.target.value) || 0)}
+                onChange={(e) => setDiscount(0, Number.parseFloat(e.target.value) || 0)}
                 className="w-28 px-2 py-1 text-left font-bold text-xs bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent"
               />
             </div>
@@ -1160,8 +1218,8 @@ export function POSCheckoutPage({
       {/* Quick Add Customer Modal */}
       <Modal isOpen={isQuickAddCustomerOpen} onClose={() => setIsQuickAddCustomerOpen(false)} title={t('إضافة زبون جديد فوراً')}>
         <form onSubmit={handleQuickAddCustomer} className="space-y-4">
-          <Input placeholder={t('مثلاً: محمد الأمين')} value={newCustName} onChange={(e) => setNewCustName(e.target.value)} required />
-          <Input placeholder="06XXXXXXXX" value={newCustPhone} onChange={(e) => setNewCustPhone(e.target.value)} />
+          <Input label={t('اسم الزبون الكامل')} placeholder={t('مثلاً: محمد الأمين')} value={newCustName} onChange={(e) => setNewCustName(e.target.value)} required />
+          <Input label={t('رقم الهاتف')} placeholder="06XXXXXXXX" value={newCustPhone} onChange={(e) => setNewCustPhone(e.target.value)} />
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={() => setIsQuickAddCustomerOpen(false)}>{t('إلغاء')}</Button>
             <Button type="submit" variant="primary">{t('حفظ واختيار الزبون')}</Button>
@@ -1178,15 +1236,16 @@ export function POSCheckoutPage({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-text-primary">المبلغ المدفوع كاش (نقداً):</label>
+            <label htmlFor="mixed-cash-input" className="text-xs font-bold text-text-primary">المبلغ المدفوع كاش (نقداً):</label>
             <Input
+              id="mixed-cash-input"
               type="number"
               placeholder={`مثلاً: ${cartTotal / 2}`}
               value={mixedCashInput}
               onChange={(e) => {
                 const val = e.target.value
                 setMixedCashInput(val)
-                const cashNum = parseFloat(val) || 0
+                const cashNum = Number.parseFloat(val) || 0
                 const cardNum = Math.max(0, cartTotal - cashNum)
                 setMixedCardInput(cardNum > 0 ? String(cardNum) : '')
               }}
@@ -1194,15 +1253,16 @@ export function POSCheckoutPage({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-text-primary">المبلغ المدفوع بالبطاقة (CIB):</label>
+            <label htmlFor="mixedCardInput" className="text-xs font-bold text-text-primary">المبلغ المدفوع بالبطاقة (CIB):</label>
             <Input
+              id="mixedCardInput"
               type="number"
               placeholder={`مثلاً: ${cartTotal / 2}`}
               value={mixedCardInput}
               onChange={(e) => {
                 const val = e.target.value
                 setMixedCardInput(val)
-                const cardNum = parseFloat(val) || 0
+                const cardNum = Number.parseFloat(val) || 0
                 const cashNum = Math.max(0, cardNum > 0 ? cartTotal - cardNum : 0)
                 setMixedCashInput(cashNum > 0 ? String(cashNum) : '')
               }}
@@ -1215,8 +1275,8 @@ export function POSCheckoutPage({
               type="button"
               variant="primary"
               onClick={() => {
-                const cash = parseFloat(mixedCashInput) || 0
-                const card = parseFloat(mixedCardInput) || 0
+                const cash = Number.parseFloat(mixedCashInput) || 0
+                const card = Number.parseFloat(mixedCardInput) || 0
                 setMixedAmounts(cash, card)
                 setIsMixedModalOpen(false)
                 addToast({ message: t('تم حفظ تقسيم الدفع المختلط بنجاح!'), variant: 'success' })

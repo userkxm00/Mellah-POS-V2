@@ -28,6 +28,14 @@ export const ALL_BACKUP_TABLES = [
   'supplier_payments',
 ]
 
+const ALLOWED_BACKUP_SET = new Set(ALL_BACKUP_TABLES)
+
+function assertAllowedTable(tableName: string): void {
+  if (!ALLOWED_BACKUP_SET.has(tableName)) {
+    throw new Error(`Unauthorized table name in backup service: ${tableName}`)
+  }
+}
+
 /**
  * Manual export: dumps all 17 tables to a JSON file downloaded by the browser.
  */
@@ -39,6 +47,7 @@ export async function exportDatabaseBackup(): Promise<string> {
     const backupData: Record<string, unknown[]> = {}
 
     for (const table of ALL_BACKUP_TABLES) {
+      assertAllowedTable(table)
       try {
         const rows = await window.electron.db.query(`SELECT * FROM ${table}`)
         backupData[table] = rows
@@ -84,11 +93,13 @@ export async function importDatabaseBackup(jsonString: string): Promise<number> 
   // Reverse tables for clean deletion (dependencies first)
   const reverseTables = [...ALL_BACKUP_TABLES].reverse()
   for (const table of reverseTables) {
+    assertAllowedTable(table)
     operations.push({ sql: `DELETE FROM ${table}`, params: [] })
   }
 
   // Build insert operations for each table in backup
   for (const table of ALL_BACKUP_TABLES) {
+    assertAllowedTable(table)
     const rows = backupData[table]
     if (Array.isArray(rows) && rows.length > 0) {
       for (const row of rows) {

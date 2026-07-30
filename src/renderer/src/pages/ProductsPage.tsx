@@ -113,25 +113,32 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
     setIsBulkSaving(true)
     try {
       const now = new Date().toISOString()
-      let whereClause = 'WHERE deleted_at IS NULL'
-      const params: unknown[] = []
-
       if (bulkCatId) {
-        whereClause += ' AND category_id = ?'
-        params.push(bulkCatId)
-      }
-
-      if (bulkAdjustmentType === 'percent') {
-        const factor = 1 + bulkAdjustmentVal / 100.0
-        await window.electron.db.execute(
-          `UPDATE products SET price_dzd = ROUND(price_dzd * ?, 2), updated_at = ? ${whereClause}`,
-          [factor, now, ...params]
-        )
+        if (bulkAdjustmentType === 'percent') {
+          const factor = 1 + bulkAdjustmentVal / 100.0
+          await window.electron.db.execute(
+            `UPDATE products SET price_dzd = ROUND(price_dzd * ?, 2), updated_at = ? WHERE deleted_at IS NULL AND category_id = ?`,
+            [factor, now, bulkCatId]
+          )
+        } else {
+          await window.electron.db.execute(
+            `UPDATE products SET price_dzd = MAX(0, price_dzd + ?), updated_at = ? WHERE deleted_at IS NULL AND category_id = ?`,
+            [bulkAdjustmentVal, now, bulkCatId]
+          )
+        }
       } else {
-        await window.electron.db.execute(
-          `UPDATE products SET price_dzd = MAX(0, price_dzd + ?), updated_at = ? ${whereClause}`,
-          [bulkAdjustmentVal, now, ...params]
-        )
+        if (bulkAdjustmentType === 'percent') {
+          const factor = 1 + bulkAdjustmentVal / 100.0
+          await window.electron.db.execute(
+            `UPDATE products SET price_dzd = ROUND(price_dzd * ?, 2), updated_at = ? WHERE deleted_at IS NULL`,
+            [factor, now]
+          )
+        } else {
+          await window.electron.db.execute(
+            `UPDATE products SET price_dzd = MAX(0, price_dzd + ?), updated_at = ? WHERE deleted_at IS NULL`,
+            [bulkAdjustmentVal, now]
+          )
+        }
       }
 
       addToast({ message: t('تم تحديث أسعار المنتجات المحددة بنجاح!'), variant: 'success' })

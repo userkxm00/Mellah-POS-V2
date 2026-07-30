@@ -117,6 +117,7 @@ export const RECEIPT_TRANSLATIONS: Record<ReceiptLanguage, {
 }
 
 export function generateBarcodeSvg(barcodeText: string): string {
+  const safeText = (barcodeText || '').replace(/[^a-zA-Z0-9_-]/g, '')
   return `<svg viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 40px;">
     <rect width="200" height="60" fill="#ffffff" />
     <g fill="#000000">
@@ -137,13 +138,14 @@ export function generateBarcodeSvg(barcodeText: string): string {
       <rect x="122" y="5" width="2" height="40" />
       <rect x="128" y="5" width="8" height="40" />
       <rect x="140" y="5" width="2" height="40" />
-      <rect x="146" y="5" width="4" height="40" />
-      <rect x="154" y="5" width="6" height="40" />
+      <rect x="146" y="5" width="6" height="40" />
+      <rect x="156" y="5" width="4" height="40" />
       <rect x="164" y="5" width="2" height="40" />
-      <rect x="172" y="5" width="6" height="40" />
-      <rect x="182" y="5" width="4" height="40" />
+      <rect x="170" y="5" width="6" height="40" />
+      <rect x="180" y="5" width="4" height="40" />
+      <rect x="188" y="5" width="2" height="40" />
     </g>
-    <text x="100" y="55" font-family="monospace" font-size="11" font-weight="bold" text-anchor="middle" fill="#000000">${barcodeText}</text>
+    <text x="100" y="55" font-size="9" text-anchor="middle" font-family="monospace" fill="#000000">${safeText}</text>
   </svg>`
 }
 

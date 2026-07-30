@@ -36,7 +36,7 @@ interface CustomerSaleRow {
   payment_method: string
 }
 
-export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
+export function CustomersPage({ onBack }: { readonly onBack?: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
   const [customers, setCustomers] = useState<CustomerItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
@@ -182,7 +182,7 @@ export function CustomersPage({ onBack }: { onBack?: () => void }): React.JSX.El
   const handleRepayDebt = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     if (!payingDebtCustomer) return
-    const amount = parseFloat(repayAmountDzd)
+    const amount = Number.parseFloat(repayAmountDzd)
     if (!amount || amount <= 0) {
       addToast({ message: t('يرجى كتابة مبلغ تسديد صحيح'), variant: 'error' })
       return

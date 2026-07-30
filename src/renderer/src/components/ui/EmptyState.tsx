@@ -3,12 +3,12 @@ import React from 'react'
 export type EmptyStateVariant = 'cart' | 'search' | 'sales' | 'customers' | 'generic'
 
 interface EmptyStateProps {
-  variant?: EmptyStateVariant
-  title: string
-  description?: string
-  actionLabel?: string
-  onAction?: () => void
-  className?: string
+  readonly variant?: EmptyStateVariant
+  readonly title: string
+  readonly description?: string
+  readonly actionLabel?: string
+  readonly onAction?: () => void
+  readonly className?: string
 }
 
 const illustrations: Record<EmptyStateVariant, React.JSX.Element> = {
@@ -68,6 +68,7 @@ export function EmptyState({
       {description && <p className="text-sm text-[#6B7A8D] dark:text-slate-400 max-w-sm mb-5 leading-relaxed">{description}</p>}
       {actionLabel && onAction && (
         <button
+          type="button"
           onClick={onAction}
           className="px-5 py-2.5 bg-accent hover:bg-accent-hover active:scale-[0.98] text-white font-medium text-sm rounded-xl shadow-hero-glow transition-all duration-150"
         >

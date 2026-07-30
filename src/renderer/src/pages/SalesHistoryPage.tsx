@@ -54,7 +54,47 @@ interface ShiftOption {
   status: string
 }
 
-export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
+function getPaymentMethodStyle(pm: string): string {
+  if (pm === 'cash') return 'bg-success/10 text-success border-success/20'
+  if (pm === 'card') return 'bg-accent/10 text-accent border-accent/20'
+  return 'bg-warning/10 text-warning border-warning/20'
+}
+
+function getPaymentMethodIcon(pm: string): React.JSX.Element {
+  if (pm === 'cash') return <Banknote className="w-3.5 h-3.5" />
+  if (pm === 'card') return <CreditCard className="w-3.5 h-3.5" />
+  return <Layers className="w-3.5 h-3.5" />
+}
+
+function getPaymentMethodName(pm: string, t: (k: string) => string): string {
+  if (pm === 'cash') return t('نقداً')
+  if (pm === 'card') return t('بطاقة CIB')
+  return t('مزدوج')
+}
+
+function getStatusStyle(status: string): string {
+  if (status === 'completed') return 'bg-success-light text-success'
+  if (status === 'voided') return 'bg-danger-light text-danger'
+  return 'bg-warning-light text-warning'
+}
+
+function getStatusLabel(status: string, t: (k: string) => string): string {
+  if (status === 'completed') return t('مكتملة')
+  if (status === 'voided') return t('ملغاة (Voided)')
+  return t('مرتجعة')
+}
+
+function getPaymentMethodLabel(sale: SaleRow, t: (k: string) => string): string {
+  if (sale.payment_method === 'cash') return t('نقداً')
+  if (sale.payment_method === 'card') return t('بطاقة CIB')
+  return `${t('مزدوج')} (${sale.cash_amount_dzd ?? 0} ${t('دج نقد')} + ${sale.card_amount_dzd ?? 0} ${t('دج كارت')})`
+}
+
+interface SalesHistoryPageProps {
+  readonly onBack?: () => void
+}
+
+export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
   const activeShift = useShiftStore((s) => s.activeShift)
   const [sales, setSales] = useState<SaleRow[]>([])
@@ -188,7 +228,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
           unit_price: i.unit_price_dzd,
         })),
         subtotalDzd: sale.subtotal_dzd ?? sale.total_dzd,
-        discountDzd: sale.discount_dzd && sale.discount_dzd > 0 ? sale.discount_dzd : undefined,
+        discountDzd: (sale.discount_dzd ?? 0) > 0 ? (sale.discount_dzd as number) : undefined,
         totalDzd: sale.total_dzd,
         paymentMethod: sale.payment_method,
       },
@@ -228,8 +268,8 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
     return (
       q === '' ||
       s.id.toLowerCase().includes(q) ||
-      (s.cashier_name && s.cashier_name.toLowerCase().includes(q)) ||
-      (s.customer_name && s.customer_name.toLowerCase().includes(q))
+      s.cashier_name?.toLowerCase().includes(q) ||
+      s.customer_name?.toLowerCase().includes(q)
     )
   })
 
@@ -294,24 +334,16 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
       key: 'payment_method',
       header: t('طريقة الدفع'),
       sortable: true,
-      render: (row) => {
-        const isCash = row.payment_method === 'cash'
-        const isCard = row.payment_method === 'card'
-        return (
-          <span
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold border ${
-              isCash
-                ? 'bg-success/10 text-success border-success/20'
-                : isCard
-                  ? 'bg-accent/10 text-accent border-accent/20'
-                  : 'bg-warning/10 text-warning border-warning/20'
-            }`}
+      render: (row) => (
+        <span
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold border ${getPaymentMethodStyle(
+              row.payment_method
+            )}`}
           >
-            {isCash ? <Banknote className="w-3 h-3" /> : isCard ? <CreditCard className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
-            <span>{isCash ? t('نقداً') : isCard ? t('بطاقة CIB') : t('مزدوج')}</span>
-          </span>
-        )
-      },
+            {getPaymentMethodIcon(row.payment_method)}
+            <span>{getPaymentMethodName(row.payment_method, t)}</span>
+        </span>
+      ),
     },
     {
       key: 'total_dzd',
@@ -322,8 +354,8 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
           <span className={`currency font-black text-sm block ${row.status === 'voided' ? 'line-through text-text-tertiary' : 'text-accent'}`}>
             {formatCurrency(row.total_dzd)}
           </span>
-          {row.discount_dzd && row.discount_dzd > 0 ? (
-            <span className="text-[10px] text-danger font-bold block">{t('الخصم (دج):')} {formatCurrency(row.discount_dzd)}</span>
+          {(row.discount_dzd ?? 0) > 0 ? (
+            <span className="text-[10px] text-danger font-bold block">{t('الخصم (دج):')} {formatCurrency(row.discount_dzd as number)}</span>
           ) : null}
         </div>
       ),
@@ -334,15 +366,11 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
       sortable: true,
       render: (row) => (
         <span
-          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
-            row.status === 'completed'
-              ? 'bg-success-light text-success'
-              : row.status === 'voided'
-                ? 'bg-danger-light text-danger'
-                : 'bg-warning-light text-warning'
-          }`}
+          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${getStatusStyle(
+            row.status
+          )}`}
         >
-          {row.status === 'completed' ? t('مكتملة') : row.status === 'voided' ? t('ملغاة (Voided)') : t('مرتجعة')}
+          {getStatusLabel(row.status, t)}
         </span>
       ),
     },
@@ -539,11 +567,7 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
               <div>
                 <p className="font-bold text-text-tertiary">{t('طريقة الدفع:')}</p>
                 <p className="font-bold text-accent mt-0.5">
-                  {selectedSale.payment_method === 'cash'
-                    ? t('نقداً')
-                    : selectedSale.payment_method === 'card'
-                      ? t('بطاقة CIB')
-                      : `${t('مزدوج')} (${selectedSale.cash_amount_dzd ?? 0} ${t('دج نقد')} + ${selectedSale.card_amount_dzd ?? 0} ${t('دج كارت')})`}
+                  {getPaymentMethodLabel(selectedSale, t)}
                 </p>
               </div>
             </div>
@@ -565,8 +589,8 @@ export function SalesHistoryPage({ onBack }: { onBack?: () => void }): React.JSX
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                  {saleItems.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/50">
+                  {saleItems.map((item) => (
+                    <tr key={item.variant_id || item.product_name} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/50">
                       <td className="p-3 font-bold text-text-primary dark:text-slate-100">
                         {item.product_name}
                         {(item.size || item.color) && (

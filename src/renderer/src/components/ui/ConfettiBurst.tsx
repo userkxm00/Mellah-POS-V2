@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 
 interface ConfettiBurstProps {
-  onComplete?: () => void
+  readonly onComplete?: () => void
 }
 
 interface Particle {
@@ -17,6 +17,12 @@ interface Particle {
 }
 
 const COLORS = ['#0A84FF', '#30D158', '#FF9F0A', '#BF5AF2', '#FF453A', '#64D2FF', '#FFD60A']
+
+function cryptoRandomFloat(): number {
+  const arr = new Uint32Array(1)
+  window.crypto.getRandomValues(arr)
+  return arr[0] / (0xffffffff + 1)
+}
 
 export function ConfettiBurst({ onComplete }: ConfettiBurstProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -36,14 +42,14 @@ export function ConfettiBurst({ onComplete }: ConfettiBurstProps): React.JSX.Ele
 
     for (let i = 0; i < particleCount; i++) {
       particles.push({
-        x: canvas.width / 2 + (Math.random() * 200 - 100),
-        y: canvas.height / 2 - 50 + (Math.random() * 100 - 50),
-        vx: (Math.random() - 0.5) * 14,
-        vy: (Math.random() - 0.8) * 16,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        radius: Math.random() * 6 + 3,
-        rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.2,
+        x: canvas.width / 2 + (cryptoRandomFloat() * 200 - 100),
+        y: canvas.height / 2 - 50 + (cryptoRandomFloat() * 100 - 50),
+        vx: (cryptoRandomFloat() - 0.5) * 14,
+        vy: (cryptoRandomFloat() - 0.8) * 16,
+        color: COLORS[Math.floor(cryptoRandomFloat() * COLORS.length)],
+        radius: cryptoRandomFloat() * 6 + 3,
+        rotation: cryptoRandomFloat() * Math.PI * 2,
+        rotationSpeed: (cryptoRandomFloat() - 0.5) * 0.2,
         alpha: 1,
       })
     }

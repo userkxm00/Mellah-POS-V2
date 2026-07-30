@@ -10,9 +10,9 @@ interface CategoryRow {
 }
 
 interface CategoriesModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onCategoryChanged: () => void
+  readonly isOpen: boolean
+  readonly onClose: () => void
+  readonly onCategoryChanged: () => void
 }
 
 export function CategoriesModal({
@@ -161,6 +161,7 @@ export function CategoriesModal({
                     <span className="font-semibold text-text-primary">{c.name}</span>
                     <div className="flex items-center gap-1">
                       <button
+                        type="button"
                         onClick={() => {
                           setEditingId(c.id)
                           setEditingName(c.name)
@@ -170,6 +171,7 @@ export function CategoriesModal({
                         ✏️ تعديل
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleDelete(c.id)}
                         className="p-1 rounded text-text-tertiary hover:text-danger text-xs"
                       >

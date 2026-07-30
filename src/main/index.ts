@@ -1,6 +1,6 @@
-import { app, shell, BrowserWindow, ipcMain, nativeImage, Menu } from 'electron'
-import path from 'path'
-import fs from 'fs'
+import { app, shell, BrowserWindow, ipcMain, nativeImage, Menu, safeStorage } from 'electron'
+import path from 'node:path'
+import fs from 'node:fs'
 import bcrypt from 'bcryptjs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { initDatabase, closeDatabase, whenDatabaseReady, withTransaction } from './database'
@@ -397,6 +397,32 @@ function registerIpcHandlers(): void {
     }
   })
 
+  // SafeStorage IPC Handlers for Sensitive Credential Encryption
+  ipcMain.handle('safe-storage:is-available', () => {
+    return safeStorage.isEncryptionAvailable()
+  })
+
+  ipcMain.handle('safe-storage:encrypt', (_event, plaintext: string) => {
+    if (!plaintext) return ''
+    if (safeStorage.isEncryptionAvailable()) {
+      return safeStorage.encryptString(plaintext).toString('base64')
+    }
+    return plaintext
+  })
+
+  ipcMain.handle('safe-storage:decrypt', (_event, ciphertext: string) => {
+    if (!ciphertext) return ''
+    if (safeStorage.isEncryptionAvailable()) {
+      try {
+        const buffer = Buffer.from(ciphertext, 'base64')
+        return safeStorage.decryptString(buffer)
+      } catch {
+        return ciphertext
+      }
+    }
+    return ciphertext
+  })
+
   ipcMain.handle('backup:get-dir', () => {
     return getActiveBackupDir()
   })
@@ -404,10 +430,15 @@ function registerIpcHandlers(): void {
   ipcMain.handle('backup:set-dir', async (_event, customDir: string | null) => {
     try {
       if (customDir) {
+        const targetDir = path.resolve(path.normalize(customDir))
         // Validate the directory exists or can be created
-        ensureBackupDir(customDir)
-        // Test write access
-        const testFile = path.join(customDir, '.mellah-write-test')
+        ensureBackupDir(targetDir)
+        // Resolve symlinks with fs.realpathSync before boundary check
+        const realTargetDir = fs.existsSync(targetDir) ? fs.realpathSync(targetDir) : targetDir
+        const testFile = path.resolve(realTargetDir, '.mellah-write-test')
+        if (!testFile.startsWith(realTargetDir)) {
+          throw new Error('Invalid path traversal detected')
+        }
         fs.writeFileSync(testFile, 'test', 'utf-8')
         fs.unlinkSync(testFile)
       }

@@ -10,9 +10,9 @@ export interface CommandItem {
 }
 
 interface CommandPaletteProps {
-  isOpen: boolean
-  onClose: () => void
-  onNavigate?: (path: string) => void
+  readonly isOpen: boolean
+  readonly onClose: () => void
+  readonly onNavigate?: (path: string) => void
 }
 
 export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPaletteProps): React.JSX.Element | null {
@@ -220,11 +220,12 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
             filteredItems.map((item, idx) => {
               const isSelected = idx === selectedIndex
               return (
-                <div
+                <button
+                  type="button"
                   key={item.id}
                   onClick={item.action}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl cursor-pointer transition-all duration-150 ${
+                  className={`w-full text-right flex items-center gap-3.5 px-4 py-3 rounded-2xl cursor-pointer transition-all duration-150 ${
                     isSelected
                       ? 'bg-accent/10 dark:bg-accent/20 border border-accent/30 text-accent font-semibold shadow-layered-sm'
                       : 'hover:bg-gray-100/80 dark:hover:bg-slate-800/60 text-[#1C2B3A] dark:text-slate-200'
@@ -244,7 +245,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
                       </p>
                     )}
                   </div>
-                </div>
+                </button>
               )
             })
           )}

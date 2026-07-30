@@ -7,8 +7,8 @@ const PRESET_SIZES = ['S', 'M', 'L', 'XL', '2XL', '38', '40', '42', '44']
 const PRESET_COLORS = ['أسود', 'أبيض', 'أزرق', 'أحمر', 'رمادي', 'أخضر', 'كحلي']
 
 interface VariantMatrixBuilderProps {
-  basePrice: number
-  onChange: (variants: VariantInput[]) => void
+  readonly basePrice: number
+  readonly onChange: (variants: VariantInput[]) => void
 }
 
 interface MatrixRow extends VariantInput {
@@ -25,10 +25,12 @@ export function VariantMatrixBuilder({
   const [customColorInput, setCustomColorInput] = useState<string>('')
   const [matrixRows, setMatrixRows] = useState<MatrixRow[]>([])
 
-  // Helper to generate a 12-digit barcode: 690 + random 9 digits
+  // Helper to generate a 12-digit barcode: 690 + crypto random 9 digits
   const generateBarcode = (): string => {
-    const randomDigits = Math.floor(100000000 + Math.random() * 900000000).toString()
-    return `690${randomDigits}`
+    const array = new Uint32Array(1)
+    window.crypto.getRandomValues(array)
+    const randomVal = (array[0] % 900000000) + 100000000
+    return `690${randomVal}`
   }
 
   // Regenerate matrix when selected sizes or colors change
@@ -169,7 +171,7 @@ export function VariantMatrixBuilder({
             updateRowField(
               row.key,
               'price_dzd',
-              e.target.value ? parseFloat(e.target.value) : null
+              e.target.value ? Number.parseFloat(e.target.value) : null
             )
           }
           className="w-32 px-2.5 py-1.5 rounded-lg border border-border text-xs bg-white focus:outline-none focus:ring-1 focus:ring-accent"
@@ -188,7 +190,7 @@ export function VariantMatrixBuilder({
             updateRowField(
               row.key,
               'initial_stock',
-              parseInt(e.target.value) || 0
+              Number.parseInt(e.target.value, 10) || 0
             )
           }
           className="w-24 px-2.5 py-1.5 rounded-lg border border-border text-xs font-bold text-accent bg-white focus:outline-none focus:ring-1 focus:ring-accent"

@@ -3,8 +3,8 @@
  * Connects directly to Linear API to sync issues, statuses, and roadmap items.
  */
 
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 
 // Read .env manually to get LINEAR_API_KEY
 function getApiKey() {

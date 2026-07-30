@@ -115,7 +115,7 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
 
     set({ isLoading: true, error: null })
     try {
-      // 1. Calculate actual physical cash collected from sales during this shift
+      // Execute shift close calculation queries
       const salesRows = await window.electron.db.query<{ total_cash_sales: number | null }>(
         `SELECT SUM(
            CASE 
@@ -131,7 +131,6 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
 
       const cashSalesTotal = salesRows[0]?.total_cash_sales ?? 0
 
-      // 1b. Calculate cash debt repayments collected from customers during this shift
       const repaymentRows = await window.electron.db.query<{ total_repayments: number | null }>(
         `SELECT SUM(amount_dzd) as total_repayments 
          FROM customer_payments 
@@ -140,21 +139,19 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
       ).catch(() => [{ total_repayments: 0 }])
 
       const cashRepaymentsTotal = repaymentRows[0]?.total_repayments ?? 0
-
-      // 2. Expected cash = Opening cash + Cash Sales + Cash Debt Repayments
       const expectedCash = currentShift.opening_cash_dzd + cashSalesTotal + cashRepaymentsTotal
-
-      // 3. Difference = Closing cash - Expected cash
       const difference = closingCashDzd - expectedCash
       const now = new Date().toISOString()
 
-      // 4. Update shift in DB
-      await window.electron.db.execute(
-        `UPDATE shifts 
-         SET expected_cash_dzd = ?, closing_cash_dzd = ?, difference_dzd = ?, status = 'closed', closed_at = ? 
-         WHERE id = ?`,
-        [expectedCash, closingCashDzd, difference, now, currentShift.id]
-      )
+      // Atomic Update in DB transaction
+      await window.electron.db.transaction([
+        {
+          sql: `UPDATE shifts 
+                SET expected_cash_dzd = ?, closing_cash_dzd = ?, difference_dzd = ?, status = 'closed', closed_at = ? 
+                WHERE id = ?`,
+          params: [expectedCash, closingCashDzd, difference, now, currentShift.id],
+        },
+      ])
 
       const closedShift: Shift = {
         ...currentShift,

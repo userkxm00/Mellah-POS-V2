@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { ArrowRight, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode, FolderOpen, RefreshCw, HardDrive, Moon, Sun, Volume2, VolumeX } from 'lucide-react'
+import { ArrowRight, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode, FolderOpen, RefreshCw, HardDrive, Moon, Sun, Volume2, VolumeX, Send, Bell } from 'lucide-react'
 import { Card, Input, Modal, Button } from '@/components/ui'
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { exportDatabaseBackup, importDatabaseBackup } from '@/services/backupService'
@@ -9,13 +9,14 @@ import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
 import { useThemeStore } from '@/stores/themeStore'
 import { soundService } from '@/services/soundService'
 import { printThermalReceipt, buildReceiptHtml, generateBarcodeSvg, type ReceiptLanguage, RECEIPT_TRANSLATIONS } from '@/services/receiptService'
+import { sendTestTelegramNotification } from '@/services/telegramService'
 
 export interface PrinterInfo {
   name: string
   isDefault: boolean
 }
 
-export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Element {
+export function SettingsPage({ onBack }: { readonly onBack: () => void }): React.JSX.Element {
   const currentLang = useLanguageStore((s) => s.language)
   const setLanguageStore = useLanguageStore((s) => s.setLanguage)
   const t = useLanguageStore((s) => s.t)
@@ -72,6 +73,14 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(null)
   const [isChangingDir, setIsChangingDir] = useState<boolean>(false)
 
+  // Telegram Settings State
+  const [telegramBotToken, setTelegramBotToken] = useState<string>('')
+  const [telegramChatIds, setTelegramChatIds] = useState<string>('')
+  const [telegramNotifyAppLaunch, setTelegramNotifyAppLaunch] = useState<boolean>(true)
+  const [telegramNotifySale, setTelegramNotifySale] = useState<boolean>(true)
+  const [telegramNotifyShift, setTelegramNotifyShift] = useState<boolean>(true)
+  const [isTestingTelegram, setIsTestingTelegram] = useState<boolean>(false)
+
   // Fetch printers and store settings
   const loadSettings = useCallback(async () => {
     try {
@@ -91,8 +100,13 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
         receipt_footer_text: string
         default_language: string
         session_timeout_minutes: number | null
+        telegram_bot_token: string | null
+        telegram_chat_ids: string | null
+        telegram_notify_app_launch: number | null
+        telegram_notify_sale: number | null
+        telegram_notify_shift: number | null
       }>(
-        'SELECT store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes FROM store_settings WHERE branch_id = ?',
+        'SELECT store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes, telegram_bot_token, telegram_chat_ids, telegram_notify_app_launch, telegram_notify_sale, telegram_notify_shift FROM store_settings WHERE branch_id = ?',
         [DEFAULT_BRANCH_ID]
       )
 
@@ -110,6 +124,20 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
         if (rows[0].default_language) {
           setLanguageStore(rows[0].default_language as Language)
         }
+
+        let tokenVal = rows[0].telegram_bot_token ?? localStorage.getItem('mellah_telegram_bot_token') ?? ''
+        if (tokenVal && window.electron?.safeStorage?.decrypt) {
+          try {
+            tokenVal = await window.electron.safeStorage.decrypt(tokenVal)
+          } catch {
+            // fallback
+          }
+        }
+        setTelegramBotToken(tokenVal)
+        setTelegramChatIds(rows[0].telegram_chat_ids ?? localStorage.getItem('mellah_telegram_chat_ids') ?? '')
+        setTelegramNotifyAppLaunch(rows[0].telegram_notify_app_launch === 1)
+        setTelegramNotifySale(rows[0].telegram_notify_sale === 1)
+        setTelegramNotifyShift(rows[0].telegram_notify_shift === 1)
       }
     } catch (err) {// eslint-disable-next-line no-console
       console.error("[SettingsPage]", err); // Default fallback settings
@@ -144,9 +172,22 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
     setIsSaving(true)
     try {
       const now = new Date().toISOString()
+      const rawToken = telegramBotToken.trim()
+      let storedToken = rawToken
+      if (rawToken && window.electron?.safeStorage?.encrypt) {
+        try {
+          storedToken = await window.electron.safeStorage.encrypt(rawToken)
+        } catch {
+          // fallback
+        }
+      }
+
       await window.electron.db.execute(
-        `INSERT INTO store_settings (branch_id, store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO store_settings (
+           branch_id, store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes,
+           telegram_bot_token, telegram_chat_ids, telegram_notify_app_launch, telegram_notify_sale, telegram_notify_shift, updated_at
+         )
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(branch_id) DO UPDATE SET
            store_name=excluded.store_name,
            store_address=excluded.store_address,
@@ -154,8 +195,27 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
            receipt_footer_text=excluded.receipt_footer_text,
            default_language=excluded.default_language,
            session_timeout_minutes=excluded.session_timeout_minutes,
+           telegram_bot_token=excluded.telegram_bot_token,
+           telegram_chat_ids=excluded.telegram_chat_ids,
+           telegram_notify_app_launch=excluded.telegram_notify_app_launch,
+           telegram_notify_sale=excluded.telegram_notify_sale,
+           telegram_notify_shift=excluded.telegram_notify_shift,
            updated_at=excluded.updated_at`,
-        [DEFAULT_BRANCH_ID, storeName.trim(), storeAddress.trim() || null, storePhone.trim() || null, footerText.trim(), currentLang, sessionTimeout, now]
+        [
+          DEFAULT_BRANCH_ID,
+          storeName.trim(),
+          storeAddress.trim() || null,
+          storePhone.trim() || null,
+          footerText.trim(),
+          currentLang,
+          sessionTimeout,
+          storedToken || null,
+          telegramChatIds.trim() || null,
+          telegramNotifyAppLaunch ? 1 : 0,
+          telegramNotifySale ? 1 : 0,
+          telegramNotifyShift ? 1 : 0,
+          now
+        ]
       )
 
       localStorage.setItem('mellah_printer_name', selectedPrinter)
@@ -163,10 +223,16 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
       localStorage.setItem('mellah_receipt_language', receiptLanguage)
       localStorage.setItem('mellah_auto_print', String(autoPrint))
 
+      localStorage.setItem('mellah_telegram_bot_token', storedToken)
+      localStorage.setItem('mellah_telegram_chat_ids', telegramChatIds.trim())
+      localStorage.setItem('mellah_telegram_notify_app_launch', String(telegramNotifyAppLaunch))
+      localStorage.setItem('mellah_telegram_notify_sale', String(telegramNotifySale))
+      localStorage.setItem('mellah_telegram_notify_shift', String(telegramNotifyShift))
+
       // Refresh store settings in Zustand store
       useStoreSettingsStore.getState().loadSettings()
 
-      addToast({ message: t('تم حفظ إعدادات المتجر وطابعة الفواتير واللغة بنجاح! ✅'), variant: 'success' })
+      addToast({ message: t('تم حفظ إعدادات المتجر وإشعارات تلغرام بنجاح! ✅'), variant: 'success' })
 
       if (currentLang !== initialLang) {
         setIsRestartModalOpen(true)
@@ -200,7 +266,26 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
       )
       addToast({ message: t('تم إرسال أمر الطباعة التجريبية! 🖨️'), variant: 'success' })
     } catch (err) {// eslint-disable-next-line no-console
-      console.error("[SettingsPage]", err); addToast({ message: t('فشل إرسال الفاتورة التجريبية للطابعة'), variant: 'error' })
+      console.error("[SettingsPage]", err); addToast({ message: t('فشل طباعة التذكرة التجريبية'), variant: 'error' })
+    }
+  }
+
+  const handleTestTelegram = async (): Promise<void> => {
+    setIsTestingTelegram(true)
+    try {
+      const res = await sendTestTelegramNotification(telegramBotToken, telegramChatIds)
+      if (res.success) {
+        addToast({
+          message: `${t('تم إرسال الرسالة التجريبية بنجاح إلى')} ${res.count} ${t('محادثة في تلغرام! 📱✅')}`,
+          variant: 'success',
+        })
+      } else {
+        addToast({ message: res.error || t('فشل إرسال رسالة تجربة تلغرام'), variant: 'error' })
+      }
+    } catch (err) {
+      addToast({ message: (err as Error).message, variant: 'error' })
+    } finally {
+      setIsTestingTelegram(false)
     }
   }
 
@@ -220,15 +305,17 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
     const file = e.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const content = event.target?.result as string
-      if (content) {
-        setPendingBackupContent(content)
-        setIsRestoreModalOpen(true)
-      }
-    }
-    reader.readAsText(file)
+    file
+      .text()
+      .then((content) => {
+        if (content) {
+          setPendingBackupContent(content)
+          setIsRestoreModalOpen(true)
+        }
+      })
+      .catch(() => {
+        addToast({ message: t('فشل قراءة ملف النسخة الاحتياطية'), variant: 'error' })
+      })
   }
 
   const handleConfirmRestore = async (): Promise<void> => {
@@ -247,11 +334,12 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
     }
   }
 
-  const [activeTab, setActiveTab] = useState<'store' | 'printer' | 'theme' | 'backup' | 'language'>('store')
+  const [activeTab, setActiveTab] = useState<'store' | 'printer' | 'theme' | 'telegram' | 'backup' | 'language'>('store')
 
   const tabs = [
     { id: 'store', label: t('بيانات المتجر'), icon: <Store className="w-4 h-4" /> },
     { id: 'printer', label: t('طابعة الفواتير'), icon: <Printer className="w-4 h-4" /> },
+    { id: 'telegram', label: t('إشعارات تلغرام'), icon: <Send className="w-4 h-4" /> },
     { id: 'theme', label: t('المظهر والصوت'), icon: <Sun className="w-4 h-4" /> },
     { id: 'backup', label: t('النسخ الاحتياطي'), icon: <Database className="w-4 h-4" /> },
     { id: 'language', label: t('اللغة والأمان'), icon: <Globe className="w-4 h-4" /> },
@@ -396,12 +484,111 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                   min={1}
                   max={60}
                   value={sessionTimeout}
-                  onChange={(e) => setSessionTimeout(parseInt(e.target.value) || 5)}
+                  onChange={(e) => setSessionTimeout(Number.parseInt(e.target.value, 10) || 5)}
                   className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </div>
             </div>
           </Card>
+          )}
+
+          {/* Telegram Notifications Settings Card */}
+          {activeTab === 'telegram' && (
+            <Card className="p-6 space-y-5 border border-gray-200/80 dark:border-slate-800 animate-scale-in">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
+                <h2 className="text-sm font-black text-text-primary dark:text-slate-100 flex items-center gap-2">
+                  <Send className="w-4 h-4 text-sky-500" />
+                  <span>{t('إعدادات بوت وإشعارات تلغرام الذكية (Telegram Bot)')}</span>
+                </h2>
+                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                  Telegram Instant Alerts
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Input
+                    label={t('توكن البوت (Bot Token)')}
+                    type="password"
+                    placeholder="123456789:ABCdefGHIjklMNOpqrSTUvwxYZ..."
+                    value={telegramBotToken}
+                    onChange={(e) => setTelegramBotToken(e.target.value)}
+                  />
+                  <p className="text-[11px] text-text-secondary mt-1">
+                    {t('احصل على التوكن مجاناً عبر البحث عن BotFather في تلغرام وإجراء أمر /newbot')}
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-extrabold text-[#1C2B3A] dark:text-slate-200 flex items-center justify-between">
+                    <span>{t('معرفات المحادثات (Chat IDs) — أكثر من ID مدعوم')}</span>
+                    <span className="text-[10px] text-text-secondary">فصل بين المعرفات بفواصل أو أسطر</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="123456789, 987654321, -100123456789"
+                    value={telegramChatIds}
+                    onChange={(e) => setTelegramChatIds(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-2xl text-xs font-mono font-medium bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+                  />
+                  <p className="text-[11px] text-text-secondary">
+                    {t('يمكنك إضافة ID حسابك الشخصي أو ID مجموعة المدراء ليصل التنبيه للجميع فوراً.')}
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-gray-100 dark:border-slate-800 space-y-3">
+                  <h3 className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200 flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5 text-accent" />
+                    <span>{t('أنواع الإشعارات المراد استقبالها:')}</span>
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <label className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-slate-800/60 border border-gray-200/80 dark:border-slate-700/80 cursor-pointer hover:border-accent transition-all">
+                      <input
+                        type="checkbox"
+                        checked={telegramNotifyAppLaunch}
+                        onChange={(e) => setTelegramNotifyAppLaunch(e.target.checked)}
+                        className="w-4 h-4 rounded text-accent focus:ring-accent"
+                      />
+                      <span className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200">🚀 {t('فتح وتنسيق التطبيق')}</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-slate-800/60 border border-gray-200/80 dark:border-slate-700/80 cursor-pointer hover:border-accent transition-all">
+                      <input
+                        type="checkbox"
+                        checked={telegramNotifySale}
+                        onChange={(e) => setTelegramNotifySale(e.target.checked)}
+                        className="w-4 h-4 rounded text-accent focus:ring-accent"
+                      />
+                      <span className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200">💰 {t('فواتير المبيعات + الصور')}</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-slate-800/60 border border-gray-200/80 dark:border-slate-700/80 cursor-pointer hover:border-accent transition-all">
+                      <input
+                        type="checkbox"
+                        checked={telegramNotifyShift}
+                        onChange={(e) => setTelegramNotifyShift(e.target.checked)}
+                        className="w-4 h-4 rounded text-accent focus:ring-accent"
+                      />
+                      <span className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200">🏪 {t('بداية الورديات والصندوق')}</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="pt-3 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleTestTelegram}
+                    loading={isTestingTelegram}
+                    className="flex items-center gap-2 border-sky-200 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>{t('تجربة الإرسال الفوري (Test Telegram)')}</span>
+                  </Button>
+                </div>
+              </div>
+            </Card>
           )}
 
           {/* Appearance & Sound Settings Card */}
@@ -449,7 +636,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
 
               {/* Sound Controls */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200 flex items-center justify-between">
+                <div className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <Volume2 className="w-3.5 h-3.5 text-accent" />
                     <span>أصوات الكاشير (Web Audio)</span>
@@ -461,7 +648,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                   >
                     🔊 تجربة الصوت
                   </button>
-                </label>
+                </div>
                 <div className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-slate-800/60 rounded-2xl border border-gray-200/80 dark:border-slate-700/80">
                   <button
                     type="button"
@@ -478,13 +665,15 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
 
                   {soundEnabled && (
                     <div className="flex-1 flex items-center gap-2 pr-1">
+                      <label htmlFor="sound-volume-slider" className="sr-only">مستوى الصوت</label>
                       <input
+                        id="sound-volume-slider"
                         type="range"
                         min="0.05"
                         max="1"
                         step="0.05"
                         value={soundVolume}
-                        onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
+                        onChange={(e) => setSoundVolume(Number.parseFloat(e.target.value))}
                         className="flex-1 accent-accent cursor-pointer h-1.5"
                       />
                       <span className="text-[10px] font-mono font-bold text-[#6B7A8D] dark:text-slate-400">
@@ -507,8 +696,9 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
             </h2>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-text-primary dark:text-slate-200">طابعة الفواتير المتصلة بالكمبيوتر</label>
+              <label htmlFor="printer-select" className="text-xs font-bold text-text-primary dark:text-slate-200">طابعة الفواتير المتصلة بالكمبيوتر</label>
               <select
+                id="printer-select"
                 value={selectedPrinter}
                 onChange={(e) => setSelectedPrinter(e.target.value)}
                 className="w-full px-4 py-3 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
@@ -524,8 +714,9 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-text-primary dark:text-slate-200">عرض ورق الفاتورة الحرارية</label>
+                <label htmlFor="paper-width-select" className="text-xs font-bold text-text-primary dark:text-slate-200">عرض ورق الفاتورة الحرارية</label>
                 <select
+                  id="paper-width-select"
                   value={paperWidth}
                   onChange={(e) => setPaperWidth(e.target.value as '80mm' | '58mm')}
                   className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
@@ -536,8 +727,9 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-text-primary dark:text-slate-200">لغة طباعة الفاتورة (Receipt Language)</label>
+                <label htmlFor="receipt-lang-select" className="text-xs font-bold text-text-primary dark:text-slate-200">لغة طباعة الفاتورة (Receipt Language)</label>
                 <select
+                  id="receipt-lang-select"
                   value={receiptLanguage}
                   onChange={(e) => setReceiptLanguage(e.target.value as ReceiptLanguage)}
                   className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
@@ -913,6 +1105,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                 } else {
                   const pWin = window.open('', '_blank')
                   if (pWin) {
+                    pWin.document.open()
                     pWin.document.write(html)
                     pWin.document.close()
                   }
@@ -967,7 +1160,37 @@ export function SettingsPage({ onBack }: { onBack: () => void }): React.JSX.Elem
                 <span className="text-[9px] font-bold text-gray-600 block">الحجم: L | اللون: أزرق</span>
               </div>
 
-              <div className="w-full my-1" dangerouslySetInnerHTML={{ __html: generateBarcodeSvg('200010042890') }} />
+              <div className="w-full my-1 flex justify-center">
+                <svg viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" className="w-full h-10">
+                  <rect width="200" height="60" fill="#ffffff" />
+                  <g fill="#000000">
+                    <rect x="10" y="5" width="4" height="40" />
+                    <rect x="18" y="5" width="2" height="40" />
+                    <rect x="24" y="5" width="6" height="40" />
+                    <rect x="34" y="5" width="2" height="40" />
+                    <rect x="40" y="5" width="4" height="40" />
+                    <rect x="48" y="5" width="8" height="40" />
+                    <rect x="60" y="5" width="2" height="40" />
+                    <rect x="66" y="5" width="4" height="40" />
+                    <rect x="74" y="5" width="6" height="40" />
+                    <rect x="84" y="5" width="2" height="40" />
+                    <rect x="90" y="5" width="4" height="40" />
+                    <rect x="98" y="5" width="2" height="40" />
+                    <rect x="104" y="5" width="6" height="40" />
+                    <rect x="114" y="5" width="4" height="40" />
+                    <rect x="122" y="5" width="2" height="40" />
+                    <rect x="128" y="5" width="8" height="40" />
+                    <rect x="140" y="5" width="2" height="40" />
+                    <rect x="146" y="5" width="6" height="40" />
+                    <rect x="156" y="5" width="4" height="40" />
+                    <rect x="164" y="5" width="2" height="40" />
+                    <rect x="170" y="5" width="6" height="40" />
+                    <rect x="180" y="5" width="4" height="40" />
+                    <rect x="188" y="5" width="2" height="40" />
+                  </g>
+                  <text x="100" y="55" fontSize="9" textAnchor="middle" fontFamily="monospace" fill="#000000">200010042890</text>
+                </svg>
+              </div>
 
               <div className="w-full border-t border-gray-200 pt-1 flex justify-between items-center px-1">
                 <span className="text-[9px] font-mono text-gray-500">SKU-7890</span>

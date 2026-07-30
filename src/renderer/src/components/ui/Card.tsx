@@ -3,11 +3,11 @@ import React from 'react'
 type CardPadding = 'compact' | 'default' | 'spacious'
 
 interface CardProps {
-  children: React.ReactNode
-  className?: string
-  padding?: CardPadding
-  glass?: boolean
-  onClick?: () => void
+  readonly children: React.ReactNode
+  readonly className?: string
+  readonly padding?: CardPadding
+  readonly glass?: boolean
+  readonly onClick?: () => void
 }
 
 const paddingStyles: Record<CardPadding, string> = {

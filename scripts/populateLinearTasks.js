@@ -1,4 +1,4 @@
-import { getTeamInfo, createIssue, linearQuery } from './linearSync.js'
+import { getTeamInfo, createIssue } from './linearSync.js'
 
 async function populateRoadmap() {
   console.log('🔄 Syncing Mellah POS tasks to Linear.app...')

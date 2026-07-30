@@ -42,8 +42,14 @@ interface CategoryOption {
 }
 
 interface ProductDetailPageProps {
-  productId: string
-  onBack: () => void
+  readonly productId: string
+  readonly onBack: () => void
+}
+
+function getStockBadgeStyle(stock: number): string {
+  if (stock <= 5) return 'bg-danger-light text-danger'
+  if (stock <= 10) return 'bg-warning-light text-warning'
+  return 'bg-success-light text-success'
 }
 
 export function ProductDetailPage({
@@ -65,6 +71,7 @@ export function ProductDetailPage({
   const [editPrice, setEditPrice] = useState<string>('')
   const [editCost, setEditCost] = useState<string>('')
   const [editCategoryId, setEditCategoryId] = useState<string>('')
+  const [editImageUrl, setEditImageUrl] = useState<string | null>(null)
   const [categories, setCategories] = useState<CategoryOption[]>([])
   const [isSaving, setIsSaving] = useState<boolean>(false)
 
@@ -162,6 +169,7 @@ export function ProductDetailPage({
     setEditPrice(String(product.price_dzd))
     setEditCost(product.cost_dzd ? String(product.cost_dzd) : '')
     setEditCategoryId(product.category_id ?? '')
+    setEditImageUrl(product.image_url ?? null)
     setIsEditMode(true)
   }
 
@@ -172,12 +180,13 @@ export function ProductDetailPage({
     try {
       const now = new Date().toISOString()
       await window.electron.db.execute(
-        `UPDATE products SET name = ?, description = ?, price_dzd = ?, cost_dzd = ?, category_id = ?, updated_at = ? WHERE id = ?`,
+        `UPDATE products SET name = ?, description = ?, price_dzd = ?, cost_dzd = ?, image_url = ?, category_id = ?, updated_at = ? WHERE id = ?`,
         [
           editName.trim(),
           editDescription.trim() || null,
-          parseFloat(editPrice) || product.price_dzd,
-          editCost ? parseFloat(editCost) : null,
+          Number.parseFloat(editPrice) || product.price_dzd,
+          editCost ? Number.parseFloat(editCost) : null,
+          editImageUrl || null,
           editCategoryId || null,
           now,
           product.id,
@@ -236,7 +245,7 @@ export function ProductDetailPage({
           newSize.trim() || null,
           newColor.trim() || null,
           newBarcode.trim() || null,
-          newVariantPrice ? parseFloat(newVariantPrice) : null,
+          newVariantPrice ? Number.parseFloat(newVariantPrice) : null,
           now,
           now,
         ]
@@ -332,15 +341,9 @@ export function ProductDetailPage({
       header: t('المخزون الحالي (Ledger)'),
       render: (row) => (
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-            row.current_stock <= 0
-              ? 'bg-danger-light text-danger'
-              : row.current_stock <= 5
-                ? 'bg-danger-light text-danger'
-                : row.current_stock <= 10
-                  ? 'bg-warning-light text-warning'
-                  : 'bg-success-light text-success'
-          }`}
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${getStockBadgeStyle(
+            row.current_stock
+          )}`}
         >
           {row.current_stock} {t('وحدة')}
         </span>
@@ -581,11 +584,11 @@ export function ProductDetailPage({
       {/* Stock Movements History Modal */}
       <Modal isOpen={isMovementsOpen} onClose={() => setIsMovementsOpen(false)} title="📦 سجل حركات المخزون" size="lg">
         <div className="max-h-96 overflow-y-auto">
-          {isLoadingMovements ? (
-            <p className="text-xs text-center py-6 text-text-tertiary font-bold">جاري التحميل...</p>
-          ) : stockMovements.length === 0 ? (
+          {isLoadingMovements && <p className="text-xs text-center py-6 text-text-tertiary font-bold">جاري التحميل...</p>}
+          {!isLoadingMovements && stockMovements.length === 0 && (
             <p className="text-xs text-center py-6 text-text-tertiary font-bold">لا توجد حركات مخزون لهذا المنتج بعد.</p>
-          ) : (
+          )}
+          {!isLoadingMovements && stockMovements.length > 0 && (
             <Table columns={movementColumns} data={stockMovements} rowKey={(row) => row.id} />
           )}
         </div>

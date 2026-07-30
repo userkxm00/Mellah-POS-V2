@@ -6,8 +6,8 @@ import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
 
 interface OpenShiftModalProps {
-  isOpen: boolean
-  onClose?: () => void
+  readonly isOpen: boolean
+  readonly onClose?: () => void
 }
 
 export function OpenShiftModal({ isOpen }: OpenShiftModalProps): React.JSX.Element | null {
@@ -19,8 +19,8 @@ export function OpenShiftModal({ isOpen }: OpenShiftModalProps): React.JSX.Eleme
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
-    const cashVal = parseFloat(openingCash)
-    if (isNaN(cashVal) || cashVal < 0) {
+    const cashVal = Number.parseFloat(openingCash)
+    if (Number.isNaN(cashVal) || cashVal < 0) {
       addToast({ message: t('يرجى إدخال مبلغ فتح الصندوق بشكل صحيح'), variant: 'error' })
       return
     }

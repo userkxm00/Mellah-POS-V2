@@ -95,6 +95,12 @@ export interface AppInfoApi {
   getDbSize: () => Promise<number>
 }
 
+export interface SafeStorageApi {
+  isAvailable: () => Promise<boolean>
+  encrypt: (plaintext: string) => Promise<string>
+  decrypt: (ciphertext: string) => Promise<string>
+}
+
 export interface ElectronApi {
   db: DbApi
   openModuleWindow: (moduleName: string) => Promise<void>
@@ -110,6 +116,7 @@ export interface ElectronApi {
   backup: BackupApi
   appInfo: AppInfoApi
   relaunchApp: () => Promise<void>
+  safeStorage: SafeStorageApi
 }
 
 const api: ElectronApi = {
@@ -211,6 +218,17 @@ const api: ElectronApi = {
   },
   relaunchApp: (): Promise<void> => {
     return ipcRenderer.invoke('app:relaunch') as Promise<void>
+  },
+  safeStorage: {
+    isAvailable: (): Promise<boolean> => {
+      return ipcRenderer.invoke('safe-storage:is-available') as Promise<boolean>
+    },
+    encrypt: (plaintext: string): Promise<string> => {
+      return ipcRenderer.invoke('safe-storage:encrypt', plaintext) as Promise<string>
+    },
+    decrypt: (ciphertext: string): Promise<string> => {
+      return ipcRenderer.invoke('safe-storage:decrypt', ciphertext) as Promise<string>
+    },
   },
 }
 

@@ -6,10 +6,10 @@ type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant
-  size?: ButtonSize
-  loading?: boolean
-  children: React.ReactNode
+  readonly variant?: ButtonVariant
+  readonly size?: ButtonSize
+  readonly loading?: boolean
+  readonly children: React.ReactNode
 }
 
 // ----- Style maps -----
@@ -38,6 +38,7 @@ export function Button({
   size = 'md',
   loading = false,
   disabled,
+  type = 'button',
   className = '',
   children,
   ...props
@@ -46,6 +47,7 @@ export function Button({
 
   return (
     <button
+      type={type}
       className={[
         'inline-flex items-center justify-center',
         'transition-all duration-150 ease-smooth select-none',

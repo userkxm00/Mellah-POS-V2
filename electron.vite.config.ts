@@ -1,5 +1,5 @@
-import { resolve } from 'path'
-import fs from 'fs'
+import { resolve } from 'node:path'
+import * as fs from 'node:fs'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 

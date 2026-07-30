@@ -93,6 +93,7 @@ function ToastItem({ toast }: { toast: ToastType }): React.JSX.Element {
       </span>
       <p className="flex-1 text-sm font-semibold text-[#1C2B3A] dark:text-slate-100">{toast.message}</p>
       <button
+        type="button"
         onClick={() => removeToast(toast.id)}
         className="flex-shrink-0 p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 text-text-tertiary dark:text-slate-400 transition-colors"
         aria-label="إغلاق"

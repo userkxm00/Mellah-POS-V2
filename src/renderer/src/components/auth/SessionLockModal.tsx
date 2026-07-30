@@ -5,8 +5,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 
 interface SessionLockModalProps {
-  isOpen: boolean
-  onUnlock: () => void
+  readonly isOpen: boolean
+  readonly onUnlock: () => void
 }
 
 export function SessionLockModal({ isOpen, onUnlock }: SessionLockModalProps): React.JSX.Element | null {
@@ -96,6 +96,7 @@ export function SessionLockModal({ isOpen, onUnlock }: SessionLockModalProps): R
         <div className="grid grid-cols-3 gap-3 max-w-xs mx-auto">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
             <button
+              type="button"
               key={num}
               onClick={() => handleNumClick(num)}
               className="py-3.5 rounded-2xl bg-gray-100 hover:bg-gray-200/80 active:bg-accent active:text-white text-lg font-black text-text-primary transition-all btn-press shadow-ambient-sm"
@@ -104,18 +105,21 @@ export function SessionLockModal({ isOpen, onUnlock }: SessionLockModalProps): R
             </button>
           ))}
           <button
+            type="button"
             onClick={handleDelete}
             className="py-3.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-text-secondary transition-all btn-press"
           >
             مسح
           </button>
           <button
+            type="button"
             onClick={() => handleNumClick('0')}
             className="py-3.5 rounded-2xl bg-gray-100 hover:bg-gray-200 active:bg-accent active:text-white text-lg font-black text-text-primary transition-all btn-press shadow-ambient-sm"
           >
             0
           </button>
           <button
+            type="button"
             onClick={() => handleUnlock()}
             disabled={isVerifying || pin.length < 4}
             className="py-3.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-black shadow-ambient transition-all btn-press disabled:opacity-50"

@@ -1,7 +1,7 @@
 import initSqlJs from 'sql.js'
 import { app } from 'electron'
-import path from 'path'
-import fs from 'fs'
+import path from 'node:path'
+import fs from 'node:fs'
 import { seedInitialData } from './seed'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -193,7 +193,7 @@ async function runMigrations(wrapper: DbWrapper): Promise<void> {
   const migrationFiles = fs
     .readdirSync(migrationsPath)
     .filter((f) => f.endsWith('.sql'))
-    .sort()
+    .sort((a: string, b: string): number => a.localeCompare(b, 'en', { numeric: true }))
 
   const appliedRows = await wrapper.query<{ name: string }>('SELECT name FROM _migrations')
   const applied = new Set(appliedRows.map((row) => row.name))

@@ -8,9 +8,9 @@ import { formatCurrency } from '@/lib/format'
 import { useToastStore } from '@/stores/toastStore'
 
 interface ReturnModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: () => void
+  readonly isOpen: boolean
+  readonly onClose: () => void
+  readonly onSuccess: () => void
 }
 
 export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): React.JSX.Element | null {
@@ -174,7 +174,7 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
             onChange={(e) =>
               handleQuantityChange(
                 row.variant_id,
-                parseInt(e.target.value) || 0,
+                Number.parseInt(e.target.value, 10) || 0,
                 row.max_returnable
               )
             }

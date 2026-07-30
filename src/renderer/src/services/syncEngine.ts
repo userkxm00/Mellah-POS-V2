@@ -229,17 +229,20 @@ export async function pullFromSupabase(): Promise<number> {
   const lastPull = localStorage.getItem('mellah_last_pull_timestamp') ?? '1970-01-01T00:00:00.000Z'
   const now = new Date().toISOString()
 
-  const syncTables = [
+  const ALLOWED_SYNC_SET = new Set([
     'branches',
     'categories',
     'products',
     'product_variants',
     'customers',
     'store_settings',
-  ]
+  ])
 
-  for (const tableName of syncTables) {
+  for (const tableName of Array.from(ALLOWED_SYNC_SET)) {
     try {
+      if (!ALLOWED_SYNC_SET.has(tableName)) {
+        throw new Error(`Unauthorized table name in sync engine: ${tableName}`)
+      }
       const { data, error } = await supabase
         .from(tableName)
         .select('*')

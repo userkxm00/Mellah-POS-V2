@@ -4,11 +4,11 @@ import { addStockMovement } from '@/services/productService'
 import { useToastStore } from '@/stores/toastStore'
 
 interface StockAdjustmentModalProps {
-  isOpen: boolean
-  variantId: string | null
-  variantTitle: string
-  onClose: () => void
-  onSuccess: () => void
+  readonly isOpen: boolean
+  readonly variantId: string | null
+  readonly variantTitle: string
+  readonly onClose: () => void
+  readonly onSuccess: () => void
 }
 
 export function StockAdjustmentModal({
@@ -29,8 +29,8 @@ export function StockAdjustmentModal({
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
-    const qtyNum = parseInt(quantity)
-    if (isNaN(qtyNum) || qtyNum === 0) {
+    const qtyNum = Number.parseInt(quantity, 10)
+    if (Number.isNaN(qtyNum) || qtyNum === 0) {
       addToast({ message: 'يرجى إدخال كمية صحيحة غير صفرية', variant: 'error' })
       return
     }

@@ -6,8 +6,8 @@ import { useToastStore } from '@/stores/toastStore'
 import { formatCurrency } from '@/lib/format'
 
 interface CloseShiftModalProps {
-  isOpen: boolean
-  onClose: () => void
+  readonly isOpen: boolean
+  readonly onClose: () => void
 }
 
 export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): React.JSX.Element | null {
@@ -54,12 +54,12 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): Reac
 
   const openingCash = activeShift.opening_cash_dzd || 0
   const expectedCash = openingCash + cashSalesTotal
-  const closingCashNum = parseFloat(closingCashInput) || 0
+  const closingCashNum = Number.parseFloat(closingCashInput) || 0
   const difference = closingCashNum - expectedCash
 
   const handleConfirmClose = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
-    if (isNaN(closingCashNum) || closingCashNum < 0) {
+    if (Number.isNaN(closingCashNum) || closingCashNum < 0) {
       addToast({ message: 'يرجى إدخال مبلغ العد الفعلي للصندوق بشكل صحيح', variant: 'error' })
       return
     }
