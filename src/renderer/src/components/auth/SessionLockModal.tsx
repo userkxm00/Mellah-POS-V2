@@ -28,8 +28,6 @@ export function SessionLockModal({ isOpen, onUnlock }: SessionLockModalProps): R
       } else if (e.key === 'Backspace') {
         setPin((prev) => prev.slice(0, -1))
         setError(null)
-      } else if (e.key === 'Escape') {
-        onUnlock()
       } else if (e.key === 'Enter') {
         if (pin && pin.length >= 4 && currentUser) {
           setIsVerifying(true)

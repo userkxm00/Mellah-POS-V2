@@ -75,8 +75,15 @@ function ToastItem({ toast }: { readonly toast: ToastType }): React.JSX.Element 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => removeToast(toast.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          removeToast(toast.id)
+        }
+      }}
+      tabIndex={0}
       className={[
-        'relative flex items-center gap-3 px-4 py-3.5 rounded-2xl border shadow-hero-glow overflow-hidden transition-all duration-200 cursor-pointer select-none',
+        'relative flex items-center gap-3 px-4 py-3.5 rounded-2xl border shadow-hero-glow overflow-hidden transition-all duration-200 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-accent',
         'toast-enter',
         'min-w-[320px] max-w-[440px]',
         styles.bg,

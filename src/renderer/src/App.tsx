@@ -28,6 +28,7 @@ import { SessionLockModal } from '@/components/auth/SessionLockModal'
 import { useIdleTimer } from '@/hooks/useIdleTimer'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
 import { useLanguageStore, type Language } from '@/stores/languageStore'
+import { useThemeStore, type ThemeMode } from '@/stores/themeStore'
 
 // In-window routes (fast navigation inside the main window)
 type InWindowRoute = 'launcher' | 'pos' | 'history' | 'returns' | 'customers' | 'labels' | 'maintenance'
@@ -96,12 +97,32 @@ export function App(): React.JSX.Element {
         useLanguageStore.getState().setLanguage(savedLang)
       }
 
-      // Multi-window theme (Dark/Light mode) sync
-      const savedTheme = localStorage.getItem('mellah_pos_theme')
-      if (savedTheme === 'dark') {
-        document.documentElement.classList.add('dark')
+      // Multi-window theme & sound settings sync
+      const savedTheme = (localStorage.getItem('mellah_pos_theme') as ThemeMode) || 'light'
+      if (savedTheme !== useThemeStore.getState().theme) {
+        useThemeStore.getState().setTheme(savedTheme)
       } else {
-        document.documentElement.classList.remove('dark')
+        if (savedTheme === 'dark') {
+          document.documentElement.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+        }
+      }
+
+      const savedSoundEnabled = localStorage.getItem('mellah_pos_sound_enabled')
+      if (savedSoundEnabled !== null) {
+        const isEnabled = savedSoundEnabled === 'true'
+        if (isEnabled !== useThemeStore.getState().soundEnabled) {
+          useThemeStore.getState().setSoundEnabled(isEnabled)
+        }
+      }
+
+      const savedSoundVolume = localStorage.getItem('mellah_pos_sound_volume')
+      if (savedSoundVolume !== null) {
+        const volume = Number.parseFloat(savedSoundVolume)
+        if (!Number.isNaN(volume) && volume !== useThemeStore.getState().soundVolume) {
+          useThemeStore.getState().setSoundVolume(volume)
+        }
       }
     }
 
