@@ -82,8 +82,12 @@ export function SettingsPage({ onBack }: { readonly onBack: () => void }): React
   const [isTestingTelegram, setIsTestingTelegram] = useState<boolean>(false)
 
 async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
-  if (typeof window !== 'undefined' && window.electron?.getPrinters) {
-    return await window.electron.getPrinters()
+  try {
+    if (typeof window !== 'undefined' && window.electron?.getPrinters) {
+      return await window.electron.getPrinters()
+    }
+  } catch {
+    // سكوت — خدمة الطباعة غير متاحة (Windows Print Spooler موقف)
   }
   return []
 }
