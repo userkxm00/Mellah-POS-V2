@@ -25,6 +25,7 @@ import { KeyboardShortcutsModal } from '@/components/ui/KeyboardShortcutsModal'
 import { FirstRunWizardModal } from '@/components/setup/FirstRunWizardModal'
 import { SessionLockModal } from '@/components/auth/SessionLockModal'
 import { useIdleTimer } from '@/hooks/useIdleTimer'
+import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
 
 // In-window routes (fast navigation inside the main window)
 type InWindowRoute = 'launcher' | 'pos' | 'history' | 'returns' | 'customers' | 'labels' | 'maintenance'
@@ -69,6 +70,7 @@ export function App(): React.JSX.Element {
 
   useEffect(() => {
     checkAuthSession()
+    useStoreSettingsStore.getState().loadSettings()
     const stopSyncLoop = startBackgroundSyncLoop()
     const stopAutoBackup = initAutoBackupScheduler()
     return () => {

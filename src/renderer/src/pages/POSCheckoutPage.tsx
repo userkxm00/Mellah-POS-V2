@@ -468,6 +468,8 @@ export function POSCheckoutPage({
   const restoreCart = useHeldCartStore((s) => s.restoreCart)
   const deleteCart = useHeldCartStore((s) => s.deleteCart)
 
+  const storeSettings = useStoreSettingsStore((s) => s.settings)
+
   const [categories, setCategories] = useState<CategoryItem[]>([])
   const [variants, setVariants] = useState<ProductVariantItem[]>([])
   const [customers, setCustomers] = useState<CustomerOption[]>([])
@@ -847,7 +849,7 @@ export function POSCheckoutPage({
           )}
           <AnimatedBrandLogo
             size="sm"
-            subtitle={useStoreSettingsStore.getState().settings.store_name || t('شاشة نقطة البيع (POS)')}
+            subtitle={storeSettings.store_name || t('شاشة نقطة البيع (POS)')}
           />
         </div>
 

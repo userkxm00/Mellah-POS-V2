@@ -97,6 +97,7 @@ interface SalesHistoryPageProps {
 export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
   const activeShift = useShiftStore((s) => s.activeShift)
+  const storeSettings = useStoreSettingsStore((s) => s.settings)
   const [sales, setSales] = useState<SaleRow[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [searchQuery, setSearchQuery] = useState<string>('')
@@ -218,8 +219,8 @@ export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.E
 
     printThermalReceipt(
       {
-        storeName: useStoreSettingsStore.getState().settings.store_name,
-        branchAddress: useStoreSettingsStore.getState().settings.store_address || undefined,
+        storeName: storeSettings.store_name,
+        branchAddress: storeSettings.store_address || undefined,
         receiptId: sale.id,
         date: sale.created_at,
         cashierName: sale.cashier_name,

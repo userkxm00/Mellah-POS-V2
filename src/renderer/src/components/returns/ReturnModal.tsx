@@ -23,6 +23,7 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
 
   const addToast = useToastStore((s) => s.addToast)
+  const storeSettings = useStoreSettingsStore((s) => s.settings)
 
   const handleSearchSale = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
@@ -86,7 +87,7 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
       const paperWidth = (localStorage.getItem('mellah_paper_width') as '80mm' | '58mm') ?? '80mm'
       printThermalReturnReceipt(
         {
-          storeName: useStoreSettingsStore.getState().settings.store_name,
+          storeName: storeSettings.store_name,
           returnId,
           originalSaleId: saleData.sale_id,
           date: new Date().toISOString(),

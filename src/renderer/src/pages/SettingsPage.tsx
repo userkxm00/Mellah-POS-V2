@@ -238,7 +238,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
       addToast({ message: t('تم حفظ إعدادات المتجر وإشعارات تلغرام بنجاح! ✅'), variant: 'success' })
 
       if (currentLang !== initialLang) {
-        setIsRestartModalOpen(true)
+        window.location.reload()
       }
     } catch (err) {// eslint-disable-next-line no-console
       console.error("[SettingsPage]", err); addToast({ message: t('فشل حفظ الإعدادات'), variant: 'error' })
