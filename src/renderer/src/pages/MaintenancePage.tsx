@@ -191,24 +191,30 @@ export function MaintenancePage({ onBack }: { onBack?: () => void }): React.JSX.
     }
   }
 
+  const isSecondaryWindow = typeof window !== 'undefined' && window.location.search.includes('module=')
+
   return (
-    <div className="min-h-screen p-6 max-w-4xl mx-auto space-y-6 pb-12 select-none dark:bg-slate-950">
+    <div className="min-h-screen p-6 md:p-8 w-full max-w-none space-y-6 pb-12 select-none dark:bg-slate-950">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-3.5">
           <button
+            type="button"
             onClick={() => {
               if (onBack) onBack()
+              else window.close()
             }}
-            className="text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 mb-1.5 transition-colors"
+            className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
+            title={isSecondaryWindow ? t('إغلاق النافذة') : t('العودة')}
           >
-            <ArrowRight className="w-3.5 h-3.5" />
-            <span>{t('إغلاق النافذة')}</span>
+            <ArrowRight className="w-4 h-4 transform rtl:rotate-0 ltr:rotate-180" />
           </button>
-          <h1 className="text-2xl font-black text-text-primary">{t('الصيانة والتحديثات')}</h1>
-          <p className="text-sm text-text-tertiary mt-0.5">
-            {t('أدوات الفحص والإصلاح وتحديث النظام')}
-          </p>
+          <div>
+            <h1 className="text-2xl font-black text-text-primary dark:text-slate-100">{t('الصيانة والتحديثات')}</h1>
+            <p className="text-sm text-text-tertiary mt-0.5">
+              {t('أدوات الفحص والإصلاح وتحديث النظام')}
+            </p>
+          </div>
         </div>
 
         <button

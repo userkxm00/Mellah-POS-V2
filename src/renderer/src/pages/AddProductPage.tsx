@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Upload, X, Image as ImageIcon } from 'lucide-react'
+import { Upload, X, Image as ImageIcon, ArrowRight } from 'lucide-react'
 import { Card, Button, Input } from '@/components/ui'
 import { VariantMatrixBuilder } from '@/components/products/VariantMatrixBuilder'
 import { createProductWithVariants, type VariantInput } from '@/services/productService'
@@ -109,18 +109,21 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
 
   const basePriceVal = Number.parseFloat(priceDzd) || 0
 
+  const isSecondaryWindow = typeof window !== 'undefined' && window.location.search.includes('module=')
+
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6 pb-12">
+    <div className="p-6 md:p-8 w-full max-w-none space-y-6 pb-12 select-none">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-3.5">
           <button
             type="button"
             onClick={onBack}
-            className="text-xs font-semibold text-text-secondary hover:text-accent flex items-center gap-1 mb-1"
+            className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
+            title={isSecondaryWindow ? t('إغلاق النافذة') : t('العودة')}
           >
-            ← {t('العودة لقائمة المنتجات')}
+            <ArrowRight className="w-4 h-4 transform rtl:rotate-0 ltr:rotate-180" />
           </button>
-          <h1 className="text-xl font-bold text-text-primary">{t('إضافة منتج جديد وتوليد الخيارات')}</h1>
+          <h1 className="text-xl font-bold text-text-primary dark:text-slate-100">{t('إضافة منتج جديد وتوليد الخيارات')}</h1>
         </div>
 
         <div className="flex gap-3">
