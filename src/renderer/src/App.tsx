@@ -30,24 +30,25 @@ import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
 import { useLanguageStore, type Language } from '@/stores/languageStore'
 import { useThemeStore, type ThemeMode } from '@/stores/themeStore'
 
-// In-window routes (fast navigation inside the main window)
-type InWindowRoute = 'launcher' | 'pos' | 'history' | 'returns' | 'customers' | 'labels' | 'maintenance'
+// In-window routes (Instant 0ms SPA navigation inside the main window)
+type InWindowRoute =
+  | 'launcher'
+  | 'pos'
+  | 'history'
+  | 'returns'
+  | 'customers'
+  | 'suppliers'
+  | 'labels'
+  | 'products'
+  | 'reports'
+  | 'users'
+  | 'branches'
+  | 'settings'
+  | 'audit_logs'
+  | 'maintenance'
 
-// Modules that open in a secondary Electron BrowserWindow (all non-POS modules)
-const SECONDARY_MODULES = new Set([
-  'history',
-  'returns',
-  'customers',
-  'suppliers',
-  'labels',
-  'products',
-  'reports',
-  'users',
-  'branches',
-  'settings',
-  'audit_logs',
-  'maintenance',
-])
+// Modules that open in a secondary Electron BrowserWindow (Empty set by default for Instant 0ms SPA Mode)
+const SECONDARY_MODULES = new Set<string>([])
 
 function getSecondaryModule(): string | null {
   const params = new URLSearchParams(window.location.search)
@@ -337,7 +338,7 @@ export function App(): React.JSX.Element {
     )
   }
 
-  // In-window pages (POS, history, returns, customers, labels)
+  // In-window pages (0ms Instant SPA Navigation)
   return (
     <div className="relative h-screen w-screen overflow-hidden flex flex-col bg-[#F4F5F9] dark:bg-[#0F172A]">
       <main className="flex-1 overflow-auto page-enter">
@@ -346,7 +347,15 @@ export function App(): React.JSX.Element {
           {currentPage === 'history' && <SalesHistoryPage onBack={goHome} />}
           {currentPage === 'returns' && <ReturnsPage onBack={goHome} />}
           {currentPage === 'customers' && <CustomersPage onBack={goHome} />}
+          {currentPage === 'suppliers' && hasRole(['admin', 'manager']) && <SuppliersPage onBack={goHome} />}
           {currentPage === 'labels' && <LabelPrinterPage onBack={goHome} />}
+          {currentPage === 'products' && hasRole(['admin', 'manager']) && <ProductsPage onNavigateToPos={goHome} />}
+          {currentPage === 'reports' && hasRole(['admin', 'manager']) && <ReportsPage onBack={goHome} />}
+          {currentPage === 'users' && hasRole(['admin']) && <UsersPage onBack={goHome} />}
+          {currentPage === 'branches' && hasRole(['admin']) && <BranchesPage onBack={goHome} />}
+          {currentPage === 'settings' && hasRole(['admin']) && <SettingsPage onBack={goHome} />}
+          {currentPage === 'audit_logs' && hasRole(['admin']) && <AuditLogPage onBack={goHome} />}
+          {currentPage === 'maintenance' && hasRole(['admin']) && <MaintenancePage onBack={goHome} />}
         </Suspense>
       </main>
       <FirstRunWizardModal />

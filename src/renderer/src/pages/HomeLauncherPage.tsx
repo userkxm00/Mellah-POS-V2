@@ -78,7 +78,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         icon: <Receipt className="w-8 h-8" />,
         iconBg: 'bg-[#5856D6] text-white',
         roles: ['admin', 'manager', 'cashier'],
-        inWindow: false,
+        inWindow: true,
       },
       {
         id: 'returns',
@@ -87,7 +87,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         icon: <RotateCcw className="w-8 h-8" />,
         iconBg: 'bg-warning text-white',
         roles: ['admin', 'manager', 'cashier'],
-        inWindow: false,
+        inWindow: true,
       },
       {
         id: 'customers',
@@ -96,7 +96,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         icon: <UserPlus className="w-8 h-8" />,
         iconBg: 'bg-[#FF2D55] text-white',
         roles: ['admin', 'manager', 'cashier'],
-        inWindow: false,
+        inWindow: true,
       },
       {
         id: 'labels',
@@ -105,7 +105,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('تيكيتات الباركود 40mm×30mm'),
         iconBg: 'bg-[#FF9500] text-white',
         roles: ['admin', 'manager', 'cashier'],
-        inWindow: false,
+        inWindow: true,
       },
       {
         id: 'products',
@@ -114,7 +114,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         icon: <Package className="w-8 h-8" />,
         iconBg: 'bg-success text-white',
         roles: ['admin', 'manager'],
-        inWindow: false,
+        inWindow: true,
       },
       {
         id: 'suppliers',
@@ -123,7 +123,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         icon: <Truck className="w-8 h-8" />,
         iconBg: 'bg-[#FF9500] text-white',
         roles: ['admin', 'manager'],
-        inWindow: false,
+        inWindow: true,
       },
       {
         id: 'reports',
@@ -132,7 +132,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         icon: <BarChart3 className="w-8 h-8" />,
         iconBg: 'bg-[#AF52DE] text-white',
         roles: ['admin', 'manager'],
-        inWindow: false,
+        inWindow: true,
       },
       {
         id: 'users',
@@ -141,7 +141,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         icon: <Users className="w-8 h-8" />,
         iconBg: 'bg-[#007AFF] text-white',
         roles: ['admin'],
-        inWindow: false,
+        inWindow: true,
       },
       {
         id: 'branches',
@@ -150,7 +150,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         icon: <Building2 className="w-8 h-8" />,
         iconBg: 'bg-[#34C759] text-white',
         roles: ['admin'],
-        inWindow: false,
+        inWindow: true,
       },
       {
         id: 'settings',
@@ -159,7 +159,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         icon: <Settings className="w-8 h-8" />,
         iconBg: 'bg-[#8E8E93] text-white',
         roles: ['admin'],
-        inWindow: false,
+        inWindow: true,
       },
       {
         id: 'audit_logs',
@@ -168,7 +168,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         icon: <ShieldCheck className="w-8 h-8" />,
         iconBg: 'bg-[#34C759] text-white',
         roles: ['admin'],
-        inWindow: false,
+        inWindow: true,
       },
       {
         id: 'maintenance',
@@ -177,7 +177,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         icon: <Wrench className="w-8 h-8" />,
         iconBg: 'bg-[#FF9500] text-white',
         roles: ['admin'],
-        inWindow: false,
+        inWindow: true,
       },
     ],
     [t]
