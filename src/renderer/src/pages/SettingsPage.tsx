@@ -62,6 +62,7 @@ export function SettingsPage({ onBack }: { readonly onBack: () => void }): React
   const [isRestartModalOpen, setIsRestartModalOpen] = useState<boolean>(false)
   const [initialLang, setInitialLang] = useState<Language>(currentLang)
   const [pendingBackupContent, setPendingBackupContent] = useState<string | null>(null)
+  const [isCustomTimeout, setIsCustomTimeout] = useState<boolean>(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const addToast = useToastStore((s) => s.addToast)
@@ -130,7 +131,11 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
           setLanguageStore(rows[0].default_language as Language)
         }
         if (rows[0].session_timeout_minutes !== undefined && rows[0].session_timeout_minutes !== null) {
-          setSessionTimeout(rows[0].session_timeout_minutes)
+          const mins = rows[0].session_timeout_minutes
+          setSessionTimeout(mins)
+          if (![0, 1, 3, 5, 10, 15, 30, 60].includes(mins)) {
+            setIsCustomTimeout(true)
+          }
         }
 
         let tokenVal = rows[0].telegram_bot_token ?? localStorage.getItem('mellah_telegram_bot_token') ?? ''
@@ -496,21 +501,51 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                     {sessionTimeout === 0 ? t('🔴 القفل التلقائي معطل') : `${t('🟢 مفعل بعد')} ${sessionTimeout} ${t('دقيقة')}`}
                   </span>
                 </label>
-                <select
-                  id="session-timeout-select"
-                  value={sessionTimeout}
-                  onChange={(e) => setSessionTimeout(Number.parseInt(e.target.value, 10))}
-                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer"
-                >
-                  <option value={0}>🚫 {t('معطل (إيقاف القفل التلقائي للجلسة نهائياً)')}</option>
-                  <option value={1}>⚡ {t('دقيقة واحدة (1 دقيقة)')}</option>
-                  <option value={3}>⚡ {t('3 دقائق')}</option>
-                  <option value={5}>⏳ {t('5 دقائق (الافتراضي)')}</option>
-                  <option value={10}>⏳ {t('10 دقائق')}</option>
-                  <option value={15}>⏳ {t('15 دقيقة')}</option>
-                  <option value={30}>⏳ {t('30 دقيقة')}</option>
-                  <option value={60}>⏳ {t('ساعة واحدة (60 دقيقة)')}</option>
-                </select>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    id="session-timeout-select"
+                    value={isCustomTimeout || ![0, 1, 3, 5, 10, 15, 30, 60].includes(sessionTimeout) ? 'custom' : sessionTimeout}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val === 'custom') {
+                        setIsCustomTimeout(true)
+                        if ([0, 1, 3, 5, 10, 15, 30, 60].includes(sessionTimeout)) {
+                          setSessionTimeout(7)
+                        }
+                      } else {
+                        setIsCustomTimeout(false)
+                        setSessionTimeout(Number.parseInt(val, 10))
+                      }
+                    }}
+                    className="flex-1 px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer"
+                  >
+                    <option value={0}>🚫 {t('معطل (إيقاف القفل التلقائي للجلسة نهائياً)')}</option>
+                    <option value={1}>⚡ {t('دقيقة واحدة (1 دقيقة)')}</option>
+                    <option value={3}>⚡ {t('3 دقائق')}</option>
+                    <option value={5}>⏳ {t('5 دقائق (الافتراضي)')}</option>
+                    <option value={10}>⏳ {t('10 دقائق')}</option>
+                    <option value={15}>⏳ {t('15 دقيقة')}</option>
+                    <option value={30}>⏳ {t('30 دقيقة')}</option>
+                    <option value={60}>⏳ {t('ساعة واحدة (60 دقيقة)')}</option>
+                    <option value="custom">✏️ {t('وقت مخصص (تحديد عدد الدقائق يدوياً)')}</option>
+                  </select>
+
+                  {(isCustomTimeout || ![0, 1, 3, 5, 10, 15, 30, 60].includes(sessionTimeout)) && (
+                    <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 px-3.5 py-2 rounded-2xl animate-scale-in">
+                      <input
+                        type="number"
+                        min={1}
+                        max={300}
+                        value={sessionTimeout || ''}
+                        onChange={(e) => setSessionTimeout(Math.max(1, Number.parseInt(e.target.value, 10) || 1))}
+                        placeholder="7"
+                        className="w-14 text-center text-xs font-black bg-transparent text-[#1C2B3A] dark:text-slate-100 focus:outline-none"
+                      />
+                      <span className="text-xs font-bold text-text-secondary">{t('دقيقة')}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </Card>
