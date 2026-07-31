@@ -204,11 +204,11 @@
 
   /* Hero POS Launcher Tile Highlight */
   .launcher-tile-hero {
-    @apply relative bg-gradient-to-br from-[#0A84FF] via-[#0066FF] to-[#004BB5] text-white rounded-3xl border border-accent/40 shadow-hero-glow
-           flex flex-col items-center justify-between p-5 transition-all duration-200 cursor-pointer select-none ring-2 ring-accent/30 font-bold;
+    @apply relative bg-gradient-to-br from-[#0A84FF] via-[#0066FF] to-[#004BB5] text-white rounded-3xl border border-[rgba(10,132,255,0.4)] shadow-hero-glow
+           flex flex-col items-center justify-between p-5 transition-all duration-200 cursor-pointer select-none ring-2 ring-[rgba(10,132,255,0.3)] font-bold;
   }
   .launcher-tile-hero:hover {
-    @apply shadow-hero-glow -translate-y-1.5 ring-4 ring-accent/50 border-white/40;
+    @apply shadow-hero-glow -translate-y-1.5 ring-4 ring-[rgba(10,132,255,0.5)] border-white/40;
   }
   .launcher-tile-hero:active {
     @apply translate-y-0 scale-[0.98];
