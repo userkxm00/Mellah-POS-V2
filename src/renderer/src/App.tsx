@@ -71,6 +71,13 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     checkAuthSession()
     useStoreSettingsStore.getState().loadSettings()
+
+    // Restore saved brand color from localStorage
+    const savedColor = localStorage.getItem('mellah_brand_color')
+    if (savedColor) {
+      document.documentElement.style.setProperty('--color-accent', savedColor)
+    }
+
     const stopSyncLoop = startBackgroundSyncLoop()
     const stopAutoBackup = initAutoBackupScheduler()
     return () => {
