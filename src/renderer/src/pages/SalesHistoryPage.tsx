@@ -411,7 +411,7 @@ export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.E
             className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
             title={isSecondaryWindow ? t('إغلاق النافذة') : t('العودة')}
           >
-            <ArrowRight className="w-4 h-4 transform rtl:rotate-0 ltr:rotate-180" />
+            <ArrowRight className={`w-4 h-4 transform transition-transform ${document.documentElement.dir === 'rtl' ? '' : 'rotate-180'}`} />
           </button>
           <h1 className="text-2xl font-black text-text-primary dark:text-slate-100">{t('سجل الفواتير والمبيعات اليومية')}</h1>
         </div>
