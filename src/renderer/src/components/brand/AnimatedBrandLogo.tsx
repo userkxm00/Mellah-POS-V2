@@ -27,11 +27,15 @@ export function AnimatedBrandLogo({
       {/* Animated Emblem Container */}
       <div className="relative group cursor-pointer">
         {/* Breathing Ambient Glow */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-accent via-indigo-500 to-amber-400 rounded-3xl blur-md opacity-40 group-hover:opacity-75 transition duration-500 animate-pulse" />
+        <div
+          style={{ background: 'linear-gradient(135deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #00C6FF) 100%)' }}
+          className="absolute -inset-1 rounded-3xl blur-md opacity-40 group-hover:opacity-75 transition duration-500 animate-pulse"
+        />
 
         {/* Outer Icon Box */}
         <div
-          className={`relative ${currentSize.container} bg-[#0A6EDB] flex items-center justify-center shadow-layered-md overflow-hidden border border-white/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-blue-500/40`}
+          style={{ background: 'linear-gradient(135deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #00C6FF) 100%)' }}
+          className={`relative ${currentSize.container} flex items-center justify-center shadow-layered-md overflow-hidden border border-white/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg`}
         >
           {/* Shimmer Light Sweep Effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />

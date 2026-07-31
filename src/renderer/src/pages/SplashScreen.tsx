@@ -29,7 +29,10 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
 
       <div className="splash-logo flex flex-col items-center gap-5 relative">
         {/* Logo icon */}
-        <div className="w-24 h-24 rounded-[28px] bg-[#0A6EDB] flex items-center justify-center shadow-ambient-lg border border-white/20">
+        <div
+          style={{ background: 'linear-gradient(135deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #00C6FF) 100%)' }}
+          className="w-24 h-24 rounded-[28px] flex items-center justify-center shadow-ambient-lg border border-white/20"
+        >
           <svg
             className="w-14 h-14 text-white"
             viewBox="0 0 512 512"
