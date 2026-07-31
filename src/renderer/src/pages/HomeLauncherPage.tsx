@@ -275,7 +275,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   const visibleTiles = tiles.filter((t) => hasRole(t.roles))
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-[#F2F2F7] select-none relative overflow-hidden">
+    <div className="flex h-screen w-screen flex-col bg-[#F2F2F7] dark:bg-slate-950 select-none relative overflow-hidden">
       {/* Update notification banner */}
       <UpdateNotificationBanner />
 
@@ -284,7 +284,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
       <div className="absolute w-[500px] h-[500px] bg-accent/4 rounded-full blur-[100px] pointer-events-none -bottom-20 -left-20" />
 
       {/* ── Top Bar ── */}
-      <header className="glass-header border-b border-gray-200/80 px-8 py-3.5 flex items-center justify-between z-20 shadow-layered-sm">
+      <header className="glass-header border-b border-gray-200/80 dark:border-slate-800 px-8 py-3.5 flex items-center justify-between z-20 shadow-layered-sm">
         <AnimatedBrandLogo
           size="md"
           subtitle={currentBranch?.name ? t(currentBranch.name) : t('الفرع الرئيسي')}
@@ -311,7 +311,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
             <button
               onClick={handleManualReconnect}
               disabled={isReconnecting}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 border border-gray-200/80 text-text-primary hover:border-accent hover:text-accent text-xs font-bold shadow-layered-sm transition-all btn-press disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-slate-900/90 border border-gray-200/80 dark:border-slate-700/80 text-text-primary dark:text-slate-100 hover:border-accent hover:text-accent text-xs font-bold shadow-layered-sm transition-all btn-press disabled:opacity-50"
               title={t('إعادة الاتصال بالشبكة والمزامنة يدوياً')}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isReconnecting ? 'animate-spin text-accent' : ''}`} />
@@ -320,15 +320,15 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
           </div>
 
           {/* User Profile Tile */}
-          <div className="flex items-center gap-2.5 bg-white/90 backdrop-blur-md border border-gray-200/80 px-3.5 py-1.5 rounded-full shadow-layered-sm">
+          <div className="flex items-center gap-2.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-gray-200/80 dark:border-slate-700/80 px-3.5 py-1.5 rounded-full shadow-layered-sm">
             <div className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center font-black text-xs border border-accent/20">
               {currentUser.full_name.charAt(0)}
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-black text-text-primary leading-none">
+              <span className="text-xs font-black text-text-primary dark:text-slate-100 leading-none">
                 {currentUser.full_name}
               </span>
-              <span className="text-[10px] font-bold text-text-tertiary mt-0.5">
+              <span className="text-[10px] font-bold text-text-tertiary dark:text-slate-400 mt-0.5">
                 {t(badge.label)}
               </span>
             </div>
@@ -339,7 +339,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
             onClick={() => {
               if (window.confirm(t('هل تريد تسجيل الخروج؟'))) logout()
             }}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gray-200/60 text-text-secondary hover:bg-danger/10 hover:text-danger text-xs font-bold transition-colors btn-press"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gray-200/60 dark:bg-slate-800/60 text-text-secondary dark:text-slate-300 hover:bg-danger/10 hover:text-danger text-xs font-bold transition-colors btn-press"
           >
             <LogOut className="w-4 h-4" />
             <span>{t('خروج')}</span>
@@ -474,7 +474,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               >
                 {/* Top Badge for Secondary Windows */}
                 {!tile.inWindow ? (
-                  <span className="self-end text-[10px] font-extrabold text-text-secondary bg-gray-100/90 px-2.5 py-0.5 rounded-full border border-gray-200/90 shadow-sm flex items-center gap-1 group-hover:bg-accent/10 group-hover:text-accent group-hover:border-accent/30 transition-colors">
+                  <span className="self-end text-[10px] font-extrabold text-text-secondary dark:text-slate-300 bg-gray-100/90 dark:bg-slate-800/90 px-2.5 py-0.5 rounded-full border border-gray-200/90 dark:border-slate-700/90 shadow-sm flex items-center gap-1 group-hover:bg-accent/10 group-hover:text-accent group-hover:border-accent/30 transition-colors">
                     <ExternalLink className="w-3 h-3 text-accent" />
                     <span>{t('نافذة جديدة')}</span>
                   </span>

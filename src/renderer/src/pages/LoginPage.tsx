@@ -210,17 +210,17 @@ export function LoginPage(): React.JSX.Element {
     .join('')
 
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-[#F2F2F7] p-6 select-none relative overflow-hidden">
+    <div className="flex h-screen w-screen items-center justify-center bg-[#F2F2F7] dark:bg-slate-950 p-6 select-none relative overflow-hidden">
       {/* Ambient glow */}
       <div className="absolute w-[600px] h-[600px] bg-accent/10 rounded-full blur-3xl pointer-events-none -top-20 -right-20" />
       <div className="absolute w-[400px] h-[400px] bg-accent/5 rounded-full blur-3xl pointer-events-none -bottom-10 -left-10" />
 
       {/* PIN Card */}
-      <div className="relative w-full max-w-md bg-white/90 backdrop-blur-2xl p-8 rounded-3xl shadow-ambient-lg border border-white flex flex-col items-center page-enter">
+      <div className="relative w-full max-w-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl p-8 rounded-3xl shadow-ambient-lg border border-white dark:border-slate-800 flex flex-col items-center page-enter">
         {/* Back button */}
         <button
           onClick={handleBackToUserPicker}
-          className="absolute top-5 right-5 flex items-center gap-1 text-xs font-bold text-text-tertiary hover:text-accent transition-colors"
+          className="absolute top-5 right-5 flex items-center gap-1 text-xs font-bold text-text-tertiary dark:text-slate-400 hover:text-accent transition-colors"
         >
           <span>{t('العودة')}</span>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -231,7 +231,7 @@ export function LoginPage(): React.JSX.Element {
           {initials}
         </div>
 
-        <h2 className="text-lg font-black text-text-primary">{selectedUser.full_name}</h2>
+        <h2 className="text-lg font-black text-text-primary dark:text-slate-100">{selectedUser.full_name}</h2>
         <span
           className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border mt-1.5 ${meta.color}`}
         >
@@ -239,7 +239,7 @@ export function LoginPage(): React.JSX.Element {
           <span>{t(meta.label)}</span>
         </span>
 
-        <p className="text-xs text-text-secondary mt-4 mb-6">{t('أدخل رمز PIN الخاص بك')}</p>
+        <p className="text-xs text-text-secondary dark:text-slate-400 mt-4 mb-6">{t('أدخل رمز PIN الخاص بك')}</p>
 
         {/* Masked PIN Dots */}
         <div className="flex items-center justify-center gap-3.5 mb-8 h-10 w-full">
@@ -251,7 +251,7 @@ export function LoginPage(): React.JSX.Element {
                 className={`w-4 h-4 rounded-full transition-all duration-200 ${
                   hasValue
                     ? 'bg-accent scale-125 shadow-ambient-sm ring-4 ring-accent/20'
-                    : 'bg-gray-200 border border-gray-300'
+                    : 'bg-gray-200 dark:bg-slate-700 border border-gray-300 dark:border-slate-600'
                 }`}
               />
             )
@@ -265,7 +265,7 @@ export function LoginPage(): React.JSX.Element {
               key={digit}
               type="button"
               onClick={() => handleDigit(digit)}
-              className="h-14 rounded-2xl bg-white hover:bg-gray-50 text-text-primary font-black text-xl shadow-ambient-sm border border-gray-200/80 transition-all duration-150 btn-press flex items-center justify-center"
+              className="h-14 rounded-2xl bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-text-primary dark:text-slate-100 font-black text-xl shadow-ambient-sm border border-gray-200/80 dark:border-slate-700/80 transition-all duration-150 btn-press flex items-center justify-center"
             >
               {digit}
             </button>
@@ -275,7 +275,7 @@ export function LoginPage(): React.JSX.Element {
           <button
             type="button"
             onClick={handleClear}
-            className="h-14 rounded-2xl bg-gray-100 hover:bg-gray-200 text-text-secondary font-bold text-xs border border-gray-200/80 transition-all duration-150 btn-press flex items-center justify-center"
+            className="h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-text-secondary dark:text-slate-300 font-bold text-xs border border-gray-200/80 dark:border-slate-700/80 transition-all duration-150 btn-press flex items-center justify-center"
           >
             {t('مسح C')}
           </button>
@@ -284,7 +284,7 @@ export function LoginPage(): React.JSX.Element {
           <button
             type="button"
             onClick={() => handleDigit('0')}
-            className="h-14 rounded-2xl bg-white hover:bg-gray-50 text-text-primary font-black text-xl shadow-ambient-sm border border-gray-200/80 transition-all duration-150 btn-press flex items-center justify-center"
+            className="h-14 rounded-2xl bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-text-primary dark:text-slate-100 font-black text-xl shadow-ambient-sm border border-gray-200/80 dark:border-slate-700/80 transition-all duration-150 btn-press flex items-center justify-center"
           >
             0
           </button>
@@ -293,7 +293,7 @@ export function LoginPage(): React.JSX.Element {
           <button
             type="button"
             onClick={handleBackspace}
-            className="h-14 rounded-2xl bg-gray-100 hover:bg-gray-200 text-text-secondary font-bold text-lg border border-gray-200/80 transition-all duration-150 btn-press flex items-center justify-center"
+            className="h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-text-secondary dark:text-slate-300 font-bold text-lg border border-gray-200/80 dark:border-slate-700/80 transition-all duration-150 btn-press flex items-center justify-center"
           >
             <Delete className="w-5 h-5" />
           </button>

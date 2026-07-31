@@ -940,7 +940,7 @@ export function POSCheckoutPage({
         {/* RIGHT PANEL: Product Search & Grid */}
         <div className="flex-1 flex flex-col gap-4 overflow-hidden">
           {/* Search Bar & Category Filters */}
-          <div className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-ambient-sm flex flex-col gap-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-gray-200/80 dark:border-slate-800 shadow-ambient-sm flex flex-col gap-3">
             <Input
               ref={searchInputRef}
               placeholder={t('ابحث باسم المنتج، اللون، المقاس، أو امسح الباركود... (F2)')}
@@ -1072,9 +1072,9 @@ export function POSCheckoutPage({
         </div>
 
         {/* LEFT PANEL: Cart & Payment Checkout */}
-        <div className="w-96 flex flex-col bg-white rounded-2xl border border-gray-200/80 shadow-ambient-md overflow-hidden">
+        <div className="w-96 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-gray-200/80 dark:border-slate-800 shadow-ambient-md overflow-hidden">
           {/* Cart Header */}
-          <div className="p-4 border-b border-gray-200/80 bg-gray-50/50 flex items-center justify-between">
+          <div className="p-4 border-b border-gray-200/80 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShoppingCart className="w-5 h-5 text-accent" />
               <h2 className="font-extrabold text-base text-text-primary">{t('سلة البيع الحالية')}</h2>
@@ -1104,12 +1104,12 @@ export function POSCheckoutPage({
           </div>
 
           {/* Customer Selection Bar & Loyalty */}
-          <div className="p-3 border-b border-gray-200/80 bg-gray-50/30 space-y-2">
+          <div className="p-3 border-b border-gray-200/80 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-800/30 space-y-2">
             <div className="flex items-center gap-2">
               <select
                 value={selectedCustomerId ?? ''}
                 onChange={(e) => setSelectedCustomerId(e.target.value || null)}
-                className="flex-1 px-3 py-2 rounded-xl text-xs font-bold bg-white border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                className="flex-1 px-3 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 dark:text-slate-100 border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">— {t('اختر زبون لجمع نقاط الولاء')} —</option>
                 {customers.map((c) => (
@@ -1219,7 +1219,7 @@ export function POSCheckoutPage({
           </div>
 
           {/* Payment & Checkout Options Area */}
-          <div className="p-4 border-t border-gray-200/80 bg-gray-50/50 space-y-3">
+          <div className="p-4 border-t border-gray-200/80 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 space-y-3">
             {/* Payment Method Tabs */}
             <div className="grid grid-cols-4 gap-1.5">
               {(['cash', 'card', 'mixed', 'credit'] as PaymentMethod[]).map((pm) => (
@@ -1232,7 +1232,7 @@ export function POSCheckoutPage({
                   className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition-all btn-press ${
                     paymentMethod === pm
                       ? 'bg-accent text-white shadow-ambient-sm'
-                      : 'bg-white border border-gray-200 text-text-secondary hover:bg-gray-100'
+                      : 'bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-text-secondary dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                   }`}
                 >
                   {getPaymentMethodLabel(pm, t)}
@@ -1242,7 +1242,7 @@ export function POSCheckoutPage({
 
             {/* Change Calculator Input (for Cash payment) */}
             {paymentMethod === 'cash' && cartItems.length > 0 && (
-              <div className="p-3 bg-white rounded-xl border border-gray-200 space-y-2">
+              <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-text-primary">
                   <span>{t('المبلغ النقدي المقدم من الزبون:')}</span>
                   <input
