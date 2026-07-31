@@ -20,7 +20,7 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#F2F2F7] ${
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#F2F2F7] dark:bg-slate-950 ${
         isFadingOut ? 'splash-fade-out' : ''
       }`}
     >

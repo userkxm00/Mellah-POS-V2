@@ -72,17 +72,33 @@ export function App(): React.JSX.Element {
     checkAuthSession()
     useStoreSettingsStore.getState().loadSettings()
 
-    // Restore saved brand color from localStorage
-    const savedColor = localStorage.getItem('mellah_brand_color')
-    if (savedColor) {
-      document.documentElement.style.setProperty('--color-accent', savedColor)
+    // Function to apply saved brand color from localStorage
+    const applySavedBrandColor = (): void => {
+      const savedColor = localStorage.getItem('mellah_brand_color')
+      if (savedColor) {
+        document.documentElement.style.setProperty('--color-accent', savedColor)
+      }
     }
+
+    // Apply on initial mount
+    applySavedBrandColor()
+
+    // Listen for window focus & storage changes (multi-window Electron sync)
+    const handleSync = (): void => {
+      applySavedBrandColor()
+      useStoreSettingsStore.getState().loadSettings()
+    }
+
+    window.addEventListener('focus', handleSync)
+    window.addEventListener('storage', handleSync)
 
     const stopSyncLoop = startBackgroundSyncLoop()
     const stopAutoBackup = initAutoBackupScheduler()
     return () => {
       stopSyncLoop()
       stopAutoBackup()
+      window.removeEventListener('focus', handleSync)
+      window.removeEventListener('storage', handleSync)
     }
   }, [checkAuthSession])
 
