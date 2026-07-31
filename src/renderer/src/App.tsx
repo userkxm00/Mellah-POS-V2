@@ -362,7 +362,7 @@ export function App(): React.JSX.Element {
       </main>
 
       {/* Floating Glass Pop-out Button for Hybrid Super Mode */}
-      {currentPage !== 'pos' && (
+      {(currentPage as string) !== 'launcher' && currentPage !== 'pos' && (
         <button
           type="button"
           onClick={() => {
