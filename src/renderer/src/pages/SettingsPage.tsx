@@ -20,6 +20,7 @@ export function SettingsPage({ onBack }: { readonly onBack: () => void }): React
   const currentLang = useLanguageStore((s) => s.language)
   const setLanguageStore = useLanguageStore((s) => s.setLanguage)
   const t = useLanguageStore((s) => s.t)
+  const _langVersion = useLanguageStore((s) => s.version)
 
   const [storeName, setStoreName] = useState<string>(t('بوتيك الملاح للملابس'))
   const [storeAddress, setStoreAddress] = useState<string>('')

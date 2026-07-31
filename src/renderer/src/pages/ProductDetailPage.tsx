@@ -57,6 +57,7 @@ export function ProductDetailPage({
   onBack,
 }: ProductDetailPageProps): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
+  const _langVersion = useLanguageStore((s) => s.version)
   const [product, setProduct] = useState<ProductDetailData | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [selectedVariantForAdj, setSelectedVariantForAdj] = useState<{

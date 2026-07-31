@@ -16,6 +16,7 @@ interface BranchItem {
 
 export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
+  const _langVersion = useLanguageStore((s) => s.version)
   const [branches, setBranches] = useState<BranchItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
@@ -245,7 +246,7 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press"
+              className="px-5 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-text-secondary dark:text-slate-300 text-sm font-bold btn-press"
             >
               {t('إلغاء')}
             </button>
@@ -280,7 +281,7 @@ export function BranchesPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
             </button>
             <button
               onClick={() => setEditingBranch(null)}
-              className="px-5 py-3 rounded-xl bg-gray-100 text-text-secondary text-sm font-bold btn-press"
+              className="px-5 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-text-secondary dark:text-slate-300 text-sm font-bold btn-press"
             >
               إلغاء
             </button>

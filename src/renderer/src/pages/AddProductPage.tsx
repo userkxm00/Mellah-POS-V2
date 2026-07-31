@@ -19,6 +19,7 @@ interface AddProductPageProps {
 
 export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
+  const _langVersion = useLanguageStore((s) => s.version)
   const [categories, setCategories] = useState<CategoryItem[]>([])
   const [name, setName] = useState<string>('')
   const [categoryId, setCategoryId] = useState<string>('')

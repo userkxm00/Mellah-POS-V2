@@ -18,6 +18,7 @@ interface AuditLogRow {
 
 export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
+  const _langVersion = useLanguageStore((s) => s.version)
   const [logs, setLogs] = useState<AuditLogRow[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [searchQuery, setSearchQuery] = useState<string>('')
@@ -61,10 +62,10 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
   })
 
   const actionBadge = (action: string): React.ReactNode => {
-    let color = 'bg-accent/10 text-accent border-accent/20'
-    if (action.includes('delete') || action.includes('void')) color = 'bg-danger/10 text-danger border-danger/20'
-    else if (action.includes('create') || action.includes('completed')) color = 'bg-success/10 text-success border-success/20'
-    else if (action.includes('update') || action.includes('pin')) color = 'bg-warning/10 text-warning border-warning/20'
+    let color = 'bg-accent/10 dark:bg-accent/20 text-accent border-accent/20 dark:border-accent/30'
+    if (action.includes('delete') || action.includes('void')) color = 'bg-danger/10 dark:bg-danger/20 text-danger border-danger/20 dark:border-danger/30'
+    else if (action.includes('create') || action.includes('completed')) color = 'bg-success/10 dark:bg-success/20 text-success border-success/20 dark:border-success/30'
+    else if (action.includes('update') || action.includes('pin')) color = 'bg-warning/10 dark:bg-warning/20 text-warning border-warning/20 dark:border-warning/30'
 
     return (
       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${color}`}>

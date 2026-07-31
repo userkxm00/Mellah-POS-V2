@@ -24,6 +24,7 @@ interface ReturnHistoryRow {
 
 export function ReturnsPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
+  const _langVersion = useLanguageStore((s) => s.version)
   const [returns, setReturns] = useState<ReturnHistoryRow[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)

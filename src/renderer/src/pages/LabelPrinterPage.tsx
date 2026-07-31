@@ -39,6 +39,8 @@ interface CategoryItem {
 }
 
 export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
+  const t = useLanguageStore((s) => s.t)
+  const _langVersion = useLanguageStore((s) => s.version)
   const [products, setProducts] = useState<ProductGroup[]>([])
   const [categories, setCategories] = useState<CategoryItem[]>([])
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
@@ -50,7 +52,6 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
   const addToast = useToastStore((s) => s.addToast)
-  const t = useLanguageStore((s) => s.t)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)

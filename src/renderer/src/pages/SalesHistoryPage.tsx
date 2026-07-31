@@ -96,6 +96,7 @@ interface SalesHistoryPageProps {
 
 export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
+  const _langVersion = useLanguageStore((s) => s.version)
   const activeShift = useShiftStore((s) => s.activeShift)
   const storeSettings = useStoreSettingsStore((s) => s.settings)
   const [sales, setSales] = useState<SaleRow[]>([])

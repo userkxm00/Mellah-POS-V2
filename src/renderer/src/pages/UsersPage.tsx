@@ -19,6 +19,7 @@ interface UserItem {
 
 export function UsersPage({ onBack }: { readonly onBack?: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
+  const _langVersion = useLanguageStore((s) => s.version)
   const [users, setUsers] = useState<UserItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
