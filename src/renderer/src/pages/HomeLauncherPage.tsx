@@ -19,7 +19,6 @@ import {
   Calendar,
   Sparkles,
   Zap,
-  ExternalLink,
   RefreshCw,
   Wrench,
   Truck
@@ -469,15 +468,10 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
                 <button
                   key={tile.id}
                   onClick={() => onNavigate(tile.id)}
-                  className="launcher-tile-hero group flex flex-col items-center text-center p-5 justify-between min-h-[175px] col-span-1 sm:col-span-2 lg:col-span-1"
+                  className="launcher-tile-hero group flex flex-col items-center text-center p-6 justify-center gap-3 min-h-[160px] col-span-1 sm:col-span-2 lg:col-span-1"
                 >
-                  {/* Top Badge */}
-                  <span className="self-end text-[10px] font-extrabold text-white bg-white/20 px-2.5 py-0.5 rounded-full border border-white/30 backdrop-blur-md shadow-sm">
-                    {t('شاشة سريعة')}
-                  </span>
-
                   {/* Icon */}
-                  <div className="w-14 h-14 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center shadow-lg backdrop-blur-md group-hover:scale-110 transition-transform duration-200 my-1 text-white">
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center shadow-lg backdrop-blur-md group-hover:scale-110 transition-transform duration-200 text-white">
                     {tile.icon}
                   </div>
 
@@ -498,23 +492,11 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               <button
                 key={tile.id}
                 onClick={() => onNavigate(tile.id)}
-                className="launcher-tile group flex flex-col items-center text-center p-5 justify-between min-h-[175px] relative"
+                className="launcher-tile group flex flex-col items-center text-center p-6 justify-center gap-3 min-h-[160px] relative"
               >
-                {/* Top Badge for Secondary Windows */}
-                {!tile.inWindow ? (
-                  <span className="self-end text-[10px] font-extrabold text-text-secondary dark:text-slate-300 bg-gray-100/90 dark:bg-slate-800/90 px-2.5 py-0.5 rounded-full border border-gray-200/90 dark:border-slate-700/90 shadow-sm flex items-center gap-1 group-hover:bg-accent/10 group-hover:text-accent group-hover:border-accent/30 transition-colors">
-                    <ExternalLink className="w-3 h-3 text-accent" />
-                    <span>{t('نافذة جديدة')}</span>
-                  </span>
-                ) : (
-                  <span className="self-end text-[10px] font-extrabold text-success bg-success/10 px-2.5 py-0.5 rounded-full border border-success/20 shadow-sm">
-                    {t('شاشة رئيسية')}
-                  </span>
-                )}
-
                 {/* Icon Container with Kinetic Micro Pulse Ripple */}
                 <div
-                  className={`w-14 h-14 rounded-2xl ${tile.iconBg} flex items-center justify-center shadow-layered-sm group-hover:scale-110 transition-all duration-300 my-1 relative overflow-hidden group-hover:ring-4 group-hover:ring-accent/30`}
+                  className={`w-14 h-14 rounded-2xl ${tile.iconBg} flex items-center justify-center shadow-layered-sm group-hover:scale-110 transition-all duration-300 relative overflow-hidden group-hover:ring-4 group-hover:ring-accent/30`}
                 >
                   <div className="absolute inset-0 rounded-2xl bg-white/25 opacity-0 group-hover:animate-ping pointer-events-none" />
                   {tile.icon}
