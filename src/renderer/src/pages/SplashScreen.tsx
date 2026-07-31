@@ -23,7 +23,7 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
 
   return (
     <div
-      className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-slate-950 text-slate-100 overflow-hidden select-none ${
+      className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-[#F2F2F7] dark:bg-[#0B1120] text-slate-900 dark:text-slate-100 overflow-hidden select-none transition-colors duration-300 ${
         isFadingOut ? 'splash-fade-out' : ''
       }`}
     >
@@ -86,8 +86,8 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
 
         {/* Brand Typography */}
         <div className="text-center space-y-1.5">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-slate-200 mb-1 shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/80 dark:bg-white/10 backdrop-blur-md border border-gray-200/80 dark:border-white/20 text-xs font-bold text-slate-700 dark:text-slate-200 mb-1 shadow-sm">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
             <span>MELLAH POS ECOSYSTEM</span>
           </div>
 
@@ -97,13 +97,13 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
           >
             MELLAH POS
           </h1>
-          <p className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+          <p className="text-xs font-bold text-slate-600 dark:text-slate-400 tracking-widest uppercase">
             {t('نظام نقاط البيع والتشغيل الذكي')}
           </p>
         </div>
 
         {/* High-End Glass Loading Bar */}
-        <div className="w-56 h-1.5 rounded-full bg-slate-800/80 border border-slate-700/50 overflow-hidden mt-2 p-0.5 shadow-inner">
+        <div className="w-56 h-1.5 rounded-full bg-gray-200 dark:bg-slate-800/80 border border-gray-300/50 dark:border-slate-700/50 overflow-hidden mt-2 p-0.5 shadow-inner">
           <div
             className="h-full rounded-full"
             style={{

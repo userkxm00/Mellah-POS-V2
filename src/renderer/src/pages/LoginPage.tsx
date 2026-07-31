@@ -29,18 +29,18 @@ export function LoginPage(): React.JSX.Element {
     () => ({
       admin: {
         label: t('مدير النظام'),
-        icon: <Crown className="w-4 h-4" />,
-        color: 'bg-accent/10 text-accent border-accent/20',
+        icon: <Crown className="w-3.5 h-3.5" />,
+        color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
       },
       manager: {
         label: t('مشرف المتجر'),
-        icon: <Briefcase className="w-4 h-4" />,
-        color: 'bg-warning/10 text-warning border-warning/20',
+        icon: <Briefcase className="w-3.5 h-3.5" />,
+        color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
       },
       cashier: {
         label: t('كاشير'),
-        icon: <UserCheck className="w-4 h-4" />,
-        color: 'bg-success/10 text-success border-success/20',
+        icon: <UserCheck className="w-3.5 h-3.5" />,
+        color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
       },
     }),
     [t]
@@ -152,7 +152,7 @@ export function LoginPage(): React.JSX.Element {
               <div className="animate-spin rounded-full h-8 w-8 border-3 border-accent border-t-transparent" />
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full">
               {users.map((user) => {
                 const meta = roleMeta[user.role]
                 const initials = user.full_name
@@ -164,22 +164,39 @@ export function LoginPage(): React.JSX.Element {
                 return (
                   <button
                     key={user.id}
+                    type="button"
                     onClick={() => setSelectedUser(user)}
-                    className="user-tile group"
+                    className="p-6 rounded-3xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800 shadow-md hover:shadow-2xl hover:border-accent/60 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col items-center gap-3.5 group relative overflow-hidden"
                   >
+                    {/* Ambient Hover Accent Sheen */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-accent/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
                     {/* Avatar circle */}
-                    <div className="w-16 h-16 rounded-full bg-accent/10 text-accent font-black text-xl flex items-center justify-center border-2 border-accent/20 group-hover:bg-accent group-hover:text-white group-hover:border-accent transition-all duration-200">
-                      {initials}
+                    <div className="relative">
+                      <div
+                        style={{
+                          background: 'linear-gradient(135deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #00C6FF) 100%)'
+                        }}
+                        className="absolute -inset-1 rounded-full blur-sm opacity-50 group-hover:opacity-100 group-hover:blur-md transition-all pointer-events-none"
+                      />
+                      <div
+                        style={{
+                          background: 'linear-gradient(135deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #00C6FF) 100%)'
+                        }}
+                        className="relative w-16 h-16 rounded-full text-white font-black text-xl flex items-center justify-center border-2 border-white/40 shadow-md group-hover:scale-105 transition-transform"
+                      >
+                        {initials || <UserCheck className="w-7 h-7" />}
+                      </div>
                     </div>
 
                     {/* Name */}
-                    <span className="text-sm font-extrabold text-text-primary text-center leading-tight">
+                    <span className="text-base font-black text-slate-800 dark:text-slate-100 text-center leading-snug group-hover:text-accent transition-colors">
                       {user.full_name}
                     </span>
 
                     {/* Role badge */}
                     <span
-                      className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${meta.color}`}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border ${meta.color}`}
                     >
                       {meta.icon}
                       <span>{t(meta.label)}</span>

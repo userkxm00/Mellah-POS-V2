@@ -127,7 +127,7 @@ export function SessionLockModal({ isOpen, onUnlock }: SessionLockModalProps): R
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] bg-slate-950/98 backdrop-blur-2xl text-slate-100 flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden animate-fade-in">
+    <div className="fixed inset-0 z-[99999] bg-[#0B1120] text-slate-100 flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden animate-fade-in">
       {/* Ambient Pulsing Background Glow 1 */}
       <div
         style={{
@@ -240,8 +240,8 @@ export function SessionLockModal({ isOpen, onUnlock }: SessionLockModalProps): R
               </div>
             )}
 
-            {/* Glass Numpad Grid */}
-            <div className="grid grid-cols-3 gap-2.5 pt-1">
+            {/* Glass Numpad Grid - Forced LTR for 1-2-3 standard layout */}
+            <div dir="ltr" className="grid grid-cols-3 gap-2.5 pt-1">
               {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
                 <button
                   type="button"
