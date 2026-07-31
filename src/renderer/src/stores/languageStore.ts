@@ -814,8 +814,9 @@ const frDictionary: Record<string, string> = {
 
 }
 
-interface LanguageState {
+export interface LanguageState {
   language: Language
+  version: number
   setLanguage: (lang: Language) => void
   t: (keyOrText: string) => string
 }
@@ -828,6 +829,7 @@ if (typeof document !== 'undefined') {
 
 export const useLanguageStore = create<LanguageState>((set, get) => ({
   language: initialLang,
+  version: 0,
 
   setLanguage: (language: Language) => {
     localStorage.setItem('mellah_lang', language)
@@ -835,7 +837,7 @@ export const useLanguageStore = create<LanguageState>((set, get) => ({
       document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr'
       document.documentElement.lang = language
     }
-    set({ language })
+    set({ language, version: get().version + 1 })
   },
 
   t: (keyOrText: string) => {

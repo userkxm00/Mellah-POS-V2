@@ -27,6 +27,7 @@ import { FirstRunWizardModal } from '@/components/setup/FirstRunWizardModal'
 import { SessionLockModal } from '@/components/auth/SessionLockModal'
 import { useIdleTimer } from '@/hooks/useIdleTimer'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
+import { useLanguageStore } from '@/stores/languageStore'
 
 // In-window routes (fast navigation inside the main window)
 type InWindowRoute = 'launcher' | 'pos' | 'history' | 'returns' | 'customers' | 'labels' | 'maintenance'
@@ -53,6 +54,9 @@ function getSecondaryModule(): string | null {
 }
 
 export function App(): React.JSX.Element {
+  const _language = useLanguageStore((s) => s.language)
+  const _version = useLanguageStore((s) => s.version)
+
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const currentUser = useAuthStore((s) => s.currentUser)
   const isLoading = useAuthStore((s) => s.isLoading)
