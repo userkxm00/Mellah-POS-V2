@@ -172,8 +172,8 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
               value={priceDzd}
               onChange={(e) => setPriceDzd(e.target.value)}
               placeholder="0"
-              isValid={parseFloat(priceDzd) > 0}
-              error={priceDzd !== '' && (isNaN(parseFloat(priceDzd)) || parseFloat(priceDzd) <= 0) ? t('السعر يجب أن يكون مبلغاً موجباً أكبر من 0') : undefined}
+              isValid={Number.parseFloat(priceDzd) > 0}
+              error={priceDzd !== '' && (isNaN(Number.parseFloat(priceDzd)) || Number.parseFloat(priceDzd) <= 0) ? t('السعر يجب أن يكون مبلغاً موجباً أكبر من 0') : undefined}
               required
             />
 
@@ -184,7 +184,7 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
               value={costDzd}
               onChange={(e) => setCostDzd(e.target.value)}
               placeholder="0"
-              isValid={costDzd !== '' && parseFloat(costDzd) >= 0}
+              isValid={costDzd !== '' && Number.parseFloat(costDzd) >= 0}
             />
           </div>
 

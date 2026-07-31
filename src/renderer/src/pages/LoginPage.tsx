@@ -247,7 +247,7 @@ export function LoginPage(): React.JSX.Element {
             const hasValue = index < pin.length
             return (
               <div
-                key={index}
+                key={`pin-dot-${index}`}
                 className={`w-4 h-4 rounded-full transition-all duration-200 ${
                   hasValue
                     ? 'bg-accent scale-125 shadow-ambient-sm ring-4 ring-accent/20'

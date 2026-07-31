@@ -484,7 +484,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                             max="500"
                             value={printCount}
                             onChange={(e) =>
-                              handleUpdateQuantity(variant.id, parseInt(e.target.value) || 0)
+                              handleUpdateQuantity(variant.id, Number.parseInt(e.target.value, 10) || 0)
                             }
                             className="w-20 px-3 py-1.5 rounded-xl text-xs font-black font-mono bg-white border border-gray-300 text-center focus:outline-none focus:ring-2 focus:ring-accent"
                           />

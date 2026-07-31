@@ -1,22 +1,23 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, Suspense, lazy } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { startBackgroundSyncLoop } from '@/services/syncEngine'
 import { SplashScreen } from '@/pages/SplashScreen'
 import { LoginPage } from '@/pages/LoginPage'
 import { HomeLauncherPage } from '@/pages/HomeLauncherPage'
-import { POSCheckoutPage } from '@/pages/POSCheckoutPage'
-import { SalesHistoryPage } from '@/pages/SalesHistoryPage'
-import { ReturnsPage } from '@/pages/ReturnsPage'
-import { CustomersPage } from '@/pages/CustomersPage'
-import { SuppliersPage } from '@/pages/SuppliersPage'
-import { LabelPrinterPage } from '@/pages/LabelPrinterPage'
-import { ProductsPage } from '@/pages/ProductsPage'
-import { ReportsPage } from '@/pages/ReportsPage'
-import { UsersPage } from '@/pages/UsersPage'
-import { BranchesPage } from '@/pages/BranchesPage'
-import { SettingsPage } from '@/pages/SettingsPage'
-import { AuditLogPage } from '@/pages/AuditLogPage'
-import { MaintenancePage } from '@/pages/MaintenancePage'
+
+const POSCheckoutPage = lazy(() => import('@/pages/POSCheckoutPage').then((m) => ({ default: m.POSCheckoutPage })))
+const SalesHistoryPage = lazy(() => import('@/pages/SalesHistoryPage').then((m) => ({ default: m.SalesHistoryPage })))
+const ReturnsPage = lazy(() => import('@/pages/ReturnsPage').then((m) => ({ default: m.ReturnsPage })))
+const CustomersPage = lazy(() => import('@/pages/CustomersPage').then((m) => ({ default: m.CustomersPage })))
+const SuppliersPage = lazy(() => import('@/pages/SuppliersPage').then((m) => ({ default: m.SuppliersPage })))
+const LabelPrinterPage = lazy(() => import('@/pages/LabelPrinterPage').then((m) => ({ default: m.LabelPrinterPage })))
+const ProductsPage = lazy(() => import('@/pages/ProductsPage').then((m) => ({ default: m.ProductsPage })))
+const ReportsPage = lazy(() => import('@/pages/ReportsPage').then((m) => ({ default: m.ReportsPage })))
+const UsersPage = lazy(() => import('@/pages/UsersPage').then((m) => ({ default: m.UsersPage })))
+const BranchesPage = lazy(() => import('@/pages/BranchesPage').then((m) => ({ default: m.BranchesPage })))
+const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+const AuditLogPage = lazy(() => import('@/pages/AuditLogPage').then((m) => ({ default: m.AuditLogPage })))
+const MaintenancePage = lazy(() => import('@/pages/MaintenancePage').then((m) => ({ default: m.MaintenancePage })))
 import { initAutoBackupScheduler } from '@/services/backupService'
 import { sendAppLaunchTelegramNotification } from '@/services/telegramService'
 import { ToastContainer } from '@/components/ui'
@@ -72,20 +73,23 @@ export function App(): React.JSX.Element {
     checkAuthSession()
     useStoreSettingsStore.getState().loadSettings()
 
-    // Function to apply saved brand color from localStorage
-    const applySavedBrandColor = (): void => {
+    // Function to apply saved brand color & language from localStorage
+    const applySavedBrandColorAndLang = (): void => {
       const savedColor = localStorage.getItem('mellah_brand_color')
       if (savedColor) {
         document.documentElement.style.setProperty('--color-accent', savedColor)
       }
+      const savedLang = localStorage.getItem('mellah_lang') || 'ar'
+      document.documentElement.lang = savedLang
+      document.documentElement.dir = savedLang === 'ar' ? 'rtl' : 'ltr'
     }
 
     // Apply on initial mount
-    applySavedBrandColor()
+    applySavedBrandColorAndLang()
 
     // Listen for window focus & storage changes (multi-window Electron sync)
     const handleSync = (): void => {
-      applySavedBrandColor()
+      applySavedBrandColorAndLang()
       useStoreSettingsStore.getState().loadSettings()
     }
 
@@ -94,7 +98,7 @@ export function App(): React.JSX.Element {
 
     // Periodic sync check every 3s to guarantee multi-window brand color consistency
     const intervalId = setInterval(() => {
-      applySavedBrandColor()
+      applySavedBrandColorAndLang()
     }, 3000)
 
     const stopSyncLoop = startBackgroundSyncLoop()
@@ -219,34 +223,36 @@ export function App(): React.JSX.Element {
   if (secondaryModule) {
     return (
       <div className="h-screen w-screen overflow-auto bg-[#F4F5F9] dark:bg-[#0F172A]">
-        {secondaryModule === 'history' && <SalesHistoryPage onBack={() => window.close()} />}
-        {secondaryModule === 'returns' && <ReturnsPage onBack={() => window.close()} />}
-        {secondaryModule === 'customers' && <CustomersPage onBack={() => window.close()} />}
-        {secondaryModule === 'suppliers' && hasRole(['admin', 'manager']) && (
-          <SuppliersPage onBack={() => window.close()} />
-        )}
-        {secondaryModule === 'labels' && <LabelPrinterPage onBack={() => window.close()} />}
-        {secondaryModule === 'products' && hasRole(['admin', 'manager']) && (
-          <ProductsPage onNavigateToPos={() => {}} />
-        )}
-        {secondaryModule === 'reports' && hasRole(['admin', 'manager']) && (
-          <ReportsPage onBack={() => window.close()} />
-        )}
-        {secondaryModule === 'users' && hasRole(['admin']) && (
-          <UsersPage onBack={() => window.close()} />
-        )}
-        {secondaryModule === 'branches' && hasRole(['admin']) && (
-          <BranchesPage onBack={() => window.close()} />
-        )}
-        {secondaryModule === 'settings' && hasRole(['admin']) && (
-          <SettingsPage onBack={() => window.close()} />
-        )}
-        {secondaryModule === 'audit_logs' && hasRole(['admin']) && (
-          <AuditLogPage onBack={() => window.close()} />
-        )}
-        {secondaryModule === 'maintenance' && hasRole(['admin']) && (
-          <MaintenancePage onBack={() => window.close()} />
-        )}
+        <Suspense fallback={<div className="h-full w-full flex items-center justify-center p-12 text-xs font-bold text-text-tertiary">جاري التحميل...</div>}>
+          {secondaryModule === 'history' && <SalesHistoryPage onBack={() => window.close()} />}
+          {secondaryModule === 'returns' && <ReturnsPage onBack={() => window.close()} />}
+          {secondaryModule === 'customers' && <CustomersPage onBack={() => window.close()} />}
+          {secondaryModule === 'suppliers' && hasRole(['admin', 'manager']) && (
+            <SuppliersPage onBack={() => window.close()} />
+          )}
+          {secondaryModule === 'labels' && <LabelPrinterPage onBack={() => window.close()} />}
+          {secondaryModule === 'products' && hasRole(['admin', 'manager']) && (
+            <ProductsPage onNavigateToPos={() => {}} />
+          )}
+          {secondaryModule === 'reports' && hasRole(['admin', 'manager']) && (
+            <ReportsPage onBack={() => window.close()} />
+          )}
+          {secondaryModule === 'users' && hasRole(['admin']) && (
+            <UsersPage onBack={() => window.close()} />
+          )}
+          {secondaryModule === 'branches' && hasRole(['admin']) && (
+            <BranchesPage onBack={() => window.close()} />
+          )}
+          {secondaryModule === 'settings' && hasRole(['admin']) && (
+            <SettingsPage onBack={() => window.close()} />
+          )}
+          {secondaryModule === 'audit_logs' && hasRole(['admin']) && (
+            <AuditLogPage onBack={() => window.close()} />
+          )}
+          {secondaryModule === 'maintenance' && hasRole(['admin']) && (
+            <MaintenancePage onBack={() => window.close()} />
+          )}
+        </Suspense>
         <CommandPalette
           isOpen={isCommandPaletteOpen}
           onClose={() => setIsCommandPaletteOpen(false)}
@@ -287,11 +293,13 @@ export function App(): React.JSX.Element {
   return (
     <div className="relative h-screen w-screen overflow-hidden flex flex-col bg-[#F4F5F9] dark:bg-[#0F172A]">
       <main className="flex-1 overflow-auto page-enter">
-        {currentPage === 'pos' && <POSCheckoutPage onNavigateToHome={goHome} />}
-        {currentPage === 'history' && <SalesHistoryPage onBack={goHome} />}
-        {currentPage === 'returns' && <ReturnsPage onBack={goHome} />}
-        {currentPage === 'customers' && <CustomersPage onBack={goHome} />}
-        {currentPage === 'labels' && <LabelPrinterPage onBack={goHome} />}
+        <Suspense fallback={<div className="h-full w-full flex items-center justify-center p-12 text-xs font-bold text-text-tertiary">جاري التحميل...</div>}>
+          {currentPage === 'pos' && <POSCheckoutPage onNavigateToHome={goHome} />}
+          {currentPage === 'history' && <SalesHistoryPage onBack={goHome} />}
+          {currentPage === 'returns' && <ReturnsPage onBack={goHome} />}
+          {currentPage === 'customers' && <CustomersPage onBack={goHome} />}
+          {currentPage === 'labels' && <LabelPrinterPage onBack={goHome} />}
+        </Suspense>
       </main>
       <FirstRunWizardModal />
       <SessionLockModal isOpen={isLocked} onUnlock={unlockSession} />

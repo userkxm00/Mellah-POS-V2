@@ -138,8 +138,8 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
   const handleCreatePurchaseInvoice = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     if (!purchasingSupplier) return
-    const total = parseFloat(purchaseTotalDzd)
-    const paid = parseFloat(purchasePaidDzd) || 0
+    const total = Number.parseFloat(purchaseTotalDzd)
+    const paid = Number.parseFloat(purchasePaidDzd) || 0
     if (!total || total <= 0) {
       addToast({ message: t('يرجى كتابة إجمالي مبلغ الفاتورة'), variant: 'error' })
       return
@@ -174,7 +174,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
   const handleRepaySupplierDebt = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     if (!repayingSupplier) return
-    const amount = parseFloat(repayAmountDzd)
+    const amount = Number.parseFloat(repayAmountDzd)
     if (!amount || amount <= 0) {
       addToast({ message: t('يرجى كتابة مبلغ التسديد الصحيح'), variant: 'error' })
       return
@@ -442,7 +442,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-900 font-bold">
             <span>{t('المبلغ المتبقي كدين للمورد (Dette):')}</span>
             <span className="text-sm font-black text-amber-800">
-              {((parseFloat(purchaseTotalDzd) || 0) - (parseFloat(purchasePaidDzd) || 0)).toLocaleString('ar-DZ')} {t('دج')}
+              {((Number.parseFloat(purchaseTotalDzd) || 0) - (Number.parseFloat(purchasePaidDzd) || 0)).toLocaleString('ar-DZ')} {t('دج')}
             </span>
           </div>
 

@@ -25,7 +25,7 @@ const getInitialSoundEnabled = (): boolean => {
 
 const getInitialSoundVolume = (): number => {
   const saved = localStorage.getItem('mellah_pos_sound_volume')
-  return saved !== null ? parseFloat(saved) : 0.2
+  return saved !== null ? Number.parseFloat(saved) : 0.2
 }
 
 export const useThemeStore = create<ThemeState>((set, get) => ({

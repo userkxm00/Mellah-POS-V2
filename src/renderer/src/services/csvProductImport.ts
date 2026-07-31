@@ -53,15 +53,15 @@ function processCSVLine(
   operations: Array<{ sql: string; params: unknown[] }>
 ): boolean {
   const productName = cols[indices.nameIdx]?.trim()
-  const priceDzd = parseFloat(cols[indices.priceIdx]) || 0
+  const priceDzd = Number.parseFloat(cols[indices.priceIdx]) || 0
   if (!productName || priceDzd <= 0) return false
 
   const categoryName = indices.categoryIdx !== -1 ? cols[indices.categoryIdx]?.trim() : ''
-  const costDzd = indices.costIdx !== -1 ? parseFloat(cols[indices.costIdx]) || 0 : 0
+  const costDzd = indices.costIdx !== -1 ? Number.parseFloat(cols[indices.costIdx]) || 0 : 0
   const size = indices.sizeIdx !== -1 ? cols[indices.sizeIdx]?.trim() : null
   const color = indices.colorIdx !== -1 ? cols[indices.colorIdx]?.trim() : null
-  const barcode = indices.barcodeIdx !== -1 ? cols[indices.barcodeIdx]?.trim() : null
-  const stock = indices.stockIdx !== -1 ? parseInt(cols[indices.stockIdx]) || 0 : 0
+  const barcode = indices.barcodeIdx !== -1 ? cols[indices.barcodeIdx]?.trim() || null : null
+  const stock = indices.stockIdx !== -1 ? Number.parseInt(cols[indices.stockIdx], 10) || 0 : 0
 
   let categoryId: string | null = null
   if (categoryName) {

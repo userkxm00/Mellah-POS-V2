@@ -90,7 +90,7 @@ export function ReturnsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
       key: 'refund_method',
       header: t('طريقة الاسترداد'),
       render: (row) => (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-text-secondary text-xs font-bold border border-gray-200/60">
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 dark:bg-slate-800 text-text-secondary text-xs font-bold border border-gray-200/60 dark:border-slate-700">
           {row.refund_method === 'cash' ? (
             <>
               <Banknote className="w-3.5 h-3.5 text-success" />
@@ -127,7 +127,7 @@ export function ReturnsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
   ]
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6 pb-12 select-none">
+    <div className="p-6 max-w-6xl mx-auto space-y-6 pb-12 select-none min-h-screen dark:bg-slate-950">
       <div className="flex items-center justify-between">
         <div>
           <button

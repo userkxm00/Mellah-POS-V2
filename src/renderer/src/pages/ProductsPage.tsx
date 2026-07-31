@@ -650,7 +650,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
                 type="number"
                 placeholder={t('مثلاً: 10 أو -500')}
                 value={bulkAdjustmentVal || ''}
-                onChange={(e) => setBulkAdjustmentVal(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setBulkAdjustmentVal(Number.parseFloat(e.target.value) || 0)}
                 className="w-full px-4 py-2.5 rounded-2xl text-xs font-black bg-gray-50 border border-gray-200"
               />
             </div>
