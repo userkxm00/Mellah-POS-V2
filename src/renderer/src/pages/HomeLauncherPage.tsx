@@ -358,8 +358,8 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
       <main className="flex-1 flex flex-col px-8 py-6 max-w-7xl mx-auto w-full overflow-y-auto page-enter space-y-6">
         {/* Welcome Hero Banner */}
         <div
-          style={{ background: 'linear-gradient(135deg, #0A84FF 0%, #0070E0 100%)', color: '#FFFFFF' }}
-          className="relative overflow-hidden p-6 rounded-3xl shadow-lg border border-blue-400/30 flex flex-col md:flex-row items-center justify-between gap-6"
+          style={{ background: 'linear-gradient(135deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #0070E0) 100%)', color: '#FFFFFF' }}
+          className="relative overflow-hidden p-6 rounded-3xl shadow-lg border border-white/30 flex flex-col md:flex-row items-center justify-between gap-6"
         >
           <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 

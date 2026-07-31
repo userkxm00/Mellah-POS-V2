@@ -649,18 +649,20 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                 </label>
                 <div className="flex items-center gap-3">
                   {[
-                    { name: t('أزرق ملاح (افتراضي)'), value: '#0A84FF' },
-                    { name: t('أخضر زمردي'), value: '#30D158' },
-                    { name: t('بنفسجي ملكي'), value: '#BF5AF2' },
-                    { name: t('برتقالي دافئ'), value: '#FF9F0A' },
-                    { name: t('أحمر قرمزي'), value: '#FF453A' },
+                    { name: t('أزرق ملاح (افتراضي)'), value: '#0A84FF', hover: '#0070E0' },
+                    { name: t('أخضر زمردي'), value: '#30D158', hover: '#28B84C' },
+                    { name: t('بنفسجي ملكي'), value: '#BF5AF2', hover: '#A242D6' },
+                    { name: t('برتقالي دافئ'), value: '#FF9F0A', hover: '#E08800' },
+                    { name: t('أحمر قرمزي'), value: '#FF453A', hover: '#E03025' },
                   ].map((color) => (
                     <button
                       key={color.value}
                       type="button"
                       onClick={() => {
                         document.documentElement.style.setProperty('--color-accent', color.value)
+                        document.documentElement.style.setProperty('--color-accent-hover', color.hover)
                         localStorage.setItem('mellah_brand_color', color.value)
+                        localStorage.setItem('mellah_brand_color_hover', color.hover)
                         addToast({ message: `${t('تم اختيار')} ${color.name} ${t('كلون للنظام الرئيسي!')} 🎨`, variant: 'success', duration: 2000 })
                       }}
                       title={color.name}

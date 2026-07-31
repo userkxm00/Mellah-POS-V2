@@ -82,6 +82,8 @@ export function App(): React.JSX.Element {
       const savedColor = localStorage.getItem('mellah_brand_color')
       if (savedColor) {
         document.documentElement.style.setProperty('--color-accent', savedColor)
+        const savedHover = localStorage.getItem('mellah_brand_color_hover') || savedColor
+        document.documentElement.style.setProperty('--color-accent-hover', savedHover)
       }
       const savedLang = (localStorage.getItem('mellah_lang') as Language | null) || 'ar'
       document.documentElement.lang = savedLang
