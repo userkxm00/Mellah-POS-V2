@@ -151,7 +151,7 @@ export function SessionLockModal({ isOpen, onUnlock }: SessionLockModalProps): R
         <div className="flex items-center gap-3">
           <div className="px-4 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold flex items-center gap-2 backdrop-blur-md shadow-sm">
             <Lock className="w-3.5 h-3.5 animate-bounce" />
-            <span>{t('🔒 الشاشة مغلقة لحماية الخصوصية والصندوق')}</span>
+            <span>{t('الشاشة مغلقة لحماية الخصوصية والصندوق')}</span>
           </div>
         </div>
 

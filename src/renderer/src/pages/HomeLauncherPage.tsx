@@ -386,7 +386,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               <span style={{ color: '#FFFFFF' }}>{t('لوحة التحكم والتشغيل المركزية')}</span>
             </div>
             <h2 className="text-2xl font-black tracking-tight drop-shadow-sm" style={{ color: '#FFFFFF' }}>
-              {t('مرحباً بك،')} {currentUser.full_name} 👋
+              {t('مرحباً بك،')} {currentUser.full_name}
             </h2>
             <p className="text-xs font-semibold" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
               {t('اختر الوحدة المطلوبة للبدء. نظام نقاط البيع يعمل بمرونة وسرعة تامة.')}
