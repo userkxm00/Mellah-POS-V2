@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Delete,
   ArrowLeft,
@@ -21,26 +21,30 @@ interface LocalUser {
   role: UserRole
 }
 
-const roleMeta: Record<UserRole, { label: string; icon: React.ReactNode; color: string }> = {
-  admin: {
-    label: useLanguageStore.getState().t('مدير النظام'),
-    icon: <Crown className="w-4 h-4" />,
-    color: 'bg-accent/10 text-accent border-accent/20',
-  },
-  manager: {
-    label: useLanguageStore.getState().t('مشرف المتجر'),
-    icon: <Briefcase className="w-4 h-4" />,
-    color: 'bg-warning/10 text-warning border-warning/20',
-  },
-  cashier: {
-    label: useLanguageStore.getState().t('كاشير'),
-    icon: <UserCheck className="w-4 h-4" />,
-    color: 'bg-success/10 text-success border-success/20',
-  },
-}
-
 export function LoginPage(): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
+  const langVersion = useLanguageStore((s) => s.version)
+
+  const roleMeta = useMemo<Record<UserRole, { label: string; icon: React.ReactNode; color: string }>>(
+    () => ({
+      admin: {
+        label: t('مدير النظام'),
+        icon: <Crown className="w-4 h-4" />,
+        color: 'bg-accent/10 text-accent border-accent/20',
+      },
+      manager: {
+        label: t('مشرف المتجر'),
+        icon: <Briefcase className="w-4 h-4" />,
+        color: 'bg-warning/10 text-warning border-warning/20',
+      },
+      cashier: {
+        label: t('كاشير'),
+        icon: <UserCheck className="w-4 h-4" />,
+        color: 'bg-success/10 text-success border-success/20',
+      },
+    }),
+    [t, langVersion]
+  )
   const [users, setUsers] = useState<LocalUser[]>([])
   const [selectedUser, setSelectedUser] = useState<LocalUser | null>(null)
   const [pin, setPin] = useState<string>('')

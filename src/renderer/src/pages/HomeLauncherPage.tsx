@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Store,
   RotateCcw,
@@ -14,12 +14,12 @@ import {
   Crown,
   Briefcase,
   UserCheck,
-  ExternalLink,
+  ShieldCheck,
   Clock,
   Calendar,
   Sparkles,
-  ShieldCheck,
   Zap,
+  ExternalLink,
   RefreshCw,
   Wrench,
   Truck
@@ -46,144 +46,6 @@ interface LauncherTile {
   inWindow: boolean
 }
 
-const tiles: LauncherTile[] = [
-  {
-    id: 'pos',
-    label: useLanguageStore.getState().t('نقطة البيع (POS)'),
-    description: useLanguageStore.getState().t('واجهة الكاشير البيع الفوري السريع'),
-    icon: <Store className="w-8 h-8" />,
-    iconBg: 'bg-accent text-white',
-    roles: ['admin', 'manager', 'cashier'],
-    inWindow: true,
-  },
-  {
-    id: 'history',
-    label: useLanguageStore.getState().t('سجل المبيعات'),
-    description: useLanguageStore.getState().t('استعراض الفواتير وإعادة الطباعة'),
-    icon: <Receipt className="w-8 h-8" />,
-    iconBg: 'bg-[#5856D6] text-white',
-    roles: ['admin', 'manager', 'cashier'],
-    inWindow: false,
-  },
-  {
-    id: 'returns',
-    label: useLanguageStore.getState().t('إدارة المرتجعات'),
-    description: useLanguageStore.getState().t('استرجاع المنتجات والتعويضات'),
-    icon: <RotateCcw className="w-8 h-8" />,
-    iconBg: 'bg-warning text-white',
-    roles: ['admin', 'manager', 'cashier'],
-    inWindow: false,
-  },
-  {
-    id: 'customers',
-    label: useLanguageStore.getState().t('الزبائن والولاء'),
-    description: useLanguageStore.getState().t('قاعدة الزبائن ونقاط المكافآت'),
-    icon: <UserPlus className="w-8 h-8" />,
-    iconBg: 'bg-[#FF2D55] text-white',
-    roles: ['admin', 'manager', 'cashier'],
-    inWindow: false,
-  },
-  {
-    id: 'labels',
-    label: useLanguageStore.getState().t('طباعة الملصقات'),
-    icon: <Tag className="w-8 h-8" />,
-    description: useLanguageStore.getState().t('تيكيتات الباركود 40mm×30mm'),
-    iconBg: 'bg-[#FF9500] text-white',
-    roles: ['admin', 'manager', 'cashier'],
-    inWindow: false,
-  },
-  {
-    id: 'products',
-    label: useLanguageStore.getState().t('المنتجات والمخزون'),
-    description: useLanguageStore.getState().t('إضافة السلع والمقاسات والألوان'),
-    icon: <Package className="w-8 h-8" />,
-    iconBg: 'bg-success text-white',
-    roles: ['admin', 'manager'],
-    inWindow: false,
-  },
-  {
-    id: 'suppliers',
-    label: useLanguageStore.getState().t('الموردين والديون'),
-    description: useLanguageStore.getState().t('فواتير الشراء وديون السلع (Fournisseurs)'),
-    icon: <Truck className="w-8 h-8" />,
-    iconBg: 'bg-[#FF9500] text-white',
-    roles: ['admin', 'manager'],
-    inWindow: false,
-  },
-  {
-    id: 'reports',
-    label: useLanguageStore.getState().t('التقارير والتحليلات'),
-    description: useLanguageStore.getState().t('مؤشرات الأرباح والمبيعات الحية'),
-    icon: <BarChart3 className="w-8 h-8" />,
-    iconBg: 'bg-[#AF52DE] text-white',
-    roles: ['admin', 'manager'],
-    inWindow: false,
-  },
-  {
-    id: 'users',
-    label: useLanguageStore.getState().t('إدارة المستخدمين'),
-    description: useLanguageStore.getState().t('إضافة وحذف وتعيين أدوار الطاقم'),
-    icon: <Users className="w-8 h-8" />,
-    iconBg: 'bg-[#007AFF] text-white',
-    roles: ['admin'],
-    inWindow: false,
-  },
-  {
-    id: 'branches',
-    label: useLanguageStore.getState().t('إدارة الفروع'),
-    description: useLanguageStore.getState().t('الفروع والمحلات التابعة للمتجر'),
-    icon: <Building2 className="w-8 h-8" />,
-    iconBg: 'bg-[#34C759] text-white',
-    roles: ['admin'],
-    inWindow: false,
-  },
-  {
-    id: 'settings',
-    label: useLanguageStore.getState().t('إعدادات المتجر'),
-    description: useLanguageStore.getState().t('بيانات الفاتورة والنسخ الاحتياطي'),
-    icon: <Settings className="w-8 h-8" />,
-    iconBg: 'bg-[#8E8E93] text-white',
-    roles: ['admin'],
-    inWindow: false,
-  },
-  {
-    id: 'audit_logs',
-    label: useLanguageStore.getState().t('سجل العمليات (Audit)'),
-    description: useLanguageStore.getState().t('استعراض سجل التدقيق والأمان'),
-    icon: <ShieldCheck className="w-8 h-8" />,
-    iconBg: 'bg-[#34C759] text-white',
-    roles: ['admin'],
-    inWindow: false,
-  },
-  {
-    id: 'maintenance',
-    label: useLanguageStore.getState().t('الصيانة والتحديثات'),
-    description: useLanguageStore.getState().t('فحص وإصلاح النظام وتحديث التطبيق'),
-    icon: <Wrench className="w-8 h-8" />,
-    iconBg: 'bg-[#FF9500] text-white',
-    roles: ['admin'],
-    inWindow: false,
-  },
-]
-
-const roleBadges: Record<UserRole, { label: string; icon: React.ReactNode; style: string }> = {
-  admin: {
-    label: useLanguageStore.getState().t('مدير النظام'),
-    icon: <Crown className="w-3.5 h-3.5" />,
-    style: 'bg-accent/10 text-accent border-accent/20',
-  },
-  manager: {
-    label: useLanguageStore.getState().t('مشرف المتجر'),
-    icon: <Briefcase className="w-3.5 h-3.5" />,
-    style: 'bg-warning/10 text-warning border-warning/20',
-  },
-  cashier: {
-    label: useLanguageStore.getState().t('كاشير'),
-    icon: <UserCheck className="w-3.5 h-3.5" />,
-    style: 'bg-success/10 text-success border-success/20',
-  },
-}
-
 interface HomeLauncherPageProps {
   onNavigate: (moduleId: string) => void
 }
@@ -195,8 +57,153 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   const currentBranch = useAuthStore((s) => s.currentBranch)
   const logout = useAuthStore((s) => s.logout)
   const t = useLanguageStore((s) => s.t)
+  const langVersion = useLanguageStore((s) => s.version)
   const hasRole = useAuthStore((s) => s.hasRole)
   const language = useLanguageStore((s) => s.language)
+
+  const tiles = useMemo<LauncherTile[]>(
+    () => [
+      {
+        id: 'pos',
+        label: t('نقطة البيع (POS)'),
+        description: t('واجهة الكاشير البيع الفوري السريع'),
+        icon: <Store className="w-8 h-8" />,
+        iconBg: 'bg-accent text-white',
+        roles: ['admin', 'manager', 'cashier'],
+        inWindow: true,
+      },
+      {
+        id: 'history',
+        label: t('سجل المبيعات'),
+        description: t('استعراض الفواتير وإعادة الطباعة'),
+        icon: <Receipt className="w-8 h-8" />,
+        iconBg: 'bg-[#5856D6] text-white',
+        roles: ['admin', 'manager', 'cashier'],
+        inWindow: false,
+      },
+      {
+        id: 'returns',
+        label: t('إدارة المرتجعات'),
+        description: t('استرجاع المنتجات والتعويضات'),
+        icon: <RotateCcw className="w-8 h-8" />,
+        iconBg: 'bg-warning text-white',
+        roles: ['admin', 'manager', 'cashier'],
+        inWindow: false,
+      },
+      {
+        id: 'customers',
+        label: t('الزبائن والولاء'),
+        description: t('قاعدة الزبائن ونقاط المكافآت'),
+        icon: <UserPlus className="w-8 h-8" />,
+        iconBg: 'bg-[#FF2D55] text-white',
+        roles: ['admin', 'manager', 'cashier'],
+        inWindow: false,
+      },
+      {
+        id: 'labels',
+        label: t('طباعة الملصقات'),
+        icon: <Tag className="w-8 h-8" />,
+        description: t('تيكيتات الباركود 40mm×30mm'),
+        iconBg: 'bg-[#FF9500] text-white',
+        roles: ['admin', 'manager', 'cashier'],
+        inWindow: false,
+      },
+      {
+        id: 'products',
+        label: t('المنتجات والمخزون'),
+        description: t('إضافة السلع والمقاسات والألوان'),
+        icon: <Package className="w-8 h-8" />,
+        iconBg: 'bg-success text-white',
+        roles: ['admin', 'manager'],
+        inWindow: false,
+      },
+      {
+        id: 'suppliers',
+        label: t('الموردين والديون'),
+        description: t('فواتير الشراء وديون السلع (Fournisseurs)'),
+        icon: <Truck className="w-8 h-8" />,
+        iconBg: 'bg-[#FF9500] text-white',
+        roles: ['admin', 'manager'],
+        inWindow: false,
+      },
+      {
+        id: 'reports',
+        label: t('التقارير والتحليلات'),
+        description: t('مؤشرات الأرباح والمبيعات الحية'),
+        icon: <BarChart3 className="w-8 h-8" />,
+        iconBg: 'bg-[#AF52DE] text-white',
+        roles: ['admin', 'manager'],
+        inWindow: false,
+      },
+      {
+        id: 'users',
+        label: t('إدارة المستخدمين'),
+        description: t('إضافة وحذف وتعيين أدوار الطاقم'),
+        icon: <Users className="w-8 h-8" />,
+        iconBg: 'bg-[#007AFF] text-white',
+        roles: ['admin'],
+        inWindow: false,
+      },
+      {
+        id: 'branches',
+        label: t('إدارة الفروع'),
+        description: t('الفروع والمحلات التابعة للمتجر'),
+        icon: <Building2 className="w-8 h-8" />,
+        iconBg: 'bg-[#34C759] text-white',
+        roles: ['admin'],
+        inWindow: false,
+      },
+      {
+        id: 'settings',
+        label: t('إعدادات المتجر'),
+        description: t('بيانات الفاتورة والنسخ الاحتياطي'),
+        icon: <Settings className="w-8 h-8" />,
+        iconBg: 'bg-[#8E8E93] text-white',
+        roles: ['admin'],
+        inWindow: false,
+      },
+      {
+        id: 'audit_logs',
+        label: t('سجل العمليات (Audit)'),
+        description: t('استعراض سجل التدقيق والأمان'),
+        icon: <ShieldCheck className="w-8 h-8" />,
+        iconBg: 'bg-[#34C759] text-white',
+        roles: ['admin'],
+        inWindow: false,
+      },
+      {
+        id: 'maintenance',
+        label: t('الصيانة والتحديثات'),
+        description: t('فحص وإصلاح النظام وتحديث التطبيق'),
+        icon: <Wrench className="w-8 h-8" />,
+        iconBg: 'bg-[#FF9500] text-white',
+        roles: ['admin'],
+        inWindow: false,
+      },
+    ],
+    [t, langVersion]
+  )
+
+  const roleBadges = useMemo<Record<UserRole, { label: string; icon: React.ReactNode; style: string }>>(
+    () => ({
+      admin: {
+        label: t('مدير النظام'),
+        icon: <Crown className="w-3.5 h-3.5" />,
+        style: 'bg-accent/10 text-accent border-accent/20',
+      },
+      manager: {
+        label: t('مشرف المتجر'),
+        icon: <Briefcase className="w-3.5 h-3.5" />,
+        style: 'bg-warning/10 text-warning border-warning/20',
+      },
+      cashier: {
+        label: t('كاشير'),
+        icon: <UserCheck className="w-3.5 h-3.5" />,
+        style: 'bg-success/10 text-success border-success/20',
+      },
+    }),
+    [t, langVersion]
+  )
 
   // Live ticking clock
   const [timeStr, setTimeStr] = useState<string>('')
