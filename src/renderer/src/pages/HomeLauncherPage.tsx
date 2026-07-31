@@ -498,7 +498,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               <button
                 key={tile.id}
                 onClick={() => onNavigate(tile.id)}
-                className="launcher-tile group flex flex-col items-center text-center p-5 justify-between min-h-[175px]"
+                className="launcher-tile group flex flex-col items-center text-center p-5 justify-between min-h-[175px] relative"
               >
                 {/* Top Badge for Secondary Windows */}
                 {!tile.inWindow ? (
@@ -512,21 +512,27 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
                   </span>
                 )}
 
-                {/* Icon */}
+                {/* Icon Container with Kinetic Micro Pulse Ripple */}
                 <div
-                  className={`w-14 h-14 rounded-2xl ${tile.iconBg} flex items-center justify-center shadow-layered-sm group-hover:scale-110 transition-transform duration-200 my-1`}
+                  className={`w-14 h-14 rounded-2xl ${tile.iconBg} flex items-center justify-center shadow-layered-sm group-hover:scale-110 transition-all duration-300 my-1 relative overflow-hidden group-hover:ring-4 group-hover:ring-accent/30`}
                 >
+                  <div className="absolute inset-0 rounded-2xl bg-white/25 opacity-0 group-hover:animate-ping pointer-events-none" />
                   {tile.icon}
                 </div>
 
                 {/* Label & Description */}
                 <div>
-                  <span className="text-xs font-black text-text-primary block leading-tight">
+                  <span className="text-xs font-black text-text-primary block leading-tight group-hover:text-accent transition-colors">
                     {t(tile.label)}
                   </span>
                   <span className="text-[10px] font-bold text-text-tertiary block mt-1 line-clamp-1">
                     {t(tile.description)}
                   </span>
+                </div>
+
+                {/* Floating Glass Tooltip on Hover */}
+                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-1 transition-all duration-200 pointer-events-none z-30 whitespace-nowrap bg-slate-900/90 dark:bg-slate-800/95 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-lg backdrop-blur-md shadow-lg border border-white/20 flex items-center gap-1">
+                  <span>{t(tile.description)}</span>
                 </div>
               </button>
             )
