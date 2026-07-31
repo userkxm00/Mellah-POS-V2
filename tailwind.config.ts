@@ -15,9 +15,9 @@ const config: Config = {
           card: '#FFFFFF',
         },
         accent: {
-          DEFAULT: '#0A84FF',
-          hover: '#0070E0',
-          light: 'rgba(10, 132, 255, 0.1)',
+          DEFAULT: 'var(--color-accent, #0A84FF)',
+          hover: 'var(--color-accent-hover, #0070E0)',
+          light: 'var(--color-accent-light, rgba(10, 132, 255, 0.1))',
         },
         success: {
           DEFAULT: '#30D158',

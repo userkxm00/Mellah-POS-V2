@@ -8,6 +8,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Brand Accent Colour Tokens (overridden at runtime by SettingsPage) ── */
+:root {
+  --color-accent: #0A84FF;
+  --color-accent-hover: #0070E0;
+  --color-accent-light: rgba(10, 132, 255, 0.1);
+}
+
 @layer base {
   html {
     direction: rtl;

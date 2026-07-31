@@ -374,7 +374,8 @@ async function dispatchSaleNotifications(
   autoPrintReceipt: boolean,
   autoOpenDrawer: boolean,
   t: (key: string) => string,
-  addToast: (toast: { message: string; variant: 'success' | 'warning' | 'error' | 'info'; duration?: number }) => void
+  addToast: (toast: { message: string; variant: 'success' | 'warning' | 'error' | 'info'; duration?: number }) => void,
+  storeName: string
 ): Promise<void> {
   const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
   if (autoOpenDrawer) {
@@ -395,7 +396,7 @@ async function dispatchSaleNotifications(
       paymentMethod,
       currentUser?.full_name,
       custObj?.full_name,
-      useStoreSettingsStore.getState().settings.store_name
+      storeName
     )
     printThermalReceipt(payload, { printerName, paperWidth, language: receiptLanguage }).catch(() => {
       addToast({
@@ -758,7 +759,8 @@ export function POSCheckoutPage({
         autoPrintReceipt,
         autoOpenDrawer,
         t,
-        addToast
+        addToast,
+        storeSettings.store_name
       )
 
       // 5 Signature Delight Moments Trigger
