@@ -34,7 +34,7 @@ interface MaintenanceTask {
 
 export function MaintenancePage({ onBack }: { onBack?: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
-  const _langVersion = useLanguageStore((s) => s.version)
+  useLanguageStore((s) => s.version)
   const addToast = useToastStore((s) => s.addToast)
 
   const [appVersion, setAppVersion] = useState<string>('...')

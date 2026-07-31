@@ -43,7 +43,7 @@ interface CategoryItem {
 
 export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
-  const _langVersion = useLanguageStore((s) => s.version)
+  useLanguageStore((s) => s.version)
   const [view, setView] = useState<'list' | 'add' | 'detail'>('list')
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
 

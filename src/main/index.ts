@@ -74,6 +74,7 @@ function registerIpcHandlers(): void {
         }
       })
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Failed to update window taskbar icon:', err)
     }
   })

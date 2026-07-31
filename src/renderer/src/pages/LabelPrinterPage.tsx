@@ -40,7 +40,7 @@ interface CategoryItem {
 
 export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
-  const _langVersion = useLanguageStore((s) => s.version)
+  useLanguageStore((s) => s.version)
   const [products, setProducts] = useState<ProductGroup[]>([])
   const [categories, setCategories] = useState<CategoryItem[]>([])
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)

@@ -23,7 +23,7 @@ interface LocalUser {
 
 export function LoginPage(): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
-  const langVersion = useLanguageStore((s) => s.version)
+  useLanguageStore((s) => s.version)
 
   const roleMeta = useMemo<Record<UserRole, { label: string; icon: React.ReactNode; color: string }>>(
     () => ({
@@ -43,7 +43,7 @@ export function LoginPage(): React.JSX.Element {
         color: 'bg-success/10 text-success border-success/20',
       },
     }),
-    [t, langVersion]
+    [t]
   )
   const [users, setUsers] = useState<LocalUser[]>([])
   const [selectedUser, setSelectedUser] = useState<LocalUser | null>(null)

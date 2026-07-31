@@ -57,7 +57,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   const currentBranch = useAuthStore((s) => s.currentBranch)
   const logout = useAuthStore((s) => s.logout)
   const t = useLanguageStore((s) => s.t)
-  const langVersion = useLanguageStore((s) => s.version)
+  useLanguageStore((s) => s.version)
   const hasRole = useAuthStore((s) => s.hasRole)
   const language = useLanguageStore((s) => s.language)
 
@@ -181,7 +181,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         inWindow: false,
       },
     ],
-    [t, langVersion]
+    [t]
   )
 
   const roleBadges = useMemo<Record<UserRole, { label: string; icon: React.ReactNode; style: string }>>(
@@ -202,7 +202,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         style: 'bg-success/10 text-success border-success/20',
       },
     }),
-    [t, langVersion]
+    [t]
   )
 
   // Live ticking clock

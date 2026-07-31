@@ -55,8 +55,8 @@ function getSecondaryModule(): string | null {
 }
 
 export function App(): React.JSX.Element {
-  const _language = useLanguageStore((s) => s.language)
-  const _version = useLanguageStore((s) => s.version)
+  useLanguageStore((s) => s.language)
+  useLanguageStore((s) => s.version)
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const currentUser = useAuthStore((s) => s.currentUser)

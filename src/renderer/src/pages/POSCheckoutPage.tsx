@@ -459,7 +459,7 @@ export function POSCheckoutPage({
   } = useCartStore()
 
   const t = useLanguageStore((s) => s.t)
-  const _langVersion = useLanguageStore((s) => s.version)
+  useLanguageStore((s) => s.version)
 
   const activeShift = useShiftStore((s) => s.activeShift)
   const fetchActiveShift = useShiftStore((s) => s.fetchActiveShift)

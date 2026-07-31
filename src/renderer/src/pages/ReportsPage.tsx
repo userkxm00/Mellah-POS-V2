@@ -47,7 +47,7 @@ interface DailyChartPoint {
 
 export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
-  const _langVersion = useLanguageStore((s) => s.version)
+  useLanguageStore((s) => s.version)
   const [salesSummary, setSalesSummary] = useState<SalesAnalyticsSummary | null>(null)
   const [topProducts, setTopProducts] = useState<TopProductRow[]>([])
   const [inventoryVal, setInventoryVal] = useState<InventoryValuationSummary | null>(null)

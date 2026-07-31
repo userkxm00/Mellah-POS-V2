@@ -18,7 +18,7 @@ interface AuditLogRow {
 
 export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
-  const _langVersion = useLanguageStore((s) => s.version)
+  useLanguageStore((s) => s.version)
   const [logs, setLogs] = useState<AuditLogRow[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [searchQuery, setSearchQuery] = useState<string>('')

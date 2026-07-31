@@ -38,7 +38,7 @@ interface CustomerSaleRow {
 
 export function CustomersPage({ onBack }: { readonly onBack?: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
-  const _langVersion = useLanguageStore((s) => s.version)
+  useLanguageStore((s) => s.version)
   const [customers, setCustomers] = useState<CustomerItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [searchQuery, setSearchQuery] = useState<string>('')
