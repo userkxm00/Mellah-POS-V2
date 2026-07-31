@@ -663,6 +663,9 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                         document.documentElement.style.setProperty('--color-accent-hover', color.hover)
                         localStorage.setItem('mellah_brand_color', color.value)
                         localStorage.setItem('mellah_brand_color_hover', color.hover)
+                        if (window.electron?.updateWindowIcon) {
+                          window.electron.updateWindowIcon(color.value, color.hover)
+                        }
                         addToast({ message: `${t('تم اختيار')} ${color.name} ${t('كلون للنظام الرئيسي!')} 🎨`, variant: 'success', duration: 2000 })
                       }}
                       title={color.name}

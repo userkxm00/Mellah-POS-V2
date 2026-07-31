@@ -52,6 +52,32 @@ function saveWindowState(win: BrowserWindow): void {
 // ----- IPC Handlers -----
 
 function registerIpcHandlers(): void {
+  ipcMain.on('app:update-window-icon', (_event, primaryHex: string, secondaryHex?: string) => {
+    try {
+      const c1 = primaryHex || '#0A84FF'
+      const c2 = secondaryHex || c1
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+        <defs>
+          <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${c1}"/>
+            <stop offset="100%" stop-color="${c2}"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+        <path d="M35,85.5 L35,44.5 L64,73 L93,44.5 L93,85.5" fill="none" stroke="#FFFFFF" stroke-width="11.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`
+      const base64Svg = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+      const iconImage = nativeImage.createFromDataURL(base64Svg)
+      BrowserWindow.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed()) {
+          win.setIcon(iconImage)
+        }
+      })
+    } catch (err) {
+      console.error('Failed to update window taskbar icon:', err)
+    }
+  })
+
   // Generic database query handler (read-only) - awaits whenDatabaseReady() to handle early queries seamlessly
   ipcMain.handle('db:query', async (_event, sql: string, params: unknown[]) => {
     const db = await whenDatabaseReady()

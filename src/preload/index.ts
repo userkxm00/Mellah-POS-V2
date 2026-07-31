@@ -116,6 +116,7 @@ export interface ElectronApi {
   backup: BackupApi
   appInfo: AppInfoApi
   relaunchApp: () => Promise<void>
+  updateWindowIcon?: (primaryHex: string, secondaryHex?: string) => void
   safeStorage: SafeStorageApi
 }
 
@@ -218,6 +219,9 @@ const api: ElectronApi = {
   },
   relaunchApp: (): Promise<void> => {
     return ipcRenderer.invoke('app:relaunch') as Promise<void>
+  },
+  updateWindowIcon: (primaryHex: string, secondaryHex?: string): void => {
+    ipcRenderer.send('app:update-window-icon', primaryHex, secondaryHex)
   },
   safeStorage: {
     isAvailable: (): Promise<boolean> => {
