@@ -56,7 +56,7 @@ interface GlassParticle {
   size: number
   duration: number
   delay: number
-  opacity: number
+  gradient: string
 }
 
 export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.JSX.Element {
@@ -70,7 +70,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   const hasRole = useAuthStore((s) => s.hasRole)
   const language = useLanguageStore((s) => s.language)
 
-  // 3D Parallax Mouse Tracking State
+  // 3D Parallax Mouse Tracking State (Max 45px distinct offset)
   const [parallaxOffset, setParallaxOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
 
   useEffect(() => {
@@ -81,9 +81,9 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
       const centerY = window.innerHeight / 2
       const normX = (e.clientX - centerX) / centerX
       const normY = (e.clientY - centerY) / centerY
-      // Max 18px offset in opposite cursor direction for smooth depth
-      const targetX = -normX * 18
-      const targetY = -normY * 18
+      // Max 45px responsive 3D parallax displacement
+      const targetX = -normX * 45
+      const targetY = -normY * 35
 
       animationFrameId = requestAnimationFrame(() => {
         setParallaxOffset({
@@ -100,15 +100,22 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
     }
   }, [])
 
-  // Floating Glass Particle Generator
+  // Vibrant Floating Glass Particles Generator (Visible in both Light & Dark modes)
   const particles = useMemo<GlassParticle[]>(() => {
-    return Array.from({ length: 14 }).map((_, i) => ({
+    const gradients = [
+      'from-accent/40 via-blue-400/30 to-teal-300/30',
+      'from-emerald-400/40 via-teal-500/30 to-accent/30',
+      'from-purple-400/40 via-accent/30 to-pink-400/30',
+      'from-amber-400/40 via-accent/30 to-emerald-400/30',
+    ]
+
+    return Array.from({ length: 16 }).map((_, i) => ({
       id: i,
-      x: (i * 7.1 + 3) % 100,
-      size: 4 + (i % 5) * 2,
-      duration: 7 + (i % 6) * 1.5,
-      delay: (i * 0.4) % 4,
-      opacity: 0.15 + (i % 4) * 0.08,
+      x: (i * 6.2 + 2) % 100,
+      size: 8 + (i % 5) * 3, // Sizes 8px to 20px
+      duration: 6 + (i % 6) * 1.5,
+      delay: (i * 0.35) % 4,
+      gradient: gradients[i % gradients.length],
     }))
   }, [])
 
@@ -322,7 +329,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         })
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
+        // eslint-disable-next-line no-console
       console.error('[HomeLauncherPage]', err)
       addToast({ message: t('حدث خطأ أثناء فحص الاتصال'), variant: 'error' })
     } finally {
@@ -340,25 +347,32 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
       {/* Update notification banner */}
       <UpdateNotificationBanner />
 
-      {/* Interactive Parallax Background Ambient Glow 1 */}
+      {/* ── High-Contrast Vibrant Parallax Ambient Glow Blobs ── */}
       <div
         style={{
           transform: `translate3d(${parallaxOffset.x}px, ${parallaxOffset.y}px, 0)`,
-          transition: 'transform 500ms cubic-bezier(0.16, 1, 0.3, 1)'
+          transition: 'transform 600ms cubic-bezier(0.16, 1, 0.3, 1)'
         }}
-        className="absolute w-[700px] h-[700px] bg-accent/8 rounded-full blur-[140px] pointer-events-none -top-40 right-1/4 z-0"
+        className="absolute w-[650px] h-[650px] bg-gradient-to-tr from-accent/25 via-blue-400/20 to-teal-300/20 rounded-full blur-[100px] pointer-events-none -top-32 right-1/4 z-0"
       />
 
-      {/* Interactive Parallax Background Ambient Glow 2 */}
       <div
         style={{
-          transform: `translate3d(${-parallaxOffset.x * 1.2}px, ${-parallaxOffset.y * 1.2}px, 0)`,
-          transition: 'transform 500ms cubic-bezier(0.16, 1, 0.3, 1)'
+          transform: `translate3d(${-parallaxOffset.x * 1.3}px, ${-parallaxOffset.y * 1.3}px, 0)`,
+          transition: 'transform 600ms cubic-bezier(0.16, 1, 0.3, 1)'
         }}
-        className="absolute w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px] pointer-events-none -bottom-20 -left-20 z-0"
+        className="absolute w-[550px] h-[550px] bg-gradient-to-br from-purple-500/20 via-accent/20 to-emerald-400/20 rounded-full blur-[90px] pointer-events-none -bottom-20 -left-20 z-0"
       />
 
-      {/* Floating Glass Particle System */}
+      <div
+        style={{
+          transform: `translate3d(${parallaxOffset.x * 0.7}px, ${parallaxOffset.y * 0.7}px, 0)`,
+          transition: 'transform 600ms cubic-bezier(0.16, 1, 0.3, 1)'
+        }}
+        className="absolute w-[500px] h-[500px] bg-gradient-to-r from-amber-400/15 via-accent/15 to-teal-400/20 rounded-full blur-[110px] pointer-events-none top-1/3 left-1/3 z-0"
+      />
+
+      {/* ── Floating Luminous Glass Particles System ── */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         {particles.map((p) => (
           <div
@@ -369,19 +383,19 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               height: `${p.size}px`,
               animation: `home-float-particle ${p.duration}s ease-in-out infinite`,
               animationDelay: `${p.delay}s`,
-              opacity: p.opacity,
+              boxShadow: '0 4px 14px rgba(10, 132, 255, 0.35)',
             }}
-            className="absolute bottom-0 rounded-full bg-white/30 dark:bg-white/10 backdrop-blur-sm border border-white/20 pointer-events-none"
+            className={`absolute bottom-0 rounded-full bg-gradient-to-tr ${p.gradient} backdrop-blur-md border border-accent/40 dark:border-white/30 pointer-events-none`}
           />
         ))}
       </div>
 
       {/* ── Top Bar ── */}
       <header className="glass-header border-b border-gray-200/80 dark:border-slate-800 px-8 py-3.5 flex items-center justify-between z-20 shadow-layered-sm relative overflow-hidden group">
-        {/* Header Diagonal Light Sweep */}
+        {/* Header Light Sweep */}
         <div
           style={{ animation: 'header-shimmer 6s ease-in-out infinite' }}
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 dark:via-white/10 to-transparent -translate-x-full pointer-events-none"
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 dark:via-white/10 to-transparent -translate-x-full pointer-events-none"
         />
 
         <AnimatedBrandLogo
@@ -453,14 +467,14 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
           style={{
             background: 'linear-gradient(135deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #0070E0) 100%)',
             color: '#FFFFFF',
-            boxShadow: '0 10px 30px -10px var(--color-accent, rgba(10,132,255,0.4))'
+            boxShadow: '0 12px 35px -10px var(--color-accent, rgba(10,132,255,0.45))'
           }}
-          className="relative overflow-hidden p-6 rounded-3xl border border-white/30 flex flex-col md:flex-row items-center justify-between gap-6 group"
+          className="relative overflow-hidden p-6 rounded-3xl border border-white/40 flex flex-col md:flex-row items-center justify-between gap-6 group shadow-2xl"
         >
           {/* Banner Reflection Light Sweep */}
           <div
             style={{ animation: 'banner-shimmer 4s ease-in-out infinite' }}
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full pointer-events-none z-10"
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full pointer-events-none z-10"
           />
 
           <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
@@ -495,8 +509,8 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
 
         {/* Quick System Summary Pills */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="glass-card-premium p-4 rounded-2xl flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center border border-accent/20">
+          <div className="glass-card-premium p-4 rounded-2xl flex items-center gap-3 hover:-translate-y-1 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center border border-accent/20 shadow-sm">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
@@ -507,8 +521,8 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
             </div>
           </div>
 
-          <div className="glass-card-premium p-4 rounded-2xl flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center border border-success/20">
+          <div className="glass-card-premium p-4 rounded-2xl flex items-center gap-3 hover:-translate-y-1 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center border border-success/20 shadow-sm">
               <Zap className="w-5 h-5" />
             </div>
             <div>
@@ -519,8 +533,8 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
             </div>
           </div>
 
-          <div className="glass-card-premium p-4 rounded-2xl flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center border border-warning/20">
+          <div className="glass-card-premium p-4 rounded-2xl flex items-center gap-3 hover:-translate-y-1 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center border border-warning/20 shadow-sm">
               <UserCheck className="w-5 h-5" />
             </div>
             <div>
@@ -535,7 +549,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         {/* Section Header */}
         <div className="flex items-center justify-between pt-2">
           <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
+            <span className="w-2.5 h-2.5 rounded-full bg-accent animate-ping" />
             <span>{t('وحدات النظام المتوفرة')}</span>
           </h3>
           <span className="text-xs font-bold text-text-tertiary">
@@ -553,7 +567,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
                 <button
                   key={tile.id}
                   onClick={() => onNavigate(tile.id)}
-                  className="launcher-tile-hero group flex flex-col items-center text-center p-5 justify-between min-h-[175px] col-span-1 sm:col-span-2 lg:col-span-1"
+                  className="launcher-tile-hero group flex flex-col items-center text-center p-5 justify-between min-h-[175px] col-span-1 sm:col-span-2 lg:col-span-1 hover:-translate-y-2 hover:scale-[1.03] hover:shadow-2xl transition-all duration-300 cursor-pointer"
                 >
                   {/* Top Badge */}
                   <span className="self-end text-[10px] font-extrabold text-white bg-white/20 px-2.5 py-0.5 rounded-full border border-white/30 backdrop-blur-md shadow-sm">
@@ -582,7 +596,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               <button
                 key={tile.id}
                 onClick={() => onNavigate(tile.id)}
-                className="launcher-tile group flex flex-col items-center text-center p-5 justify-between min-h-[175px]"
+                className="launcher-tile group flex flex-col items-center text-center p-5 justify-between min-h-[175px] hover:-translate-y-2 hover:scale-[1.03] hover:shadow-2xl hover:border-accent/60 transition-all duration-300 cursor-pointer"
               >
                 {/* Top Badge for Secondary Windows */}
                 {!tile.inWindow ? (
@@ -605,7 +619,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
 
                 {/* Label & Description */}
                 <div>
-                  <span className="text-xs font-black text-text-primary block leading-tight">
+                  <span className="text-xs font-black text-text-primary block leading-tight group-hover:text-accent transition-colors">
                     {t(tile.label)}
                   </span>
                   <span className="text-[10px] font-bold text-text-tertiary block mt-1 line-clamp-1">
@@ -621,17 +635,17 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
       <style>{`
         @keyframes home-float-particle {
           0% {
-            transform: translateY(105vh) scale(0.8) rotate(0deg);
+            transform: translateY(105vh) scale(0.6) rotate(0deg);
             opacity: 0;
           }
-          15% {
-            opacity: 0.3;
+          20% {
+            opacity: 0.85;
           }
-          85% {
-            opacity: 0.3;
+          80% {
+            opacity: 0.85;
           }
           100% {
-            transform: translateY(-10vh) scale(1.2) rotate(360deg);
+            transform: translateY(-10vh) scale(1.3) rotate(360deg);
             opacity: 0;
           }
         }
