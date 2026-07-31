@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Store,
   RotateCcw,
@@ -41,6 +41,7 @@ interface LauncherTile {
   description: string
   icon: React.ReactNode
   iconBg: string
+  glowColor: string
   roles: UserRole[]
   /** If true, navigates in-window. If false, opens a new Electron window. */
   inWindow: boolean
@@ -48,6 +49,14 @@ interface LauncherTile {
 
 interface HomeLauncherPageProps {
   onNavigate: (moduleId: string) => void
+}
+
+interface Particle {
+  id: number
+  x: number
+  size: number
+  duration: number
+  delay: number
 }
 
 export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.JSX.Element {
@@ -61,6 +70,66 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   const hasRole = useAuthStore((s) => s.hasRole)
   const language = useLanguageStore((s) => s.language)
 
+  const pageContainerRef = useRef<HTMLDivElement>(null)
+
+  // Zero-State Parallax Mouse Listener (Bypasses React Re-renders via CSS Variables)
+  useEffect(() => {
+    let rafId: number
+
+    const handleMouseMove = (e: MouseEvent): void => {
+      rafId = requestAnimationFrame(() => {
+        if (pageContainerRef.current) {
+          const normX = (e.clientX - window.innerWidth / 2) * -0.015
+          const normY = (e.clientY - window.innerHeight / 2) * -0.015
+          pageContainerRef.current.style.setProperty('--bg-parallax-x', `${normX.toFixed(2)}px`)
+          pageContainerRef.current.style.setProperty('--bg-parallax-y', `${normY.toFixed(2)}px`)
+        }
+      })
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      if (rafId) cancelAnimationFrame(rafId)
+    }
+  }, [])
+
+  // Floating Particles Data (Generated once on mount)
+  const particles = useMemo<Particle[]>(
+    () =>
+      Array.from({ length: 12 }).map((_, i) => ({
+        id: i,
+        x: (i * 8.3 + 4) % 100,
+        size: 4 + (i % 4) * 2,
+        duration: 8 + (i % 5) * 2,
+        delay: (i * 0.4) % 5,
+      })),
+    []
+  )
+
+  // Direct DOM 3D Tilt Event Handlers (0% React Overhead)
+  const handleTileMouseMove = (e: React.MouseEvent<HTMLButtonElement>): void => {
+    const target = e.currentTarget
+    const rect = target.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const centerX = rect.width / 2
+    const centerY = rect.height / 2
+    const rotateX = Math.round(((y - centerY) / centerY) * -9)
+    const rotateY = Math.round(((x - centerX) / centerX) * 9)
+    target.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`
+  }
+
+  const handleTileMouseLeave = (e: React.MouseEvent<HTMLButtonElement>): void => {
+    const target = e.currentTarget
+    target.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)'
+    target.style.boxShadow = ''
+  }
+
+  const handleTileMouseEnter = (e: React.MouseEvent<HTMLButtonElement>, glowColor: string): void => {
+    e.currentTarget.style.boxShadow = `0 14px 30px -6px ${glowColor}`
+  }
+
   const tiles = useMemo<LauncherTile[]>(
     () => [
       {
@@ -69,6 +138,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('واجهة الكاشير البيع الفوري السريع'),
         icon: <Store className="w-8 h-8" />,
         iconBg: 'bg-accent text-white',
+        glowColor: 'rgba(20, 184, 166, 0.35)',
         roles: ['admin', 'manager', 'cashier'],
         inWindow: true,
       },
@@ -78,6 +148,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('استعراض الفواتير وإعادة الطباعة'),
         icon: <Receipt className="w-8 h-8" />,
         iconBg: 'bg-[#5856D6] text-white',
+        glowColor: 'rgba(88, 86, 214, 0.35)',
         roles: ['admin', 'manager', 'cashier'],
         inWindow: false,
       },
@@ -87,6 +158,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('استرجاع المنتجات والتعويضات'),
         icon: <RotateCcw className="w-8 h-8" />,
         iconBg: 'bg-warning text-white',
+        glowColor: 'rgba(245, 158, 11, 0.35)',
         roles: ['admin', 'manager', 'cashier'],
         inWindow: false,
       },
@@ -96,6 +168,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('قاعدة الزبائن ونقاط المكافآت'),
         icon: <UserPlus className="w-8 h-8" />,
         iconBg: 'bg-[#FF2D55] text-white',
+        glowColor: 'rgba(255, 45, 85, 0.35)',
         roles: ['admin', 'manager', 'cashier'],
         inWindow: false,
       },
@@ -105,6 +178,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         icon: <Tag className="w-8 h-8" />,
         description: t('تيكيتات الباركود 40mm×30mm'),
         iconBg: 'bg-[#FF9500] text-white',
+        glowColor: 'rgba(255, 149, 0, 0.35)',
         roles: ['admin', 'manager', 'cashier'],
         inWindow: false,
       },
@@ -114,6 +188,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('إضافة السلع والمقاسات والألوان'),
         icon: <Package className="w-8 h-8" />,
         iconBg: 'bg-success text-white',
+        glowColor: 'rgba(52, 199, 89, 0.35)',
         roles: ['admin', 'manager'],
         inWindow: false,
       },
@@ -123,6 +198,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('فواتير الشراء وديون السلع (Fournisseurs)'),
         icon: <Truck className="w-8 h-8" />,
         iconBg: 'bg-[#FF9500] text-white',
+        glowColor: 'rgba(255, 149, 0, 0.35)',
         roles: ['admin', 'manager'],
         inWindow: false,
       },
@@ -132,6 +208,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('مؤشرات الأرباح والمبيعات الحية'),
         icon: <BarChart3 className="w-8 h-8" />,
         iconBg: 'bg-[#AF52DE] text-white',
+        glowColor: 'rgba(175, 82, 222, 0.35)',
         roles: ['admin', 'manager'],
         inWindow: false,
       },
@@ -141,6 +218,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('إضافة وحذف وتعيين أدوار الطاقم'),
         icon: <Users className="w-8 h-8" />,
         iconBg: 'bg-[#007AFF] text-white',
+        glowColor: 'rgba(0, 122, 255, 0.35)',
         roles: ['admin'],
         inWindow: false,
       },
@@ -150,6 +228,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('الفروع والمحلات التابعة للمتجر'),
         icon: <Building2 className="w-8 h-8" />,
         iconBg: 'bg-[#34C759] text-white',
+        glowColor: 'rgba(52, 199, 89, 0.35)',
         roles: ['admin'],
         inWindow: false,
       },
@@ -159,6 +238,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('بيانات الفاتورة والنسخ الاحتياطي'),
         icon: <Settings className="w-8 h-8" />,
         iconBg: 'bg-[#8E8E93] text-white',
+        glowColor: 'rgba(142, 142, 147, 0.35)',
         roles: ['admin'],
         inWindow: false,
       },
@@ -168,6 +248,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('استعراض سجل التدقيق والأمان'),
         icon: <ShieldCheck className="w-8 h-8" />,
         iconBg: 'bg-[#34C759] text-white',
+        glowColor: 'rgba(52, 199, 89, 0.35)',
         roles: ['admin'],
         inWindow: false,
       },
@@ -177,6 +258,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         description: t('فحص وإصلاح النظام وتحديث التطبيق'),
         icon: <Wrench className="w-8 h-8" />,
         iconBg: 'bg-[#FF9500] text-white',
+        glowColor: 'rgba(255, 149, 0, 0.35)',
         roles: ['admin'],
         inWindow: false,
       },
@@ -271,7 +353,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         })
       }
     } catch (err) {
-        // eslint-disable-next-line no-console
+      // eslint-disable-next-line no-console
       console.error('[HomeLauncherPage]', err)
       addToast({ message: t('حدث خطأ أثناء فحص الاتصال'), variant: 'error' })
     } finally {
@@ -285,16 +367,57 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   const visibleTiles = tiles.filter((tile) => hasRole(tile.roles))
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-[#F2F2F7] dark:bg-slate-950 select-none relative overflow-hidden">
+    <div
+      ref={pageContainerRef}
+      className="flex h-screen w-screen flex-col bg-[#F2F2F7] dark:bg-slate-950 select-none relative overflow-hidden"
+    >
       {/* Update notification banner */}
       <UpdateNotificationBanner />
 
-      {/* Clean Subtle Ambient Background Lighting */}
-      <div className="absolute w-[600px] h-[600px] bg-accent/10 rounded-full blur-[140px] pointer-events-none -top-32 right-1/4 z-0" />
-      <div className="absolute w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none -bottom-20 -left-20 z-0" />
+      {/* GPU-Accelerated Parallax Background Ambient Glows */}
+      <div
+        style={{
+          transform: 'translate3d(var(--bg-parallax-x, 0px), var(--bg-parallax-y, 0px), 0px)',
+          willChange: 'transform',
+          transition: 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)',
+        }}
+        className="absolute w-[650px] h-[650px] bg-accent/12 rounded-full blur-[140px] pointer-events-none -top-32 right-1/4 z-0"
+      />
+      <div
+        style={{
+          transform: 'translate3d(calc(var(--bg-parallax-x, 0px) * -1.2), calc(var(--bg-parallax-y, 0px) * -1.2), 0px)',
+          willChange: 'transform',
+          transition: 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)',
+        }}
+        className="absolute w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none -bottom-20 -left-20 z-0"
+      />
+
+      {/* Hardware-Accelerated Floating Glass Particles System */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {particles.map((p) => (
+          <div
+            key={p.id}
+            style={{
+              left: `${p.x}%`,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              animation: `float-particle ${p.duration}s ease-in-out infinite`,
+              animationDelay: `${p.delay}s`,
+              willChange: 'transform',
+            }}
+            className="absolute bottom-0 rounded-full bg-white/15 dark:bg-white/5 border border-white/10 backdrop-blur-[2px] pointer-events-none"
+          />
+        ))}
+      </div>
 
       {/* ── Top Bar ── */}
-      <header className="glass-header border-b border-gray-200/80 dark:border-slate-800 px-8 py-3.5 flex items-center justify-between z-20 shadow-layered-sm relative overflow-hidden">
+      <header className="glass-header border-b border-gray-200/80 dark:border-slate-800 px-8 py-3.5 flex items-center justify-between z-20 shadow-layered-sm relative overflow-hidden group">
+        {/* Header Light Sweep */}
+        <div
+          style={{ animation: 'header-shimmer 7s ease-in-out infinite' }}
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 dark:via-white/10 to-transparent -translate-x-full pointer-events-none"
+        />
+
         <AnimatedBrandLogo
           size="md"
           subtitle={currentBranch?.name ? t(currentBranch.name) : t('الفرع الرئيسي')}
@@ -365,8 +488,14 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
             background: 'linear-gradient(135deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #0070E0) 100%)',
             color: '#FFFFFF'
           }}
-          className="relative overflow-hidden p-6 rounded-3xl shadow-lg border border-white/20 flex flex-col md:flex-row items-center justify-between gap-6"
+          className="relative overflow-hidden p-6 rounded-3xl shadow-lg border border-white/30 flex flex-col md:flex-row items-center justify-between gap-6 group"
         >
+          {/* Banner Reflection Light Sweep */}
+          <div
+            style={{ animation: 'banner-shimmer 5s ease-in-out infinite' }}
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full pointer-events-none z-10"
+          />
+
           <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
           <div className="space-y-1.5 text-center md:text-right z-10">
@@ -456,8 +585,16 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               return (
                 <button
                   key={tile.id}
+                  type="button"
                   onClick={() => onNavigate(tile.id)}
-                  className="launcher-tile-hero group flex flex-col items-center text-center p-5 justify-between min-h-[175px] col-span-1 sm:col-span-2 lg:col-span-1 cursor-pointer"
+                  onMouseMove={handleTileMouseMove}
+                  onMouseLeave={handleTileMouseLeave}
+                  onMouseEnter={(e) => handleTileMouseEnter(e, tile.glowColor)}
+                  style={{
+                    transition: 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.4s ease',
+                    willChange: 'transform, box-shadow',
+                  }}
+                  className="launcher-tile-hero group flex flex-col items-center text-center p-5 justify-between min-h-[175px] col-span-1 sm:col-span-2 lg:col-span-1 cursor-pointer relative overflow-hidden"
                 >
                   {/* Top Badge */}
                   <span className="self-end text-[10px] font-extrabold text-white bg-white/20 px-2.5 py-0.5 rounded-full border border-white/30 backdrop-blur-md shadow-sm">
@@ -485,8 +622,16 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
             return (
               <button
                 key={tile.id}
+                type="button"
                 onClick={() => onNavigate(tile.id)}
-                className="launcher-tile group flex flex-col items-center text-center p-5 justify-between min-h-[175px] cursor-pointer"
+                onMouseMove={handleTileMouseMove}
+                onMouseLeave={handleTileMouseLeave}
+                onMouseEnter={(e) => handleTileMouseEnter(e, tile.glowColor)}
+                style={{
+                  transition: 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.4s ease',
+                  willChange: 'transform, box-shadow',
+                }}
+                className="launcher-tile group flex flex-col items-center text-center p-5 justify-between min-h-[175px] cursor-pointer relative overflow-hidden"
               >
                 {/* Top Badge for Secondary Windows */}
                 {!tile.inWindow ? (
@@ -521,6 +666,33 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
           })}
         </div>
       </main>
+
+      <style>{`
+        @keyframes float-particle {
+          0% {
+            transform: translateY(105vh) rotate(0deg);
+            opacity: 0;
+          }
+          15% {
+            opacity: 0.35;
+          }
+          85% {
+            opacity: 0.35;
+          }
+          100% {
+            transform: translateY(-10vh) rotate(360deg);
+            opacity: 0;
+          }
+        }
+        @keyframes header-shimmer {
+          0% { transform: translateX(-150%) rotate(15deg); }
+          100% { transform: translateX(150%) rotate(15deg); }
+        }
+        @keyframes banner-shimmer {
+          0% { transform: translateX(-150%) rotate(25deg); }
+          100% { transform: translateX(150%) rotate(25deg); }
+        }
+      `}</style>
     </div>
   )
 }
