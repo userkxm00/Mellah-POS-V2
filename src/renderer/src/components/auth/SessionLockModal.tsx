@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Lock, ShieldAlert } from 'lucide-react'
 import { Modal } from '@/components/ui'
 import { useAuthStore } from '@/stores/authStore'
@@ -16,6 +16,45 @@ export function SessionLockModal({ isOpen, onUnlock }: SessionLockModalProps): R
   const [pin, setPin] = useState<string>('')
   const [isVerifying, setIsVerifying] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key >= '0' && e.key <= '9') {
+        if (pin.length < 6) {
+          setPin((prev) => prev + e.key)
+          setError(null)
+        }
+      } else if (e.key === 'Backspace') {
+        setPin((prev) => prev.slice(0, -1))
+        setError(null)
+      } else if (e.key === 'Escape') {
+        onUnlock()
+      } else if (e.key === 'Enter') {
+        if (pin && pin.length >= 4 && currentUser) {
+          setIsVerifying(true)
+          setError(null)
+          window.electron.verifyPin(pin, currentUser.id).then((res) => {
+            if (res) {
+              setPin('')
+              addToast({ message: 'تم فتح الشاشة وإلغاء القفل بنجاح', variant: 'success' })
+              onUnlock()
+            } else {
+              setError('رمز PIN غير صحيح، يرجى المحاولة مجدداً')
+              setPin('')
+            }
+          }).catch((err) => {
+            console.error('[SessionLockModal]', err)
+            setError('حدث خطأ أثناء التحقق من الرمز')
+          }).finally(() => {
+            setIsVerifying(false)
+          })
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, pin, currentUser, onUnlock, addToast])
 
   if (!isOpen || !currentUser) return null
 

@@ -313,14 +313,14 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
       </div>
 
       {/* Top Search & Category Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 bg-white p-4 rounded-3xl border border-gray-200/80 shadow-layered-sm">
+      <div className="flex flex-col sm:flex-row items-center gap-3 bg-white dark:bg-slate-900 p-4 rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-layered-sm">
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-text-tertiary absolute right-3.5 top-1/2 -translate-y-1/2" />
           <Input
             placeholder={t('البحث باسم المنتج، المقاس، اللون، أو الباركود...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-10 bg-gray-50 border-gray-200 focus:bg-white text-xs font-bold"
+            className="pr-10 bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 text-xs font-bold"
           />
         </div>
 
@@ -331,7 +331,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
             className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all shrink-0 ${
               selectedCategoryId === null
                 ? 'bg-accent text-white shadow-ambient'
-                : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+                : 'bg-gray-100 dark:bg-slate-800 text-text-secondary hover:bg-gray-200 dark:hover:bg-slate-700'
             }`}
           >
             الكل ({products.length})
@@ -343,7 +343,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
               className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all shrink-0 ${
                 selectedCategoryId === cat.id
                   ? 'bg-accent text-white shadow-ambient'
-                  : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-slate-800 text-text-secondary hover:bg-gray-200 dark:hover:bg-slate-700'
               }`}
             >
               {cat.name}
@@ -367,7 +367,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                 جاري تحميل المنتجات...
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="p-8 text-center bg-white rounded-2xl border border-gray-200 text-xs font-bold text-text-tertiary">
+              <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 text-xs font-bold text-text-tertiary">
                 لا تتوفر منتجات تطابق البحث
               </div>
             ) : (
@@ -382,7 +382,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                     className={`w-full text-right p-4 rounded-2xl border transition-all flex items-center justify-between ${
                       isSelected
                         ? 'bg-accent/10 border-accent ring-2 ring-accent/20 shadow-layered-sm'
-                        : 'bg-white border-gray-200/80 hover:border-accent/40 hover:bg-gray-50/80 shadow-layered-sm'
+                        : 'bg-white dark:bg-slate-900 border-gray-200/80 dark:border-slate-800 hover:border-accent/40 hover:bg-gray-50/80 dark:hover:bg-slate-800/80 shadow-layered-sm'
                     }`}
                   >
                     <div>
@@ -428,7 +428,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                   <select
                     value={labelSize}
                     onChange={(e) => setLabelSize(e.target.value as '40x30' | '50x25' | '58x40')}
-                    className="px-3 py-2 rounded-xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                    className="px-3 py-2 rounded-xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
                   >
                     <option value="40x30">40×30 مم (Standard Tag)</option>
                     <option value="50x25">50×25 مم (Compact Tag)</option>
@@ -458,7 +458,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                     return (
                       <div
                         key={variant.id}
-                        className="bg-gray-50/80 p-3.5 rounded-2xl border border-gray-200/80 flex items-center justify-between gap-3"
+                        className="bg-gray-50/80 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-200/80 dark:border-slate-700/60 flex items-center justify-between gap-3"
                       >
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">

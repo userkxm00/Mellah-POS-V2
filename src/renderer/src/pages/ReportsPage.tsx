@@ -288,7 +288,7 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
 
       {/* Summary Cards Grid */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-200/80 dark:border-slate-800 shadow-ambient-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-text-secondary">إجمالي المبيعات</span>
             <div className="p-2 rounded-xl bg-accent/10 text-accent">
@@ -303,7 +303,7 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-200/80 dark:border-slate-800 shadow-ambient-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-text-secondary">صافي الأرباح الربحية</span>
             <div className="p-2 rounded-xl bg-success/10 text-success">
@@ -325,10 +325,10 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-200/80 dark:border-slate-800 shadow-ambient-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-text-secondary">تقييم المخزون الحالي</span>
-            <div className="p-2 rounded-xl bg-gray-100 text-text-primary">
+            <div className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-text-primary">
               <PackageCheck className="w-4 h-4" />
             </div>
           </div>
@@ -340,7 +340,7 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-200/80 dark:border-slate-800 shadow-ambient-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-text-secondary">توزيع طرق الدفع</span>
             <div className="p-2 rounded-xl bg-accent/10 text-accent">
@@ -363,8 +363,8 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
       {/* Interactive Recharts Section */}
       <div className="grid grid-cols-3 gap-6">
         {/* Sales Revenue Curve */}
-        <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm space-y-4">
-          <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+        <div className="col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-200/80 dark:border-slate-800 shadow-ambient-sm space-y-4">
+          <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
             <BarChart2 className="w-4 h-4 text-accent" />
             <h2 className="text-sm font-black text-text-primary">منحنى المبيعات الإجمالية (آخر الأيام)</h2>
           </div>
@@ -392,8 +392,8 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
         </div>
 
         {/* Payment Methods Chart */}
-        <div className="col-span-1 bg-white rounded-2xl p-5 border border-gray-200/80 shadow-ambient-sm space-y-4">
-          <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+        <div className="col-span-1 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-200/80 dark:border-slate-800 shadow-ambient-sm space-y-4">
+          <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
             <CreditCard className="w-4 h-4 text-success" />
             <h2 className="text-sm font-black text-text-primary">{t('مقارنة وسائل الدفع')} (DA)</h2>
           </div>

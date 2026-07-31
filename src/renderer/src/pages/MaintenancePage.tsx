@@ -186,7 +186,7 @@ export function MaintenancePage({ onBack }: { onBack?: () => void }): React.JSX.
       case 'error':
         return 'border-danger/30 bg-danger/5'
       default:
-        return 'border-gray-200/80 bg-white'
+        return 'border-gray-200/80 bg-white dark:bg-slate-900 dark:border-slate-800'
     }
   }
 
