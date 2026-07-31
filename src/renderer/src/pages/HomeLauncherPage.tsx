@@ -50,6 +50,15 @@ interface HomeLauncherPageProps {
   onNavigate: (moduleId: string) => void
 }
 
+interface GlassParticle {
+  id: number
+  x: number
+  size: number
+  duration: number
+  delay: number
+  opacity: number
+}
+
 export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.JSX.Element {
   const [isReconnecting, setIsReconnecting] = useState(false)
   const isOnline = useSyncStore((s) => s.isOnline)
@@ -60,6 +69,48 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   useLanguageStore((s) => s.version)
   const hasRole = useAuthStore((s) => s.hasRole)
   const language = useLanguageStore((s) => s.language)
+
+  // 3D Parallax Mouse Tracking State
+  const [parallaxOffset, setParallaxOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+
+  useEffect(() => {
+    let animationFrameId: number
+
+    const handleMouseMove = (e: MouseEvent): void => {
+      const centerX = window.innerWidth / 2
+      const centerY = window.innerHeight / 2
+      const normX = (e.clientX - centerX) / centerX
+      const normY = (e.clientY - centerY) / centerY
+      // Max 18px offset in opposite cursor direction for smooth depth
+      const targetX = -normX * 18
+      const targetY = -normY * 18
+
+      animationFrameId = requestAnimationFrame(() => {
+        setParallaxOffset({
+          x: Math.round(targetX * 10) / 10,
+          y: Math.round(targetY * 10) / 10,
+        })
+      })
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      if (animationFrameId) cancelAnimationFrame(animationFrameId)
+    }
+  }, [])
+
+  // Floating Glass Particle Generator
+  const particles = useMemo<GlassParticle[]>(() => {
+    return Array.from({ length: 14 }).map((_, i) => ({
+      id: i,
+      x: (i * 7.1 + 3) % 100,
+      size: 4 + (i % 5) * 2,
+      duration: 7 + (i % 6) * 1.5,
+      delay: (i * 0.4) % 4,
+      opacity: 0.15 + (i % 4) * 0.08,
+    }))
+  }, [])
 
   const tiles = useMemo<LauncherTile[]>(
     () => [
@@ -246,8 +297,9 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
           setTodaySalesDzd(rows[0].total)
           setTodayTxCount(rows[0].count)
         }
-      } catch (err) {// eslint-disable-next-line no-console
-      console.error("[HomeLauncherPage]", err); // Fallback
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[HomeLauncherPage]', err)
       }
     })()
   }, [])
@@ -269,8 +321,10 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
           variant: 'error',
         })
       }
-    } catch (err) {// eslint-disable-next-line no-console
-      console.error("[HomeLauncherPage]", err); addToast({ message: t('حدث خطأ أثناء فحص الاتصال'), variant: 'error' })
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[HomeLauncherPage]', err)
+      addToast({ message: t('حدث خطأ أثناء فحص الاتصال'), variant: 'error' })
     } finally {
       setIsReconnecting(false)
     }
@@ -279,25 +333,63 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   if (!currentUser) return <></>
 
   const badge = roleBadges[currentUser.role]
-  const visibleTiles = tiles.filter((t) => hasRole(t.roles))
+  const visibleTiles = tiles.filter((tile) => hasRole(tile.roles))
 
   return (
     <div className="flex h-screen w-screen flex-col bg-[#F2F2F7] dark:bg-slate-950 select-none relative overflow-hidden">
       {/* Update notification banner */}
       <UpdateNotificationBanner />
 
-      {/* Ambient glow */}
-      <div className="absolute w-[700px] h-[700px] bg-accent/6 rounded-full blur-[140px] pointer-events-none -top-40 right-1/4" />
-      <div className="absolute w-[500px] h-[500px] bg-accent/4 rounded-full blur-[100px] pointer-events-none -bottom-20 -left-20" />
+      {/* Interactive Parallax Background Ambient Glow 1 */}
+      <div
+        style={{
+          transform: `translate3d(${parallaxOffset.x}px, ${parallaxOffset.y}px, 0)`,
+          transition: 'transform 500ms cubic-bezier(0.16, 1, 0.3, 1)'
+        }}
+        className="absolute w-[700px] h-[700px] bg-accent/8 rounded-full blur-[140px] pointer-events-none -top-40 right-1/4 z-0"
+      />
+
+      {/* Interactive Parallax Background Ambient Glow 2 */}
+      <div
+        style={{
+          transform: `translate3d(${-parallaxOffset.x * 1.2}px, ${-parallaxOffset.y * 1.2}px, 0)`,
+          transition: 'transform 500ms cubic-bezier(0.16, 1, 0.3, 1)'
+        }}
+        className="absolute w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px] pointer-events-none -bottom-20 -left-20 z-0"
+      />
+
+      {/* Floating Glass Particle System */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {particles.map((p) => (
+          <div
+            key={p.id}
+            style={{
+              left: `${p.x}%`,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              animation: `home-float-particle ${p.duration}s ease-in-out infinite`,
+              animationDelay: `${p.delay}s`,
+              opacity: p.opacity,
+            }}
+            className="absolute bottom-0 rounded-full bg-white/30 dark:bg-white/10 backdrop-blur-sm border border-white/20 pointer-events-none"
+          />
+        ))}
+      </div>
 
       {/* ── Top Bar ── */}
-      <header className="glass-header border-b border-gray-200/80 dark:border-slate-800 px-8 py-3.5 flex items-center justify-between z-20 shadow-layered-sm">
+      <header className="glass-header border-b border-gray-200/80 dark:border-slate-800 px-8 py-3.5 flex items-center justify-between z-20 shadow-layered-sm relative overflow-hidden group">
+        {/* Header Diagonal Light Sweep */}
+        <div
+          style={{ animation: 'header-shimmer 6s ease-in-out infinite' }}
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 dark:via-white/10 to-transparent -translate-x-full pointer-events-none"
+        />
+
         <AnimatedBrandLogo
           size="md"
           subtitle={currentBranch?.name ? t(currentBranch.name) : t('الفرع الرئيسي')}
         />
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 relative z-10">
           {/* Sync status & Reconnect button */}
           <div className="flex items-center gap-2">
             <div
@@ -355,12 +447,22 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
       </header>
 
       {/* ── Main Dashboard Content ── */}
-      <main className="flex-1 flex flex-col px-8 py-6 max-w-7xl mx-auto w-full overflow-y-auto page-enter space-y-6">
+      <main className="flex-1 flex flex-col px-8 py-6 max-w-7xl mx-auto w-full overflow-y-auto page-enter space-y-6 relative z-10">
         {/* Welcome Hero Banner */}
         <div
-          style={{ background: 'linear-gradient(135deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #0070E0) 100%)', color: '#FFFFFF' }}
-          className="relative overflow-hidden p-6 rounded-3xl shadow-lg border border-white/30 flex flex-col md:flex-row items-center justify-between gap-6"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #0070E0) 100%)',
+            color: '#FFFFFF',
+            boxShadow: '0 10px 30px -10px var(--color-accent, rgba(10,132,255,0.4))'
+          }}
+          className="relative overflow-hidden p-6 rounded-3xl border border-white/30 flex flex-col md:flex-row items-center justify-between gap-6 group"
         >
+          {/* Banner Reflection Light Sweep */}
+          <div
+            style={{ animation: 'banner-shimmer 4s ease-in-out infinite' }}
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full pointer-events-none z-10"
+          />
+
           <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
           <div className="space-y-1.5 text-center md:text-right z-10">
@@ -515,6 +617,33 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
           })}
         </div>
       </main>
+
+      <style>{`
+        @keyframes home-float-particle {
+          0% {
+            transform: translateY(105vh) scale(0.8) rotate(0deg);
+            opacity: 0;
+          }
+          15% {
+            opacity: 0.3;
+          }
+          85% {
+            opacity: 0.3;
+          }
+          100% {
+            transform: translateY(-10vh) scale(1.2) rotate(360deg);
+            opacity: 0;
+          }
+        }
+        @keyframes header-shimmer {
+          0% { transform: translateX(-150%) rotate(15deg); }
+          100% { transform: translateX(150%) rotate(15deg); }
+        }
+        @keyframes banner-shimmer {
+          0% { transform: translateX(-150%) rotate(25deg); }
+          100% { transform: translateX(150%) rotate(25deg); }
+        }
+      `}</style>
     </div>
   )
 }
