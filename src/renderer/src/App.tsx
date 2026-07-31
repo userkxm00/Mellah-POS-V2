@@ -77,7 +77,7 @@ export function App(): React.JSX.Element {
     checkAuthSession()
     useStoreSettingsStore.getState().loadSettings()
 
-    // Function to apply saved brand color & language from localStorage
+    // Function to apply saved brand color, language & theme mode from localStorage
     const applySavedBrandColorAndLang = (): void => {
       const savedColor = localStorage.getItem('mellah_brand_color')
       if (savedColor) {
@@ -86,6 +86,14 @@ export function App(): React.JSX.Element {
       const savedLang = localStorage.getItem('mellah_lang') || 'ar'
       document.documentElement.lang = savedLang
       document.documentElement.dir = savedLang === 'ar' ? 'rtl' : 'ltr'
+
+      // Multi-window theme (Dark/Light mode) sync
+      const savedTheme = localStorage.getItem('mellah_pos_theme')
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
     }
 
     // Apply on initial mount
