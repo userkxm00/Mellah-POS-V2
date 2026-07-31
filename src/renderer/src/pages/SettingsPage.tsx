@@ -649,11 +649,11 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                 </label>
                 <div className="flex items-center gap-3">
                   {[
-                    { name: t('أزرق ملاح (افتراضي)'), value: '#0A84FF', hover: '#0070E0' },
-                    { name: t('أخضر زمردي'), value: '#30D158', hover: '#28B84C' },
-                    { name: t('بنفسجي ملكي'), value: '#BF5AF2', hover: '#A242D6' },
-                    { name: t('برتقالي دافئ'), value: '#FF9F0A', hover: '#E08800' },
-                    { name: t('أحمر قرمزي'), value: '#FF453A', hover: '#E03025' },
+                    { name: t('أزرق ملاح (افتراضي)'), value: '#0A84FF', hover: '#00C6FF' },
+                    { name: t('أخضر زمردي'), value: '#10B981', hover: '#06B6D4' },
+                    { name: t('بنفسجي ملكي'), value: '#BF5AF2', hover: '#FF2D55' },
+                    { name: t('برتقالي دافئ'), value: '#FF9F0A', hover: '#FF5E00' },
+                    { name: t('أحمر قرمزي'), value: '#FF453A', hover: '#FF2A85' },
                   ].map((color) => (
                     <button
                       key={color.value}
