@@ -278,7 +278,7 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
               ? { label: `🥇 ${t('ذهبي')}`, color: 'bg-amber-100 text-amber-700 border-amber-200' }
               : spent >= 50000
                 ? { label: `🥈 ${t('فضي')}`, color: 'bg-slate-100 text-slate-700 border-slate-200' }
-                : { label: `🥉 ${t('عادي')}`, color: 'bg-gray-100 text-gray-700 border-gray-200' }
+                : { label: `🥉 ${t('عادي')}`, color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700' }
 
         return (
           <div className="flex items-center gap-3">

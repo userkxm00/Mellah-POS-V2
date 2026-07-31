@@ -1189,11 +1189,11 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
               }`}
             >
               <div className="w-full border-b border-gray-200 pb-1">
-                <span className="text-[10px] font-black uppercase text-gray-800 tracking-wider block truncate">
+                <span className="text-[10px] font-black uppercase text-gray-800 dark:text-gray-200 tracking-wider block truncate">
                   {storeName || 'MELLAH STORE'}
                 </span>
-                <h3 className="text-xs font-black text-black truncate">قميص قطني فاخر</h3>
-                <span className="text-[9px] font-bold text-gray-600 block">الحجم: L | اللون: أزرق</span>
+                <h3 className="text-xs font-black text-black dark:text-white truncate">قميص قطني فاخر</h3>
+                <span className="text-[9px] font-bold text-gray-600 dark:text-gray-300 block">الحجم: L | اللون: أزرق</span>
               </div>
 
               <div className="w-full my-1 flex justify-center">
@@ -1229,8 +1229,8 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
               </div>
 
               <div className="w-full border-t border-gray-200 pt-1 flex justify-between items-center px-1">
-                <span className="text-[9px] font-mono text-gray-500">SKU-7890</span>
-                <span className="text-xs font-black text-black">3,500 DA</span>
+                <span className="text-[9px] font-mono text-gray-500 dark:text-gray-400">SKU-7890</span>
+                <span className="text-xs font-black text-black dark:text-white">3,500 DA</span>
               </div>
             </div>
           </div>

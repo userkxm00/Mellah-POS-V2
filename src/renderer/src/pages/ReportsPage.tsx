@@ -460,10 +460,10 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
           </div>
           <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
             {cloudBranchData.map((b) => (
-              <div key={b.branch_id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-1">
-                <span className="text-xs font-bold text-gray-500">{b.branch_name}</span>
+              <div key={b.branch_id} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col gap-1">
+                <span className="text-xs font-bold text-gray-500 dark:text-gray-300">{b.branch_name}</span>
                 <span className="text-lg font-black text-text-primary">{formatCurrency(b.total_revenue_dzd)}</span>
-                <span className="text-xs text-gray-400">{b.sales_count} عملية بيع مسجلة سحابياً</span>
+                <span className="text-xs text-gray-400 dark:text-gray-300">{b.sales_count} عملية بيع مسجلة سحابياً</span>
               </div>
             ))}
           </div>

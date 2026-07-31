@@ -280,7 +280,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
             <div className="flex items-center gap-2">
               <span className="font-black text-text-primary text-sm">{row.name}</span>
               {row.company_name && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
                   {row.company_name}
                 </span>
               )}

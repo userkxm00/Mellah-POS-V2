@@ -32,9 +32,9 @@ const config: Config = {
           light: 'rgba(255, 159, 10, 0.1)',
         },
         text: {
-          primary: '#1C1C1E',
-          secondary: '#636366',
-          tertiary: '#AEAEB2',
+          primary: 'var(--color-text-primary, #1C1C1E)',
+          secondary: 'var(--color-text-secondary, #636366)',
+          tertiary: 'var(--color-text-tertiary, #AEAEB2)',
         },
         glass: {
           bg: 'rgba(255, 255, 255, 0.72)',

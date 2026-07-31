@@ -92,9 +92,15 @@ export function App(): React.JSX.Element {
     window.addEventListener('focus', handleSync)
     window.addEventListener('storage', handleSync)
 
+    // Periodic sync check every 3s to guarantee multi-window brand color consistency
+    const intervalId = setInterval(() => {
+      applySavedBrandColor()
+    }, 3000)
+
     const stopSyncLoop = startBackgroundSyncLoop()
     const stopAutoBackup = initAutoBackupScheduler()
     return () => {
+      clearInterval(intervalId)
       stopSyncLoop()
       stopAutoBackup()
       window.removeEventListener('focus', handleSync)

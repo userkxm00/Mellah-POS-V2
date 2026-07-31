@@ -8,11 +8,24 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Brand Accent Colour Tokens (overridden at runtime by SettingsPage) ── */
+/* ── Brand Accent & Theme Text Tokens (overridden at runtime / dark mode) ── */
 :root {
   --color-accent: #0A84FF;
   --color-accent-hover: #0070E0;
   --color-accent-light: rgba(10, 132, 255, 0.1);
+  --color-text-primary: #1C1C1E;
+  --color-text-secondary: #636366;
+  --color-text-tertiary: #AEAEB2;
+}
+
+html.dark {
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #94A3B8;
+  --color-text-tertiary: #64748B;
+}
+
+html.dark body {
+  @apply bg-[#0F172A] text-slate-100;
 }
 
 @layer base {
