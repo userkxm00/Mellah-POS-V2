@@ -27,7 +27,7 @@ import { FirstRunWizardModal } from '@/components/setup/FirstRunWizardModal'
 import { SessionLockModal } from '@/components/auth/SessionLockModal'
 import { useIdleTimer } from '@/hooks/useIdleTimer'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
-import { useLanguageStore } from '@/stores/languageStore'
+import { useLanguageStore, type Language } from '@/stores/languageStore'
 
 // In-window routes (fast navigation inside the main window)
 type InWindowRoute = 'launcher' | 'pos' | 'history' | 'returns' | 'customers' | 'labels' | 'maintenance'
@@ -83,9 +83,13 @@ export function App(): React.JSX.Element {
       if (savedColor) {
         document.documentElement.style.setProperty('--color-accent', savedColor)
       }
-      const savedLang = localStorage.getItem('mellah_lang') || 'ar'
+      const savedLang = (localStorage.getItem('mellah_lang') as Language | null) || 'ar'
       document.documentElement.lang = savedLang
       document.documentElement.dir = savedLang === 'ar' ? 'rtl' : 'ltr'
+
+      if (savedLang !== useLanguageStore.getState().language) {
+        useLanguageStore.getState().setLanguage(savedLang)
+      }
 
       // Multi-window theme (Dark/Light mode) sync
       const savedTheme = localStorage.getItem('mellah_pos_theme')
@@ -103,6 +107,11 @@ export function App(): React.JSX.Element {
     const handleSync = (): void => {
       applySavedBrandColorAndLang()
       useStoreSettingsStore.getState().loadSettings()
+
+      const savedLang = localStorage.getItem('mellah_lang') as Language | null
+      if (savedLang && savedLang !== useLanguageStore.getState().language) {
+        useLanguageStore.getState().setLanguage(savedLang)
+      }
     }
 
     window.addEventListener('focus', handleSync)
