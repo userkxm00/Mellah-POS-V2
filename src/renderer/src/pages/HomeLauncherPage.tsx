@@ -335,7 +335,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               <span className="text-xs font-black text-text-primary dark:text-slate-100 leading-none">
                 {currentUser.full_name}
               </span>
-              <span className="text-[10px] font-bold text-text-tertiary dark:text-slate-400 mt-0.5">
+              <span className="text-[10px] font-bold text-text-secondary dark:text-slate-300 mt-0.5">
                 {t(badge.label)}
               </span>
             </div>
@@ -346,7 +346,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
             onClick={() => {
               if (window.confirm(t('هل تريد تسجيل الخروج؟'))) logout()
             }}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gray-200/60 dark:bg-slate-800/60 text-text-secondary dark:text-slate-300 hover:bg-danger/10 hover:text-danger text-xs font-bold transition-colors btn-press"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gray-200/80 dark:bg-slate-800/80 text-text-primary dark:text-slate-100 hover:bg-danger/10 hover:text-danger text-xs font-black transition-colors btn-press"
           >
             <LogOut className="w-4 h-4" />
             <span>{t('خروج')}</span>

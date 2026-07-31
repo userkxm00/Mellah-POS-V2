@@ -64,7 +64,7 @@ export function AnimatedBrandLogo({
             </h1>
           </div>
           {subtitle && (
-            <p className={`${currentSize.sub} font-bold text-text-secondary tracking-widest uppercase opacity-85`}>
+            <p className={`${currentSize.sub} font-black text-text-primary dark:text-slate-300 tracking-widest uppercase`}>
               {subtitle}
             </p>
           )}
