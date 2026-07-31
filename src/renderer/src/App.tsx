@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback, Suspense, lazy } from 'react'
-import { ExternalLink } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { startBackgroundSyncLoop } from '@/services/syncEngine'
 import { SplashScreen } from '@/pages/SplashScreen'
@@ -57,7 +56,6 @@ function getSecondaryModule(): string | null {
 }
 
 export function App(): React.JSX.Element {
-  const t = useLanguageStore((s) => s.t)
   useLanguageStore((s) => s.language)
   useLanguageStore((s) => s.version)
 
@@ -361,23 +359,6 @@ export function App(): React.JSX.Element {
         </Suspense>
       </main>
 
-      {/* Floating Glass Pop-out Button for Hybrid Super Mode */}
-      {(currentPage as string) !== 'launcher' && currentPage !== 'pos' && (
-        <button
-          type="button"
-          onClick={() => {
-            if (window.electron?.openModuleWindow) {
-              window.electron.openModuleWindow(currentPage)
-              goHome()
-            }
-          }}
-          className="fixed top-3.5 right-[240px] z-50 px-3.5 py-2 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-gray-200/80 dark:border-slate-700/80 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 cursor-pointer flex items-center gap-1.5 btn-press"
-          title={t('فتح هذه الصفحة في نافذة خارجية مستقلة')}
-        >
-          <ExternalLink className="w-4 h-4" />
-          <span className="text-[11px] font-black hidden sm:inline">{t('نافذة خارجية')}</span>
-        </button>
-      )}
       <FirstRunWizardModal />
       <SessionLockModal isOpen={isLocked} onUnlock={unlockSession} />
       <CommandPalette

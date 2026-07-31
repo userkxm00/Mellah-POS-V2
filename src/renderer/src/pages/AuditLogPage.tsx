@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { ArrowRight, ClipboardList, Search, User } from 'lucide-react'
+import { ArrowRight, ExternalLink, ClipboardList, Search, User } from 'lucide-react'
 import { Card, Input, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { useToastStore } from '@/stores/toastStore'
@@ -142,14 +142,32 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
     <div className="p-6 md:p-8 w-full max-w-none space-y-6 pb-12 select-none">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3.5">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
-            title={isSecondaryWindow ? t('إغلاق النافذة') : t('العودة')}
-          >
-            <ArrowRight className={`w-4 h-4 transform transition-transform ${document.documentElement.dir === 'rtl' ? '' : 'rotate-180'}`} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
+              title={isSecondaryWindow ? t('إغلاق النافذة') : t('العودة')}
+            >
+              <ArrowRight className={`w-4 h-4 transform transition-transform ${document.documentElement.dir === 'rtl' ? '' : 'rotate-180'}`} />
+            </button>
+
+            {!isSecondaryWindow && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.electron?.openModuleWindow) {
+                    window.electron.openModuleWindow('audit_logs')
+                    if (onBack) onBack()
+                  }
+                }}
+                className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
+                title={t('فتح في نافذة خارجية جديدة')}
+              >
+                <ExternalLink className="w-4 h-4" />
+              </button>
+            )}
+          </div>
           <h1 className="text-2xl font-black text-text-primary dark:text-slate-100 flex items-center gap-2">
             <ClipboardList className="w-6 h-6 text-accent" />
             <span>{t('سجل التغييرات والعمليات (Audit Log Viewer)')}</span>
