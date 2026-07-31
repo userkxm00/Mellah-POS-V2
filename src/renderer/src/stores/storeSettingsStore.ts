@@ -51,7 +51,7 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
             receipt_footer_text: rows[0].receipt_footer_text || DEFAULT_SETTINGS.receipt_footer_text,
             logo_url: rows[0].logo_url || null,
             default_language: rows[0].default_language || 'ar',
-            session_timeout_minutes: rows[0].session_timeout_minutes || 5,
+            session_timeout_minutes: rows[0].session_timeout_minutes ?? 5,
           },
           loaded: true,
         })

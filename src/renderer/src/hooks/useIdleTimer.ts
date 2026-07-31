@@ -15,7 +15,12 @@ export function useIdleTimer(timeoutMinutes: number = 5): {
       clearTimeout(timerRef.current)
     }
 
-    const ms = Math.max(1, timeoutMinutes) * 60 * 1000
+    if (timeoutMinutes <= 0) {
+      // Auto-lock is disabled
+      return
+    }
+
+    const ms = timeoutMinutes * 60 * 1000
     timerRef.current = setTimeout(() => {
       setIsLocked(true)
     }, ms)

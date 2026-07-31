@@ -129,7 +129,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
           setInitialLang(rows[0].default_language as Language)
           setLanguageStore(rows[0].default_language as Language)
         }
-        if (rows[0].session_timeout_minutes) {
+        if (rows[0].session_timeout_minutes !== undefined && rows[0].session_timeout_minutes !== null) {
           setSessionTimeout(rows[0].session_timeout_minutes)
         }
 
@@ -483,18 +483,34 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-text-primary dark:text-slate-200 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-text-tertiary" />
-                  <span>قفل الجلسة عند التوقف (دقائق)</span>
+                <label htmlFor="session-timeout-select" className="text-xs font-bold text-text-primary dark:text-slate-200 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-accent" />
+                    <span>{t('قفل الجلسة التلقائي عند التوقف (Session Auto-Lock)')}</span>
+                  </span>
+                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                    sessionTimeout === 0
+                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  }`}>
+                    {sessionTimeout === 0 ? t('🔴 القفل التلقائي معطل') : `${t('🟢 مفعل بعد')} ${sessionTimeout} ${t('دقيقة')}`}
+                  </span>
                 </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={60}
+                <select
+                  id="session-timeout-select"
                   value={sessionTimeout}
-                  onChange={(e) => setSessionTimeout(Number.parseInt(e.target.value, 10) || 5)}
-                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
-                />
+                  onChange={(e) => setSessionTimeout(Number.parseInt(e.target.value, 10))}
+                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer"
+                >
+                  <option value={0}>🚫 {t('معطل (إيقاف القفل التلقائي للجلسة نهائياً)')}</option>
+                  <option value={1}>⚡ {t('دقيقة واحدة (1 دقيقة)')}</option>
+                  <option value={3}>⚡ {t('3 دقائق')}</option>
+                  <option value={5}>⏳ {t('5 دقائق (الافتراضي)')}</option>
+                  <option value={10}>⏳ {t('10 دقائق')}</option>
+                  <option value={15}>⏳ {t('15 دقيقة')}</option>
+                  <option value={30}>⏳ {t('30 دقيقة')}</option>
+                  <option value={60}>⏳ {t('ساعة واحدة (60 دقيقة)')}</option>
+                </select>
               </div>
             </div>
           </Card>

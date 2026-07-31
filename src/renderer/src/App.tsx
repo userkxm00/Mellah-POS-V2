@@ -69,7 +69,8 @@ export function App(): React.JSX.Element {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
 
-  const { isLocked, unlockSession } = useIdleTimer(5)
+  const sessionTimeoutMinutes = useStoreSettingsStore((s) => s.settings.session_timeout_minutes)
+  const { isLocked, unlockSession } = useIdleTimer(sessionTimeoutMinutes)
 
   // Check if this is a secondary module window
   const secondaryModule = getSecondaryModule()
