@@ -357,32 +357,35 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
       {/* ── Main Dashboard Content ── */}
       <main className="flex-1 flex flex-col px-8 py-6 max-w-7xl mx-auto w-full overflow-y-auto page-enter space-y-6">
         {/* Welcome Hero Banner */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-accent/90 to-accent text-white p-6 rounded-3xl shadow-hero-glow border border-accent/20 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div
+          style={{ background: 'linear-gradient(135deg, #0A84FF 0%, #0070E0 100%)', color: '#FFFFFF' }}
+          className="relative overflow-hidden p-6 rounded-3xl shadow-lg border border-blue-400/30 flex flex-col md:flex-row items-center justify-between gap-6"
+        >
           <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
           <div className="space-y-1.5 text-center md:text-right z-10">
-            <div className="inline-flex items-center gap-1.5 bg-white/15 px-3 py-1 rounded-full text-xs font-bold text-white/90 backdrop-blur-md mb-1 shadow-sm border border-white/20">
+            <div className="inline-flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full text-xs font-bold text-white backdrop-blur-md mb-1 shadow-sm border border-white/30">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>{t('لوحة التحكم والتشغيل المركزية')}</span>
+              <span style={{ color: '#FFFFFF' }}>{t('لوحة التحكم والتشغيل المركزية')}</span>
             </div>
-            <h2 className="text-2xl font-black tracking-tight">
+            <h2 className="text-2xl font-black tracking-tight drop-shadow-sm" style={{ color: '#FFFFFF' }}>
               {t('مرحباً بك،')} {currentUser.full_name} 👋
             </h2>
-            <p className="text-xs text-white/80 font-medium">
+            <p className="text-xs font-semibold" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
               {t('اختر الوحدة المطلوبة للبدء. نظام نقاط البيع يعمل بمرونة وسرعة تامة.')}
             </p>
           </div>
 
           {/* Live Date & Time Widget */}
-          <div className="flex items-center gap-4 bg-white/10 backdrop-blur-xl px-5 py-3.5 rounded-2xl border border-white/20 z-10 shrink-0 shadow-layered-sm">
+          <div className="flex items-center gap-4 bg-white/20 backdrop-blur-xl px-5 py-3.5 rounded-2xl border border-white/30 z-10 shrink-0 shadow-layered-sm">
             <div className="flex flex-col text-left">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-white/90">
-                <Calendar className="w-3.5 h-3.5" />
-                <span>{dateStr}</span>
+              <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: '#FFFFFF' }}>
+                <Calendar className="w-3.5 h-3.5 text-white" />
+                <span style={{ color: '#FFFFFF' }}>{dateStr}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-lg font-black text-white font-mono mt-0.5">
+              <div className="flex items-center gap-1.5 text-lg font-black font-mono mt-0.5" style={{ color: '#FFFFFF' }}>
                 <Clock className="w-4 h-4 text-amber-300" />
-                <span>{timeStr}</span>
+                <span style={{ color: '#FFFFFF' }}>{timeStr}</span>
               </div>
             </div>
           </div>
@@ -395,8 +398,8 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-text-tertiary">{t('الفرع النشط')}</p>
-              <p className="text-xs font-black text-text-primary mt-0.5">
+              <p className="text-[11px] font-bold text-text-secondary dark:text-slate-400">{t('الفرع النشط')}</p>
+              <p className="text-xs font-black text-text-primary dark:text-slate-100 mt-0.5">
                 {currentBranch?.name ? t(currentBranch.name) : t('الفرع الرئيسي')}
               </p>
             </div>
@@ -407,7 +410,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-text-tertiary dark:text-slate-400">{t('مبيعات اليوم')} ({todayTxCount} {t('عملية')})</p>
+              <p className="text-[11px] font-bold text-text-secondary dark:text-slate-400">{t('مبيعات اليوم')} ({todayTxCount} {t('عملية')})</p>
               <p className="text-xs font-black text-success mt-0.5 currency font-mono">
                 <CountUpNumber value={todaySalesDzd} formatter={(v) => formatCurrency(v)} />
               </p>
@@ -419,8 +422,8 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
               <UserCheck className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-text-tertiary">{t('صلاحياتك الحالية')}</p>
-              <p className="text-xs font-black text-text-primary mt-0.5">
+              <p className="text-[11px] font-bold text-text-secondary dark:text-slate-400">{t('صلاحياتك الحالية')}</p>
+              <p className="text-xs font-black text-text-primary dark:text-slate-100 mt-0.5">
                 {t(badge.label)} ({currentUser.full_name})
               </p>
             </div>

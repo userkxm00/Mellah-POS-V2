@@ -90,11 +90,11 @@
   }
 
   /* Text Contrast Hierarchy Tokens */
-  h1, h2, h3, .title-text {
+  .title-text {
     color: #1C2B3A;
     font-weight: 600;
   }
-  html.dark h1, html.dark h2, html.dark h3, html.dark .title-text {
+  html.dark .title-text {
     color: #F8FAFC;
   }
 
