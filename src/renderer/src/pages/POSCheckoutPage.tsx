@@ -13,7 +13,12 @@ import {
   Home,
   Pause,
   Wallet,
-  Printer
+  Printer,
+  Banknote,
+  CreditCard,
+  Shuffle,
+  BookOpen,
+  Package
 } from 'lucide-react'
 import { Card, Input, ToastContainer } from '@/components/ui'
 import { CountUpNumber } from '@/components/ui/CountUpNumber'
@@ -92,27 +97,30 @@ function filterVariantsList(
 
 const SKELETON_KEYS = ['skel-var-1', 'skel-var-2', 'skel-var-3', 'skel-var-4', 'skel-var-5', 'skel-var-6']
 
-function getStockPillStyle(isOut: boolean, stock: number): string {
-  if (isOut) return 'bg-danger-light text-danger'
-  if (stock <= 5) return 'bg-warning-light text-warning'
-  return 'bg-success-light text-success'
-}
-
-function getPaymentMethodLabel(pm: PaymentMethod, t: (k: string) => string): string {
-  switch (pm) {
-    case 'cash':
-      return t('نقد')
-    case 'card':
-      return 'CIB'
-    case 'mixed':
-      return t('مزدوج')
-    case 'credit':
-      return t('كريدي')
-    default:
-      return pm
+function getStockPillBadge(isOut: boolean, stock: number, t: (k: string) => string): React.ReactNode {
+  if (isOut) {
+    return (
+      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+        <span>{t('نفد')}</span>
+      </span>
+    )
   }
+  if (stock <= 5) {
+    return (
+      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+        <span>{stock} {t('قطعة')}</span>
+      </span>
+    )
+  }
+  return (
+    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+      <span>{stock} {t('قطعة')}</span>
+    </span>
+  )
 }
-
 async function fetchPOSBranchData(branchId: string): Promise<{
   categories: CategoryItem[]
   customers: CustomerOption[]
@@ -856,11 +864,11 @@ export function POSCheckoutPage({
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-900/60 border border-gray-200/80 dark:border-white/10 backdrop-blur-md p-1.5 rounded-2xl shadow-layered-sm">
           {/* Held Carts Badge & Button */}
           <button
             onClick={() => setIsHeldModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold hover:bg-amber-200 transition-all btn-press"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-extrabold hover:bg-amber-500/20 transition-all btn-press"
           >
             <Pause className="w-3.5 h-3.5" />
             <span>{t('السلال المعلقة')} ({heldCarts.length})</span>
@@ -870,67 +878,68 @@ export function POSCheckoutPage({
           <button
             onClick={toggleAutoPrint}
             title={autoPrintReceipt ? t('الطباعة التلقائية مفعّلة') : t('الطباعة التلقائية معطّلة')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all btn-press border ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all btn-press border ${
               autoPrintReceipt
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                : 'bg-gray-100 text-gray-400 border-gray-200 line-through opacity-75 hover:bg-gray-200'
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+                : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 border-gray-200 dark:border-slate-700 line-through opacity-75'
             }`}
           >
             <Printer className="w-3.5 h-3.5" />
             <span>{t('طباعة الفاتورة')}</span>
-            <span className={`w-2 h-2 rounded-full ${autoPrintReceipt ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+            <span className={`w-2 h-2 rounded-full ${autoPrintReceipt ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300 dark:bg-slate-600'}`} />
           </button>
 
           {/* Quick Toggle: Auto Cash Drawer */}
           <button
             onClick={toggleAutoDrawer}
             title={autoOpenDrawer ? t('فتح درج النقود مفعّل') : t('فتح درج النقود معطّل')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all btn-press border ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all btn-press border ${
               autoOpenDrawer
-                ? 'bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100'
-                : 'bg-gray-100 text-gray-400 border-gray-200 line-through opacity-75 hover:bg-gray-200'
+                ? 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20 hover:bg-sky-500/20'
+                : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 border-gray-200 dark:border-slate-700 line-through opacity-75'
             }`}
           >
             <Wallet className="w-3.5 h-3.5" />
             <span>{t('فتح لاكاس')}</span>
-            <span className={`w-2 h-2 rounded-full ${autoOpenDrawer ? 'bg-blue-500' : 'bg-gray-300'}`} />
+            <span className={`w-2 h-2 rounded-full ${autoOpenDrawer ? 'bg-sky-500 animate-pulse' : 'bg-gray-300 dark:bg-slate-600'}`} />
           </button>
 
           {/* Manual Open Drawer */}
           <button
             onClick={handleOpenDrawer}
             title={t('تجربة فتح درج النقود يدويًا (ESC/POS)')}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-text-secondary text-xs font-bold transition-all btn-press"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-[#1C2B3A] dark:text-slate-200 text-xs font-extrabold transition-all btn-press"
           >
-            <Wallet className="w-3.5 h-3.5 text-amber-600" />
+            <Wallet className="w-3.5 h-3.5 text-amber-500" />
             <span>{t('اختبار لاكاس')}</span>
           </button>
 
           {activeShift ? (
-            <div className="flex items-center gap-2 bg-success/10 px-3.5 py-1 rounded-full border border-success/20">
-              <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-xs font-bold text-success">{t('وردية نشطة')}</span>
+            <div className="flex items-center gap-2 bg-emerald-500/10 px-3 py-1 rounded-xl border border-emerald-500/20">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">{t('وردية نشطة')}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 bg-danger/10 px-3.5 py-1 rounded-full border border-danger/20">
-              <span className="w-2 h-2 rounded-full bg-danger" />
-              <span className="text-xs font-bold text-danger">{t('مغلقة')}</span>
+            <div className="flex items-center gap-2 bg-rose-500/10 px-3 py-1 rounded-xl border border-rose-500/20">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span className="text-xs font-black text-rose-600 dark:text-rose-400">{t('مغلقة')}</span>
             </div>
           )}
 
           <button
             onClick={() => setIsLocked(true)}
-            className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold hover:bg-amber-100 transition-all"
+            className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold hover:bg-amber-500/20 transition-all btn-press"
+            title={t('قفل الشاشة')}
           >
-            <Lock className="w-4 h-4 text-amber-600" />
+            <Lock className="w-4 h-4" />
           </button>
 
           <button
             onClick={() => setIsCloseShiftOpen(true)}
             disabled={!activeShift}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-text-primary text-xs font-bold shadow-ambient-sm hover:bg-gray-100 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-xs font-extrabold hover:bg-gray-200 dark:hover:bg-slate-700 disabled:opacity-50 btn-press"
           >
-            <Lock className="w-3.5 h-3.5 text-text-secondary" />
+            <Lock className="w-3.5 h-3.5 text-[#6B7A8D] dark:text-slate-400" />
             <span>{t('إغلاق الوردية')}</span>
           </button>
         </div>
@@ -1013,7 +1022,7 @@ export function POSCheckoutPage({
                             addItem(v, v.product_name, itemPrice)
                             soundService.playScan()
                             addToast({
-                              message: `تم إضافة ${v.product_name}`,
+                              message: `${t('تم إضافة')} ${v.product_name}`,
                               variant: 'success',
                               duration: 1500,
                             })
@@ -1021,47 +1030,48 @@ export function POSCheckoutPage({
                             soundService.playError()
                           }
                         }}
-                        className={`p-4 border border-gray-200/80 dark:border-slate-700/80 transition-all flex flex-col justify-between h-36 ${
-                          isOutOfStock ? 'opacity-50 grayscale bg-gray-50 dark:bg-slate-800/40 cursor-not-allowed' : 'cursor-pointer hover:border-accent'
+                        className={`p-3.5 border backdrop-blur-md transition-all duration-300 flex flex-col justify-between h-40 rounded-3xl will-change-transform ${
+                          isOutOfStock
+                            ? 'opacity-50 grayscale bg-gray-50/60 dark:bg-slate-900/30 border-gray-200/60 dark:border-slate-800 cursor-not-allowed'
+                            : 'bg-white/70 dark:bg-slate-900/50 border-gray-200/80 dark:border-white/10 cursor-pointer hover:border-accent/50 hover:scale-[1.02] hover:shadow-layered-md'
                         }`}
                       >
                         <div>
-                          <div className="flex items-start justify-between gap-1 mb-1">
-                            <div className="flex items-center gap-2 min-w-0">
-                              {v.image_url && (
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {v.image_url ? (
                                 <img
                                   src={v.image_url}
                                   alt={v.product_name}
-                                  className="w-8 h-8 rounded-lg object-cover shrink-0"
+                                  className="w-9 h-9 rounded-xl object-cover shrink-0 border border-gray-200 dark:border-slate-700 shadow-sm"
                                 />
+                              ) : (
+                                <div className="w-9 h-9 rounded-xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center shrink-0 border border-accent/20">
+                                  <Package className="w-4 h-4 text-accent" />
+                                </div>
                               )}
-                              <h3 className="font-extrabold text-sm text-[#1C2B3A] dark:text-slate-100 line-clamp-1">
-                                {v.product_name}
-                              </h3>
+                              <div className="min-w-0">
+                                <h3 className="font-extrabold text-sm text-[#1C2B3A] dark:text-slate-100 line-clamp-1">
+                                  {v.product_name}
+                                </h3>
+                                <span className="text-[10px] font-bold text-[#6B7A8D] dark:text-slate-400 block truncate">
+                                  {v.category_name ? t(v.category_name) : t('عام')}
+                                </span>
+                              </div>
                             </div>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent shrink-0">
-                              {v.category_name ? t(v.category_name) : t('عام')}
-                            </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 text-xs text-[#6B7A8D] dark:text-slate-400 font-semibold">
-                            {v.size && <span className="bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded-md">{t('مقاس:')} {v.size}</span>}
-                            {v.color && <span className="bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded-md">{t('لون:')} {t(v.color)}</span>}
+                          <div className="flex items-center gap-1.5 text-xs text-[#6B7A8D] dark:text-slate-400 font-semibold mt-1">
+                            {v.size && <span className="bg-gray-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-gray-200/60 dark:border-slate-700">{t('مقاس:')} {v.size}</span>}
+                            {v.color && <span className="bg-gray-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-gray-200/60 dark:border-slate-700">{t('لون:')} {t(v.color)}</span>}
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-700/60">
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-200/60 dark:border-slate-800">
                           <span className="currency font-black text-accent text-sm">
                             {formatCurrency(itemPrice)}
                           </span>
-                          <span
-                            className={`text-[10px] font-black px-2 py-0.5 rounded-full ${getStockPillStyle(
-                              isOutOfStock,
-                              v.current_stock
-                            )}`}
-                          >
-                            {isOutOfStock ? t('نفد') : `${v.current_stock} ${t('قطعة')}`}
-                          </span>
+                          {getStockPillBadge(isOutOfStock, v.current_stock, t)}
                         </div>
                       </Card>
                     </div>
@@ -1155,7 +1165,7 @@ export function POSCheckoutPage({
           </div>
 
           {/* Cart Items List */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 divide-y divide-gray-100">
+          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
             {cartItems.length === 0 ? (
               <EmptyState
                 variant="cart"
@@ -1168,49 +1178,62 @@ export function POSCheckoutPage({
                 const matchedVariant = variants.find((v) => v.id === item.variant_id)
                 const imageUrl = matchedVariant?.image_url
                 return (
-                  <div key={item.variant_id} className="pt-2 first:pt-0 flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {imageUrl && (
+                  <div
+                    key={item.variant_id}
+                    className="bg-white/70 dark:bg-slate-800/70 border border-gray-200/80 dark:border-white/10 backdrop-blur-md rounded-2xl p-3 shadow-sm hover:shadow-layered-sm transition-all flex items-center justify-between gap-3 group"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {imageUrl ? (
                         <img
                           src={imageUrl}
                           alt={item.product_name}
-                          className="w-8 h-8 rounded-lg object-cover shrink-0"
+                          className="w-10 h-10 rounded-xl object-cover shrink-0 border border-gray-200 dark:border-slate-700 shadow-sm"
                         />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center shrink-0 border border-accent/20">
+                          <Package className="w-5 h-5 text-accent" />
+                        </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-extrabold text-xs text-text-primary truncate">{item.product_name}</h4>
-                        <p className="text-[10px] font-medium text-text-tertiary">
-                          {item.variant_size ? `${t('مقاس:')} ${item.variant_size}` : ''}{' '}
-                          {item.variant_color ? `${t('لون:')} ${t(item.variant_color)}` : ''}
-                        </p>
-                        <span className="currency font-bold text-accent text-xs">
+                        <h4 className="font-extrabold text-xs text-[#1C2B3A] dark:text-slate-100 truncate">{item.product_name}</h4>
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#6B7A8D] dark:text-slate-400 mt-0.5">
+                          {item.variant_size && <span className="bg-gray-100 dark:bg-slate-700/80 px-1.5 py-0.5 rounded-md">{t('مقاس:')} {item.variant_size}</span>}
+                          {item.variant_color && <span className="bg-gray-100 dark:bg-slate-700/80 px-1.5 py-0.5 rounded-md">{t('لون:')} {t(item.variant_color)}</span>}
+                        </div>
+                        <span className="currency font-black text-accent text-xs block mt-0.5">
                           {formatCurrency(item.unit_price_dzd)}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center border border-gray-200 rounded-xl bg-gray-50 overflow-hidden">
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center bg-gray-100/80 dark:bg-slate-700/60 border border-gray-200/80 dark:border-slate-600/60 rounded-xl p-0.5 overflow-hidden">
                         <button
+                          type="button"
                           onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}
-                          className="p-1 text-text-secondary hover:bg-gray-200"
+                          className="p-1 rounded-lg text-[#6B7A8D] dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 hover:text-accent transition-all"
+                          title={t('نقصان الكمية')}
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="px-2 text-xs font-black text-text-primary">{item.quantity}</span>
+                        <span className="px-2 text-xs font-black text-[#1C2B3A] dark:text-slate-100">{item.quantity}</span>
                         <button
+                          type="button"
                           onClick={() => updateQuantity(item.variant_id, item.quantity + 1)}
-                          className="p-1 text-text-secondary hover:bg-gray-200"
+                          className="p-1 rounded-lg text-[#6B7A8D] dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 hover:text-accent transition-all"
+                          title={t('زيادة الكمية')}
                         >
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
 
                       <button
+                        type="button"
                         onClick={() => removeItem(item.variant_id)}
-                        className="text-gray-400 hover:text-danger p-1"
+                        className="p-1.5 rounded-xl text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all"
+                        title={t('حذف من السلة')}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -1221,24 +1244,60 @@ export function POSCheckoutPage({
 
           {/* Payment & Checkout Options Area */}
           <div className="p-4 border-t border-gray-200/80 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 space-y-3">
-            {/* Payment Method Tabs */}
+            {/* Tactile Payment Method Tabs */}
             <div className="grid grid-cols-4 gap-1.5">
-              {(['cash', 'card', 'mixed', 'credit'] as PaymentMethod[]).map((pm) => (
-                <button
-                  key={pm}
-                  onClick={() => {
-                    setPaymentMethod(pm)
-                    if (pm === 'mixed') setIsMixedModalOpen(true)
-                  }}
-                  className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition-all btn-press ${
-                    paymentMethod === pm
-                      ? 'bg-accent text-white shadow-ambient-sm'
-                      : 'bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-text-secondary dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {getPaymentMethodLabel(pm, t)}
-                </button>
-              ))}
+              {(
+                [
+                  {
+                    id: 'cash',
+                    label: t('نقداً'),
+                    icon: <Banknote className="w-4 h-4" />,
+                    activeClass: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 shadow-layered-sm ring-1 ring-emerald-500/20',
+                    hoverClass: 'hover:border-emerald-500/30 hover:text-emerald-600',
+                  },
+                  {
+                    id: 'card',
+                    label: 'CIB',
+                    icon: <CreditCard className="w-4 h-4" />,
+                    activeClass: 'bg-sky-500/15 border-sky-500/40 text-sky-700 dark:text-sky-300 shadow-layered-sm ring-1 ring-sky-500/20',
+                    hoverClass: 'hover:border-sky-500/30 hover:text-sky-600',
+                  },
+                  {
+                    id: 'mixed',
+                    label: t('مزدوج'),
+                    icon: <Shuffle className="w-4 h-4" />,
+                    activeClass: 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300 shadow-layered-sm ring-1 ring-amber-500/20',
+                    hoverClass: 'hover:border-amber-500/30 hover:text-amber-600',
+                  },
+                  {
+                    id: 'credit',
+                    label: t('كريدي'),
+                    icon: <BookOpen className="w-4 h-4" />,
+                    activeClass: 'bg-rose-500/15 border-rose-500/40 text-rose-700 dark:text-rose-300 shadow-layered-sm ring-1 ring-rose-500/20',
+                    hoverClass: 'hover:border-rose-500/30 hover:text-rose-600',
+                  },
+                ] as const
+              ).map((tab) => {
+                const isActive = paymentMethod === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod(tab.id as PaymentMethod)
+                      if (tab.id === 'mixed') setIsMixedModalOpen(true)
+                    }}
+                    className={`py-2.5 px-1 rounded-xl text-xs font-black border transition-all duration-200 btn-press flex items-center justify-center gap-1.5 ${
+                      isActive
+                        ? tab.activeClass
+                        : `bg-white/80 dark:bg-slate-800/80 border-gray-200/80 dark:border-slate-700/80 text-[#6B7A8D] dark:text-slate-400 ${tab.hoverClass}`
+                    }`}
+                  >
+                    {tab.icon}
+                    <span>{tab.label}</span>
+                  </button>
+                )
+              })}
             </div>
 
             {/* Change Calculator Input (for Cash payment) */}
@@ -1379,6 +1438,34 @@ export function POSCheckoutPage({
         t={t}
         addToast={addToast}
       />
+      {/* Sleek Bottom Keyboard Shortcuts Bar */}
+      <footer className="glass-header border-t border-gray-200/80 dark:border-white/10 px-6 py-2 flex items-center justify-center gap-8 text-[11px] font-extrabold text-[#6B7A8D] dark:text-slate-400 select-none z-10 shadow-layered-sm shrink-0">
+        <div className="flex items-center gap-1.5">
+          <kbd className="px-2 py-0.5 rounded-lg bg-gray-200/80 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-[10px] font-mono shadow-sm">F2</kbd>
+          <span>{t('تعليق السلة')}</span>
+        </div>
+        <span className="text-gray-300 dark:text-slate-700">•</span>
+        <div className="flex items-center gap-1.5">
+          <kbd className="px-2 py-0.5 rounded-lg bg-gray-200/80 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-[10px] font-mono shadow-sm">F4</kbd>
+          <span>{t('التركيز على البحث')}</span>
+        </div>
+        <span className="text-gray-300 dark:text-slate-700">•</span>
+        <div className="flex items-center gap-1.5">
+          <kbd className="px-2 py-0.5 rounded-lg bg-gray-200/80 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-[10px] font-mono shadow-sm">Ctrl + K</kbd>
+          <span>{t('لوحة الأوامر')}</span>
+        </div>
+        <span className="text-gray-300 dark:text-slate-700">•</span>
+        <div className="flex items-center gap-1.5">
+          <kbd className="px-2 py-0.5 rounded-lg bg-gray-200/80 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-[10px] font-mono shadow-sm">Enter</kbd>
+          <span>{t('إتمام البيع والدفع')}</span>
+        </div>
+        <span className="text-gray-300 dark:text-slate-700">•</span>
+        <div className="flex items-center gap-1.5">
+          <kbd className="px-2 py-0.5 rounded-lg bg-gray-200/80 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-[10px] font-mono shadow-sm">ESC</kbd>
+          <span>{t('تفريغ السلة')}</span>
+        </div>
+      </footer>
+
       <ToastContainer />
     </div>
   )
