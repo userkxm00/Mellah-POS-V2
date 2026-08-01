@@ -8,6 +8,7 @@ interface SplashScreenProps {
 
 export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
+  const language = useLanguageStore((s) => s.language)
   const [isFadingOut, setIsFadingOut] = useState(false)
   const [progress, setProgress] = useState(0)
 
@@ -126,8 +127,8 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
             className="h-full rounded-full w-full"
             style={{
               transform: `scaleX(${progress / 100})`,
-              transformOrigin: document.documentElement.dir === 'rtl' ? 'right' : 'left',
-              transition: 'transform 0.1s linear',
+              transformOrigin: language === 'fr' ? 'left' : 'right',
+              transition: 'transform 0.15s linear',
               background: 'linear-gradient(90deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #00C6FF) 100%)',
               boxShadow: '0 0 12px var(--color-accent, #0A84FF)',
               willChange: 'transform'
