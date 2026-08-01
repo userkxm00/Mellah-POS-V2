@@ -138,6 +138,9 @@ const frDictionary: Record<string, string> = {
   'نقداً': 'Espèces',
   'استبدال': 'Échanger',
   'تطبيق رصيد المتجر': 'Appliquer avoir magasin',
+  'التركيز على البحث': 'Rechercher',
+  'تعليق السلة': 'Suspendre Panier',
+  'إتمام البيع والدفع': 'Valider la Vente',
 
   // Categories & Colors
   'جميع الفئات': 'Toutes les Catégories',
@@ -399,8 +402,8 @@ const frDictionary: Record<string, string> = {
   'تأكيد حذف المنتج': 'Confirmer la suppression',
   'نعم، احذف المنتج': 'Oui, supprimer',
   'تأكيد إلغاء الفاتورة وإعادة السلع للمخزون': 'Confirmer l\'annulation de la facture',
-  'حسب الوردية': 'Par session',
-  'F2: تم التوجيه لبحث المنتجات والباركود': 'F2: Recherche produits & code-barres',
+  'F1: تم التوجيه لبحث المنتجات والباركود': 'F1: Recherche produits & code-barres',
+  'F2: تم تعليق السلة الحالية بنجاح': 'F2: Panier suspendu avec succès',
   'F4: تم إرسال أمر فتح درج النقود': 'F4: Commande ouverture caisse envoyée',
   'تعذر فتح درج النقود: ': 'Impossible d\'ouvrir la caisse: ',
   'تأكد من توصيل الطابعة/الدرج': 'Vérifiez la connexion imprimante/tiroir',

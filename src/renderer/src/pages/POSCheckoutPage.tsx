@@ -261,18 +261,27 @@ function handleGlobalPOSKeyDown(
     openAddCustomer?: () => void
     applyQuickDiscount?: () => void
     holdCart?: () => void
+    openHeldCarts?: () => void
     openShift?: () => void
     hasCartItems: boolean
     isProcessingSale: boolean
     hasActiveModals: boolean
   }
 ): void {
-  if (e.key === 'F2') {
+  if (e.key === 'F1') {
     e.preventDefault()
     opts.focusSearch()
+  } else if (e.key === 'F2') {
+    e.preventDefault()
+    if (opts.hasCartItems) {
+      opts.holdCart?.()
+    }
   } else if (e.key === 'F4') {
     e.preventDefault()
     opts.openDrawer()
+  } else if (e.key === 'F10') {
+    e.preventDefault()
+    opts.openHeldCarts?.()
   } else if (e.key === 'Escape') {
     if (!opts.hasActiveModals && opts.hasCartItems) {
       opts.clearCart()
@@ -601,7 +610,7 @@ export function POSCheckoutPage({
     holdCart(cartItems, selectedCustomerObj?.full_name)
     clearCart()
     setSelectedCustomerId(null)
-    addToast({ message: `${t('تم تعليق السلة الحالية بنجاح')} (F2)`, variant: 'info' })
+    addToast({ message: t('F2: تم تعليق السلة الحالية بنجاح'), variant: 'info' })
   }, [cartItems, addToast, holdCart, clearCart, selectedCustomerObj?.full_name, t])
 
   const filteredVariants = filterVariantsList(variants, selectedCategoryId, searchQuery)
@@ -793,13 +802,13 @@ export function POSCheckoutPage({
     }
   }
 
-  // Keyboard Shortcuts (F2: Search Focus, F4: Cash Drawer, F12: Finish Sale, ESC: Clear Cart)
+  // Keyboard Shortcuts (F1: Search Focus, F2: Suspend Cart, F4: Cash Drawer, F10: Held Carts, F12: Finish Sale, ESC: Clear Cart)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       handleGlobalPOSKeyDown(e, {
         focusSearch: () => {
           searchInputRef.current?.focus()
-          addToast({ message: t('F2: تم التوجيه لبحث المنتجات والباركود'), variant: 'info', duration: 1500 })
+          addToast({ message: t('F1: تم التوجيه لبحث المنتجات والباركود'), variant: 'info', duration: 1500 })
         },
         openDrawer: () => {
           const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
@@ -817,6 +826,7 @@ export function POSCheckoutPage({
         openAddCustomer: () => setIsQuickAddCustomerOpen(true),
         applyQuickDiscount: () => setDiscount(0, Math.round(getSubtotal() * 0.1)),
         holdCart: handleHoldCart,
+        openHeldCarts: () => setIsHeldModalOpen(true),
         openShift: () => setIsCloseShiftOpen(true),
         hasCartItems: cartItems.length > 0,
         isProcessingSale,
@@ -827,7 +837,7 @@ export function POSCheckoutPage({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartItems, isProcessingSale, isMixedModalOpen, isHeldModalOpen, isManagerPinOpen, addToast, clearCart, t])
+  }, [cartItems, isProcessingSale, isMixedModalOpen, isHeldModalOpen, isManagerPinOpen, addToast, clearCart, t, handleHoldCart])
 
   const cartSubtotal = getSubtotal()
   const cartTotal = getTotal()
@@ -953,7 +963,7 @@ export function POSCheckoutPage({
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-gray-200/80 dark:border-slate-800 shadow-ambient-sm flex flex-col gap-3">
             <Input
               ref={searchInputRef}
-              placeholder={t('ابحث باسم المنتج، اللون، المقاس، أو امسح الباركود... (F2)')}
+              placeholder={t('ابحث باسم المنتج، اللون، المقاس، أو امسح الباركود... (F1)')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-gray-50/80 border-gray-200 text-sm focus:bg-white"
@@ -1439,7 +1449,12 @@ export function POSCheckoutPage({
         addToast={addToast}
       />
       {/* Sleek Bottom Keyboard Shortcuts Bar */}
-      <footer className="glass-header border-t border-gray-200/80 dark:border-white/10 px-6 py-2 flex items-center justify-center gap-8 text-[11px] font-extrabold text-[#6B7A8D] dark:text-slate-400 select-none z-10 shadow-layered-sm shrink-0">
+      <footer className="glass-header border-t border-gray-200/80 dark:border-white/10 px-6 py-2 flex items-center justify-center gap-6 text-[11px] font-extrabold text-[#6B7A8D] dark:text-slate-400 select-none z-10 shadow-layered-sm shrink-0 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <kbd className="px-2 py-0.5 rounded-lg bg-gray-200/80 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-[10px] font-mono shadow-sm">F1</kbd>
+          <span>{t('التركيز على البحث')}</span>
+        </div>
+        <span className="text-gray-300 dark:text-slate-700">•</span>
         <div className="flex items-center gap-1.5">
           <kbd className="px-2 py-0.5 rounded-lg bg-gray-200/80 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-[10px] font-mono shadow-sm">F2</kbd>
           <span>{t('تعليق السلة')}</span>
@@ -1447,16 +1462,16 @@ export function POSCheckoutPage({
         <span className="text-gray-300 dark:text-slate-700">•</span>
         <div className="flex items-center gap-1.5">
           <kbd className="px-2 py-0.5 rounded-lg bg-gray-200/80 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-[10px] font-mono shadow-sm">F4</kbd>
-          <span>{t('التركيز على البحث')}</span>
+          <span>{t('فتح درج النقود')}</span>
         </div>
         <span className="text-gray-300 dark:text-slate-700">•</span>
         <div className="flex items-center gap-1.5">
-          <kbd className="px-2 py-0.5 rounded-lg bg-gray-200/80 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-[10px] font-mono shadow-sm">Ctrl + K</kbd>
-          <span>{t('لوحة الأوامر')}</span>
+          <kbd className="px-2 py-0.5 rounded-lg bg-gray-200/80 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-[10px] font-mono shadow-sm">F10</kbd>
+          <span>{t('السلال المعلقة')}</span>
         </div>
         <span className="text-gray-300 dark:text-slate-700">•</span>
         <div className="flex items-center gap-1.5">
-          <kbd className="px-2 py-0.5 rounded-lg bg-gray-200/80 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-[10px] font-mono shadow-sm">Enter</kbd>
+          <kbd className="px-2 py-0.5 rounded-lg bg-gray-200/80 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-200 text-[10px] font-mono shadow-sm">F12</kbd>
           <span>{t('إتمام البيع والدفع')}</span>
         </div>
         <span className="text-gray-300 dark:text-slate-700">•</span>
