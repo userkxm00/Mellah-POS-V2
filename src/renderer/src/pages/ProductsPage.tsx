@@ -545,7 +545,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
       <Modal
         isOpen={isAutoReorderModalOpen}
         onClose={() => setIsAutoReorderModalOpen(false)}
-        title={t('📋 اقتراح طلبية التزود الشاملة للموردين (Auto Purchase Order)')}
+        title={t('اقتراح طلبية التزود الشاملة للموردين (Auto Purchase Order)')}
         size="lg"
       >
         <div className="space-y-4 select-none">
@@ -630,7 +630,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
       <Modal
         isOpen={isBulkPriceModalOpen}
         onClose={() => setIsBulkPriceModalOpen(false)}
-        title={t('🏷️ التعديل الجماعي لأسعار البيع (Bulk Price Update)')}
+        title={t('التعديل الجماعي لأسعار البيع (Bulk Price Update)')}
         size="md"
       >
         <div className="space-y-4 select-none">

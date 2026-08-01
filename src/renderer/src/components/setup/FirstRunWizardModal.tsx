@@ -91,7 +91,7 @@ export function FirstRunWizardModal(): React.JSX.Element | null {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={() => {}} title="🧙‍♂️ مرحباً بك! معالج الإعداد التلقائي لأول مرة">
+    <Modal isOpen={isOpen} onClose={() => {}} title="مرحباً بك! معالج الإعداد التلقائي لأول مرة">
       <div className="space-y-6 select-none dir-rtl">
         {/* Step Indicator Badges */}
         <div className="flex items-center justify-between pb-3 border-b border-gray-200 text-xs font-bold">

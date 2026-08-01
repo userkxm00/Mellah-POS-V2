@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Package, AlertTriangle } from 'lucide-react'
 import { Modal, Button, Input } from '@/components/ui'
 import { addStockMovement } from '@/services/productService'
 import { useToastStore } from '@/stores/toastStore'
@@ -60,25 +61,27 @@ export function StockAdjustmentModal({
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              className={`py-2 rounded-xl text-xs font-bold border btn-press ${
+              className={`py-2 px-3 rounded-xl text-xs font-bold border btn-press flex items-center justify-center gap-1.5 ${
                 type === 'restock'
                   ? 'bg-success-light text-success border-success/30'
                   : 'bg-white text-text-secondary border-border'
               }`}
               onClick={() => setType('restock')}
             >
-              📦 إضافة شحنة جديدة (+ restock)
+              <Package className="w-3.5 h-3.5" />
+              <span>إضافة شحنة جديدة (+ restock)</span>
             </button>
             <button
               type="button"
-              className={`py-2 rounded-xl text-xs font-bold border btn-press ${
+              className={`py-2 px-3 rounded-xl text-xs font-bold border btn-press flex items-center justify-center gap-1.5 ${
                 type === 'adjustment'
                   ? 'bg-danger-light text-danger border-danger/30'
                   : 'bg-white text-text-secondary border-border'
               }`}
               onClick={() => setType('adjustment')}
             >
-              ⚠️ تسوية/خصم مخزون (- adjustment)
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>تسوية/خصم مخزون (- adjustment)</span>
             </button>
           </div>
         </div>

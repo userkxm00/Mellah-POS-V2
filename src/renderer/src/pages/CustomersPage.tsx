@@ -274,12 +274,12 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
         const spent = row.total_spent_dzd
         const tier =
           spent >= 500000
-            ? { label: `💎 ${t('VIP')}`, color: 'bg-purple-100 text-purple-700 border-purple-200' }
+            ? { label: t('عضوية VIP'), color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' }
             : spent >= 200000
-              ? { label: `🥇 ${t('ذهبي')}`, color: 'bg-amber-100 text-amber-700 border-amber-200' }
+              ? { label: t('عضوية ذهبية'), color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' }
               : spent >= 50000
-                ? { label: `🥈 ${t('فضي')}`, color: 'bg-slate-100 text-slate-700 border-slate-200' }
-                : { label: `🥉 ${t('عادي')}`, color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700' }
+                ? { label: t('عضوية فضية'), color: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' }
+                : { label: t('عضوية عادية'), color: 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20' }
 
         return (
           <div className="flex items-center gap-3">

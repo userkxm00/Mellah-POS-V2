@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Lock, ShieldAlert, Clock as ClockIcon, Calendar, UserCheck, KeyRound } from 'lucide-react'
+import { Lock, ShieldAlert, Clock as ClockIcon, Calendar, UserCheck, KeyRound, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
@@ -283,7 +283,7 @@ export function SessionLockModal({ isOpen, onUnlock }: SessionLockModalProps): R
                 }`}
               >
                 {isVerifying ? (
-                  <span className="animate-spin">⏳</span>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
                 ) : (
                   <>
                     <KeyRound className="w-3.5 h-3.5" />

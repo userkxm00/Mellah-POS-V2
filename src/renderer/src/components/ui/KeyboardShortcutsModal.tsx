@@ -1,4 +1,5 @@
 import React from 'react'
+import { Keyboard } from 'lucide-react'
 
 interface ShortcutGroup {
   category: string
@@ -12,7 +13,7 @@ interface KeyboardShortcutsModalProps {
 
 const shortcutGroups: ShortcutGroup[] = [
   {
-    category: '🛒 واجهة البيع السريع (POS)',
+    category: 'واجهة البيع السريع (POS)',
     shortcuts: [
       { key: 'F2', description: 'إتمام البيع والدفع الفوري' },
       { key: 'F4', description: 'التركيز على مربع بحث السلع والباركود' },
@@ -21,7 +22,7 @@ const shortcutGroups: ShortcutGroup[] = [
     ]
   },
   {
-    category: '⚡ الأوامر والنظام العام',
+    category: 'الأوامر والنظام العام',
     shortcuts: [
       { key: 'Ctrl + K', description: 'فتح لوحة الأوامر والتنقل السريع (Command Palette)' },
       { key: '?', description: 'عرض دليل اختصارات الكيبورد الشامل' },
@@ -29,7 +30,7 @@ const shortcutGroups: ShortcutGroup[] = [
     ]
   },
   {
-    category: '🖨️ الطباعة والسجلات',
+    category: 'الطباعة والسجلات',
     shortcuts: [
       { key: 'Ctrl + P', description: 'إعادة طباعة آخر فاتورة مبيعات' },
       { key: 'Ctrl + F', description: 'البحث المباشر في الجداول والقوائم' },
@@ -57,7 +58,9 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
       >
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-200/60 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <span className="p-2.5 bg-accent/10 dark:bg-accent/20 text-accent rounded-2xl text-xl">⌨️</span>
+            <span className="p-2.5 bg-accent/10 dark:bg-accent/20 text-accent rounded-2xl flex items-center justify-center">
+              <Keyboard className="w-5 h-5" />
+            </span>
             <div>
               <h2 className="text-lg font-bold text-[#1C2B3A] dark:text-slate-100">اختصارات الكيبورد (Keyboard Shortcuts)</h2>
               <p className="text-xs text-[#6B7A8D] dark:text-slate-400">جميع الاختصارات السريعة المتاحة لزيادة سرعة الكاشير والعمليات</p>

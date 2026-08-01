@@ -601,8 +601,9 @@ export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.E
             </div>
 
             {selectedSale.status === 'voided' && (
-              <div className="p-3 bg-danger/10 border border-danger/20 rounded-xl text-xs text-danger font-bold">
-                🚫 {t('فواتير ملغاة')}. {t('السبب:')} {selectedSale.void_reason ?? t('بدون سبب مذكور')}
+              <div className="p-3 bg-danger/10 border border-danger/20 rounded-xl text-xs text-danger font-bold flex items-center gap-1.5">
+                <Ban className="w-4 h-4 text-danger shrink-0" />
+                <span>{t('فواتير ملغاة')}. {t('السبب:')} {selectedSale.void_reason ?? t('بدون سبب مذكور')}</span>
               </div>
             )}
 
@@ -692,7 +693,7 @@ export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.E
       </Modal>
 
       {/* Void Reason Confirmation Modal */}
-      <Modal isOpen={isVoidModalOpen} onClose={() => setIsVoidModalOpen(false)} title="⚠️ تأكيد إلغاء الفاتورة وإعادة السلع للمخزون" size="sm">
+      <Modal isOpen={isVoidModalOpen} onClose={() => setIsVoidModalOpen(false)} title={t('تأكيد إلغاء الفاتورة وإعادة السلع للمخزون')} size="sm">
         <div className="space-y-4">
           <p className="text-xs text-text-secondary font-bold">
             إلغاء الفاتورة سيعيد الكميات المباعة تلقائياً إلى المخزون وسيسجل العملية في سجل التدقيق.

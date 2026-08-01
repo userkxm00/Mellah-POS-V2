@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { Edit2, Trash2 } from 'lucide-react'
 import { Modal, Button, Input } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
@@ -166,16 +167,18 @@ export function CategoriesModal({
                           setEditingId(c.id)
                           setEditingName(c.name)
                         }}
-                        className="p-1 rounded text-text-tertiary hover:text-accent text-xs"
+                        className="p-1 rounded text-text-tertiary hover:text-accent text-xs flex items-center gap-1"
                       >
-                        ✏️ تعديل
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span>تعديل</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(c.id)}
-                        className="p-1 rounded text-text-tertiary hover:text-danger text-xs"
+                        className="p-1 rounded text-text-tertiary hover:text-danger text-xs flex items-center gap-1"
                       >
-                        🗑️ حذف
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>حذف</span>
                       </button>
                     </div>
                   </>

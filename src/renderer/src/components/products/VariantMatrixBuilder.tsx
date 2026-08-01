@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { RefreshCw } from 'lucide-react'
 import { Button, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import type { VariantInput } from '@/services/productService'
@@ -156,7 +157,7 @@ export function VariantMatrixBuilder({
             className="p-1.5 rounded bg-gray-100 text-text-secondary hover:bg-gray-200 text-xs font-medium"
             title="توليد باركود تلقائي"
           >
-            🔄
+            <RefreshCw className="w-3.5 h-3.5" />
           </button>
         </div>
       ),

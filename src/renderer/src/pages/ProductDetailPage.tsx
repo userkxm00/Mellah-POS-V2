@@ -304,10 +304,10 @@ export function ProductDetailPage({
 
   const movementTypeLabel = (type: string): string => {
     switch (type) {
-      case 'sale': return '🛒 بيع'
-      case 'restock': return '📦 إعادة تخزين'
-      case 'adjustment': return '⚙️ تعديل يدوي'
-      case 'return': return '↩️ مرتجع'
+      case 'sale': return t('بيع')
+      case 'restock': return t('إعادة تخزين')
+      case 'adjustment': return t('تعديل يدوي')
+      case 'return': return t('مرتجع')
       default: return type
     }
   }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Search, Banknote, Tag, RefreshCw } from 'lucide-react'
 import { Modal, Button, Input, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { lookupSaleForReturn, processReturn, type SaleReturnLookupResult, type SaleReturnLookupItem } from '@/services/returnService'
@@ -209,8 +210,9 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
               autoFocus
             />
           </div>
-          <Button type="submit" variant="primary" loading={isSearching}>
-            🔍 بحث
+          <Button type="submit" variant="primary" loading={isSearching} className="flex items-center gap-1.5">
+            <Search className="w-4 h-4" />
+            <span>بحث</span>
           </Button>
         </form>
 
@@ -247,36 +249,39 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border btn-press ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border btn-press flex items-center gap-1.5 ${
                       refundMethod === 'cash'
                         ? 'bg-accent text-white border-accent'
                         : 'bg-white text-text-secondary border-border'
                     }`}
                     onClick={() => setRefundMethod('cash')}
                   >
-                    💵 إرجاع نقداً (كاش)
+                    <Banknote className="w-3.5 h-3.5" />
+                    <span>إرجاع نقداً (كاش)</span>
                   </button>
                   <button
                     type="button"
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border btn-press ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border btn-press flex items-center gap-1.5 ${
                       refundMethod === 'store_credit'
                         ? 'bg-accent text-white border-accent'
                         : 'bg-white text-text-secondary border-border'
                     }`}
                     onClick={() => setRefundMethod('store_credit')}
                   >
-                    🏷️ رصيد متجر (Store Credit)
+                    <Tag className="w-3.5 h-3.5" />
+                    <span>رصيد متجر (Store Credit)</span>
                   </button>
                   <button
                     type="button"
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border btn-press ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border btn-press flex items-center gap-1.5 ${
                       refundMethod === 'exchange'
                         ? 'bg-accent text-white border-accent'
                         : 'bg-white text-text-secondary border-border'
                     }`}
                     onClick={() => setRefundMethod('exchange')}
                   >
-                    🔄 استبدال (Exchange)
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>استبدال (Exchange)</span>
                   </button>
                 </div>
               </div>

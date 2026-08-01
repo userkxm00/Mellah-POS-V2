@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react'
+import { ShoppingCart, Package, User, BarChart2, Receipt, Settings, Plus, Wrench, Tag, Phone } from 'lucide-react'
 
 export interface CommandItem {
   id: string
   title: string
   subtitle?: string
   category: 'ملاحة' | 'منتجات' | 'زبائن' | 'إجراءات سريعة'
-  icon: string
+  icon: React.ReactNode
   action: () => void
 }
 
@@ -60,7 +61,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
       title: 'واجهة البيع السريع (POS)',
       subtitle: 'الانتقال إلى كاشير البيع وإصدار الفواتير',
       category: 'ملاحة',
-      icon: '🛒',
+      icon: <ShoppingCart className="w-4 h-4 text-accent" />,
       action: () => { onNavigate?.('/pos'); onClose() }
     },
     {
@@ -68,7 +69,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
       title: 'إدارة المنتجات والمخزون',
       subtitle: 'عرض السلع والأثمنة وتعديل الستوك',
       category: 'ملاحة',
-      icon: '📦',
+      icon: <Package className="w-4 h-4 text-accent" />,
       action: () => { onNavigate?.('/products'); onClose() }
     },
     {
@@ -76,7 +77,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
       title: 'الزبائن والديون (Ledger)',
       subtitle: 'إدارة حسابات الزبائن وتسديد الديون',
       category: 'ملاحة',
-      icon: '👤',
+      icon: <User className="w-4 h-4 text-accent" />,
       action: () => { onNavigate?.('/customers'); onClose() }
     },
     {
@@ -84,7 +85,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
       title: 'التقارير والتحليلات المالية',
       subtitle: 'مؤشرات الأرباح والمبيعات الحية',
       category: 'ملاحة',
-      icon: '📊',
+      icon: <BarChart2 className="w-4 h-4 text-accent" />,
       action: () => { onNavigate?.('/reports'); onClose() }
     },
     {
@@ -92,7 +93,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
       title: 'سجل المبيعات والفواتير',
       subtitle: 'استعراض الفواتير وإعادة الطباعة',
       category: 'ملاحة',
-      icon: '🧾',
+      icon: <Receipt className="w-4 h-4 text-accent" />,
       action: () => { onNavigate?.('/sales'); onClose() }
     },
     {
@@ -100,7 +101,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
       title: 'إعدادات النظام والنسخ الاحتياطي',
       subtitle: 'تخصيص المظهر، الصوت والباكاب التلقائي',
       category: 'ملاحة',
-      icon: '⚙️',
+      icon: <Settings className="w-4 h-4 text-accent" />,
       action: () => { onNavigate?.('/settings'); onClose() }
     },
     {
@@ -108,7 +109,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
       title: 'إضافة منتج جديد',
       subtitle: 'فتح نافذة إضافة سلعة جديدة للمحل',
       category: 'إجراءات سريعة',
-      icon: '➕',
+      icon: <Plus className="w-4 h-4 text-accent" />,
       action: () => { onNavigate?.('/products/new'); onClose() }
     },
     {
@@ -116,7 +117,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
       title: 'الصيانة والتحديثات',
       subtitle: 'فحص سلامة قاعدة البيانات والتحديث الذاتي',
       category: 'إجراءات سريعة',
-      icon: '🔧',
+      icon: <Wrench className="w-4 h-4 text-accent" />,
       action: () => { onNavigate?.('/maintenance'); onClose() }
     }
   ], [onNavigate, onClose])
@@ -139,7 +140,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
           title: p.name,
           subtitle: `باركود: ${p.barcode} | السعر: ${p.price} د.ج`,
           category: 'منتجات',
-          icon: '📊',
+          icon: <Tag className="w-4 h-4 text-accent" />,
           action: () => { onNavigate?.(`/products/${p.id}`); onClose() }
         }))
       if (exactBarcodeMatches.length > 0) {
@@ -155,7 +156,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
         title: p.name,
         subtitle: `باركود: ${p.barcode || '—'} | السعر: ${p.price} د.ج`,
         category: 'منتجات',
-        icon: '🏷️',
+        icon: <Tag className="w-4 h-4 text-accent" />,
         action: () => { onNavigate?.(`/products/${p.id}`); onClose() }
       }))
 
@@ -167,7 +168,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
         title: c.name,
         subtitle: `الهاتف: ${c.phone || '—'}`,
         category: 'زبائن',
-        icon: '📱',
+        icon: <Phone className="w-4 h-4 text-accent" />,
         action: () => { onNavigate?.('/customers'); onClose() }
       }))
 

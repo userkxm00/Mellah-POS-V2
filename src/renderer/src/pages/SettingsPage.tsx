@@ -874,7 +874,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                 className="py-3 rounded-2xl bg-blue-50 border border-blue-200 text-accent hover:bg-blue-100 text-xs font-extrabold transition-all btn-press flex items-center justify-center gap-1.5"
               >
                 <Eye className="w-4 h-4" />
-                <span>👁️ معاينة الفاتورة الحرارية (Preview)</span>
+                <span>معاينة الفاتورة الحرارية (Preview)</span>
               </button>
 
               <button
@@ -883,7 +883,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                 className="py-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 text-xs font-extrabold transition-all btn-press flex items-center justify-center gap-1.5"
               >
                 <Barcode className="w-4 h-4" />
-                <span>🏷️ معاينة ملصق الباركود (Preview)</span>
+                <span>معاينة ملصق الباركود (Preview)</span>
               </button>
             </div>
 
@@ -960,8 +960,8 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
 
               {backupCount > 0 && (
                 <div className="flex items-center gap-3 text-[11px] font-semibold text-blue-800">
-                  <span>📁 {backupCount} {t('نسخة محفوظة')}</span>
-                  {lastBackupTime && <span>🕐 {t('آخر نسخة:')} {lastBackupTime}</span>}
+                  <span className="flex items-center gap-1"><FolderOpen className="w-3.5 h-3.5 text-blue-600" /> {backupCount} {t('نسخة محفوظة')}</span>
+                  {lastBackupTime && <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-blue-600" /> {t('آخر نسخة:')} {lastBackupTime}</span>}
                 </div>
               )}
 

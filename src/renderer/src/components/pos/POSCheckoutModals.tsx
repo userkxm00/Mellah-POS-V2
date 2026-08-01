@@ -97,7 +97,7 @@ export function POSCheckoutModals({
   return (
     <>
       {/* Held Carts Modal */}
-      <Modal isOpen={isHeldModalOpen} onClose={() => setIsHeldModalOpen(false)} title="📜 السلات المعلقة والمؤقتة (Hold Carts)" size="md">
+      <Modal isOpen={isHeldModalOpen} onClose={() => setIsHeldModalOpen(false)} title={t('السلات المعلقة والمؤقتة (Hold Carts)')} size="md">
         <div className="space-y-4">
           {heldCarts.length === 0 ? (
             <p className="text-xs text-center py-6 text-text-tertiary font-bold">لا توجد سلات معلقة حالياً.</p>
@@ -140,7 +140,7 @@ export function POSCheckoutModals({
       </Modal>
 
       {/* Manager PIN Modal */}
-      <Modal isOpen={isManagerPinOpen} onClose={() => setIsManagerPinOpen(false)} title="🔐 موافقة المدير على الخصم الكبير" size="sm">
+      <Modal isOpen={isManagerPinOpen} onClose={() => setIsManagerPinOpen(false)} title={t('موافقة المدير على الخصم الكبير')} size="sm">
         <div className="space-y-4">
           <p className="text-xs text-amber-900 font-bold bg-amber-50 p-3 rounded-xl border border-amber-200">
             الخصم المطبق كبير ({formatCurrency(discountDzd)}). يرجى إدخال PIN المدير للموافقة وإتمام البيع.
