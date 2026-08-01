@@ -12,10 +12,10 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
   const [progress, setProgress] = useState(0)
 
   useEffect(() => {
-    // 1. Smoothly increment progress using a lightweight interval
-    const duration = 1400 // 1.4 seconds to reach 100%
-    const step = 2.5 // Increment step
-    const intervalTime = (duration / 100) * step // calculate delay
+    // 1. Smoothly increment progress state from 0 to 100 over 2.8 seconds
+    const duration = 2800 // 2.8s
+    const step = 2 // 2% increments
+    const intervalTime = (duration / 100) * step
 
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
@@ -27,11 +27,11 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
       })
     }, intervalTime)
 
-    // 2. Auto-dismiss splash screen at 1.8 seconds (giving 400ms holding window at 100%)
+    // 2. Auto-dismiss splash screen at 3.2 seconds (holds at 100% for 400ms before fading out)
     const timer = setTimeout(() => {
       setIsFadingOut(true)
       setTimeout(onFinished, 300)
-    }, 1800)
+    }, 3200)
 
     return () => {
       clearInterval(progressInterval)
@@ -120,16 +120,17 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
           </p>
         </div>
 
-        {/* High-End Glass Loading Bar */}
+        {/* High-End Glass Loading Bar - GPU Accelerated scaleX */}
         <div className="w-56 h-1.5 rounded-full bg-gray-200 dark:bg-slate-800/80 border border-gray-300/50 dark:border-slate-700/50 overflow-hidden mt-2 p-0.5 shadow-inner relative">
           <div
-            className="h-full rounded-full"
+            className="h-full rounded-full w-full"
             style={{
-              width: `${progress}%`,
-              transition: 'width 0.1s linear',
+              transform: `scaleX(${progress / 100})`,
+              transformOrigin: document.documentElement.dir === 'rtl' ? 'right' : 'left',
+              transition: 'transform 0.1s linear',
               background: 'linear-gradient(90deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #00C6FF) 100%)',
               boxShadow: '0 0 12px var(--color-accent, #0A84FF)',
-              willChange: 'width'
+              willChange: 'transform'
             }}
           />
         </div>
