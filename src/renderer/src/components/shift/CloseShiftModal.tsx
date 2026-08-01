@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { Lock } from 'lucide-react'
 import { Modal, Input } from '@/components/ui'
 import { useShiftStore } from '@/stores/shiftStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 import { formatCurrency } from '@/lib/format'
+import { sendShiftClosedTelegramNotification } from '@/services/telegramService'
 
 interface CloseShiftModalProps {
   readonly isOpen: boolean
@@ -85,6 +87,23 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): Reac
     try {
       const res = await closeShift(closingCashNum)
       const diffText = getShiftCloseToastMessage(res.difference)
+
+      const activeUser = useAuthStore.getState().currentUser
+      const activeBranch = useAuthStore.getState().currentBranch
+      const nowIso = new Date().toISOString()
+
+      sendShiftClosedTelegramNotification({
+        branchName: activeBranch?.name || 'الفرع الرئيسي',
+        cashierName: activeUser?.full_name || 'الكاشير',
+        totalSalesDzd: cashSalesTotal + cardSalesTotal,
+        cashSalesDzd: cashSalesTotal,
+        cardSalesDzd: cardSalesTotal,
+        expectedCashDzd: res.expectedCash,
+        closingCashDzd: closingCashNum,
+        differenceDzd: res.difference,
+        openedAt: activeShift.opened_at,
+        closedAt: nowIso,
+      }).catch(() => {})
 
       addToast({
         message: `تم قفل الصندوق بنجاح! النتيجة: ${diffText}`,

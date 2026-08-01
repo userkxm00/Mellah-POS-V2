@@ -266,7 +266,10 @@ export function buildReceiptHtml(
 
       <div class="footer">
         <p>${data.footerText ?? t.defaultFooter}</p>
-        <p style="font-family: monospace; font-size: 8px; margin-top: 4px;">MELLAH POS — Verified Receipt</p>
+        <div style="margin-top: 6px; text-align: center;">
+          ${generateBarcodeSvg(data.receiptId)}
+        </div>
+        <p style="font-family: monospace; font-size: 8px; margin-top: 4px;">MELLAH POS — Instant Direct Receipt</p>
       </div>
     </body>
     </html>
@@ -334,7 +337,7 @@ export async function printThermalReturnReceipt(
     <body>
       <div class="text-center">
         <div class="title">${data.storeName}</div>
-        <div style="font-weight: 900; font-size: 11px; margin-top: 2px;">↩️ وصل إرجاع بضاعة</div>
+        <div style="font-weight: 900; font-size: 11px; margin-top: 2px;">وصل إرجاع بضاعة</div>
       </div>
       <div class="divider"></div>
       <div class="info-row"><span>رقم المرتجع: <b>#${data.returnId.slice(0, 8)}</b></span><span>التاريخ: ${new Date(data.date).toLocaleTimeString('ar-DZ')}</span></div>

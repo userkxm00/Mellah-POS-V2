@@ -198,10 +198,10 @@ export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.E
     try {
       const items = await window.electron.db.query<SaleItemDetail>(
         `SELECT 
-           si.variant_id, p.name as product_name, v.size, v.color, si.quantity, si.unit_price_dzd
+           si.variant_id, COALESCE(p.name, 'سلعة غير مسجلة') as product_name, v.size, v.color, si.quantity, si.unit_price_dzd
          FROM sale_items si
-         JOIN product_variants v ON v.id = si.variant_id
-         JOIN products p ON p.id = v.product_id
+         LEFT JOIN product_variants v ON v.id = si.variant_id
+         LEFT JOIN products p ON p.id = v.product_id
          WHERE si.sale_id = ?`,
         [sale.id]
       )

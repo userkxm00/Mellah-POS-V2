@@ -144,15 +144,6 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         inWindow: true,
       },
       {
-        id: 'branches',
-        label: t('إدارة الفروع'),
-        description: t('الفروع والمحلات التابعة للمتجر'),
-        icon: <Building2 className="w-8 h-8" />,
-        iconBg: 'bg-[#34C759] text-white',
-        roles: ['admin'],
-        inWindow: true,
-      },
-      {
         id: 'settings',
         label: t('إعدادات المتجر'),
         description: t('بيانات الفاتورة والنسخ الاحتياطي'),
@@ -464,7 +455,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         </div>
 
         {/* ── Original Frameless Icon Grid Layout ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {visibleTiles.map((tile) => {
             const isHeroPOS = tile.id === 'pos'
 

@@ -294,6 +294,60 @@ export async function sendShiftOpenedTelegramNotification(
   }
 }
 
+export interface ShiftCloseNotificationParams {
+  branchName: string
+  cashierName: string
+  totalSalesDzd: number
+  cashSalesDzd: number
+  cardSalesDzd: number
+  expectedCashDzd: number
+  closingCashDzd: number
+  differenceDzd: number
+  openedAt: string
+  closedAt: string
+}
+
+/**
+ * Send automated Shift Closed Summary notification to Telegram managers.
+ */
+export async function sendShiftClosedTelegramNotification(
+  params: ShiftCloseNotificationParams
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    const creds = await getTelegramCredentials()
+    if (!creds.notifyShift || !creds.botToken || creds.chatIds.length === 0) {
+      return { success: false, message: 'Telegram notifications disabled or unconfigured' }
+    }
+
+    const differenceText =
+      params.differenceDzd === 0
+        ? '0 دج (متطابق 100%)'
+        : params.differenceDzd > 0
+        ? `+${params.differenceDzd.toLocaleString()} دج (فائض في الصندوق)`
+        : `${params.differenceDzd.toLocaleString()} دج (عجز في الصندوق)`
+
+    const messageText = [
+      `*إشعار غلق الوردية اليومية — MELLAH POS*`,
+      `━━━━━━━━━━━━━━━━━━━━`,
+      `*المتجر / الفرع:* ${params.branchName}`,
+      `*الكاشير:* ${params.cashierName}`,
+      `*مجموع المبيعات الإجمالي اليوم:* ${params.totalSalesDzd.toLocaleString()} دج`,
+      `*السيولة النقدية (الكاش):* ${params.cashSalesDzd.toLocaleString()} دج`,
+      `*المدفوع بالبطاقة / CIB:* ${params.cardSalesDzd.toLocaleString()} دج`,
+      `*الفارق في الصندوق:* ${differenceText}`,
+      `*وقت الفتح:* ${new Date(params.openedAt).toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' })}`,
+      `*وقت الغلق:* ${new Date(params.closedAt).toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' })}`,
+      `━━━━━━━━━━━━━━━━━━━━`,
+      `*تم إغلاق الصندوق وتصفية حساب الوردية بنجاح.*`,
+    ].join('\n')
+
+    const res = await sendToTelegramAll(creds.botToken, creds.chatIds, messageText)
+    return { success: res.success, message: res.error }
+  } catch (err) {
+    return { success: false, message: (err as Error).message }
+  }
+}
+
 /**
  * Send automated Sale Completed notification with item details and product image to Telegram managers.
  */

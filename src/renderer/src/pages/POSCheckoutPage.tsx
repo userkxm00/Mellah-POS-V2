@@ -20,7 +20,7 @@ import {
   BookOpen,
   Package
 } from 'lucide-react'
-import { Card, Input, ToastContainer } from '@/components/ui'
+import { Card, Input, Modal, Button, ToastContainer } from '@/components/ui'
 import { CountUpNumber } from '@/components/ui/CountUpNumber'
 import { AnimatedBrandLogo } from '@/components/brand/AnimatedBrandLogo'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -461,6 +461,7 @@ export function POSCheckoutPage({
   const {
     items: cartItems,
     addItem,
+    addCustomItem,
     removeItem,
     updateQuantity,
     clearCart,
@@ -504,6 +505,12 @@ export function POSCheckoutPage({
   const [isProcessingSale, setIsProcessingSale] = useState<boolean>(false)
   const [showConfetti, setShowConfetti] = useState<boolean>(false)
   const [isReceiptFlying, setIsReceiptFlying] = useState<boolean>(false)
+
+  // Quick Custom Item Modal States (سلعة عامة بدون باركود)
+  const [isQuickItemModalOpen, setIsQuickItemModalOpen] = useState<boolean>(false)
+  const [customItemName, setCustomItemName] = useState<string>('')
+  const [customItemPriceInput, setCustomItemPriceInput] = useState<string>('')
+  const [customItemQtyInput, setCustomItemQtyInput] = useState<string>('1')
 
   // Discount source tracking
   const [redeemedPoints, setRedeemedPoints] = useState<number>(0)
@@ -680,6 +687,31 @@ export function POSCheckoutPage({
       console.error('[POSCheckoutPage]', err)
       addToast({ message: t('فشل إضافة الزبون'), variant: 'error' })
     }
+  }
+
+  // Quick Custom Item Handler (سلعة عامة / غير مسجلة بدون باركود)
+  const handleAddCustomItem = (e: React.FormEvent): void => {
+    e.preventDefault()
+    const price = Math.max(0, Number.parseFloat(customItemPriceInput) || 0)
+    if (price <= 0) {
+      addToast({ message: t('يرجى كتابة مبلغ صحيح للسلعة'), variant: 'error' })
+      return
+    }
+    const qty = Math.max(1, Number.parseInt(customItemQtyInput, 10) || 1)
+    const name = customItemName.trim() || t('سلعة غير مسجلة')
+
+    addCustomItem(name, price, qty)
+    soundService.playScan()
+    addToast({
+      message: `${t('تم إضافة')} "${name}" (${price.toLocaleString()} DA) ${t('إلى السلة')}`,
+      variant: 'success',
+      duration: 2500,
+    })
+
+    setIsQuickItemModalOpen(false)
+    setCustomItemName('')
+    setCustomItemPriceInput('')
+    setCustomItemQtyInput('1')
   }
 
   // Open Cash Drawer Trigger (Supports ESC/POS Pulse Kick)
@@ -970,8 +1002,18 @@ export function POSCheckoutPage({
               icon={<Search className="w-4 h-4 text-text-tertiary" />}
             />
 
-            {/* Category Filter Pills */}
+            {/* Category Filter Pills & Quick Custom Item Button */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              <button
+                type="button"
+                onClick={() => setIsQuickItemModalOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/25 transition-all btn-press whitespace-nowrap shrink-0 shadow-sm"
+                title={t('إضافة سلعة غير مسجلة بدون باركود (مبلغ مباشر)')}
+              >
+                <Tag className="w-3.5 h-3.5 text-amber-500" />
+                <span>{t('سلعة سريعة (بدون باركود)')}</span>
+              </button>
+
               <button
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 btn-press whitespace-nowrap ${
                   selectedCategoryId === null
@@ -1409,6 +1451,94 @@ export function POSCheckoutPage({
           </div>
         </div>
       </div>
+
+      {/* Quick Custom Item Modal (سلعة عامة / غير مسجلة بدون باركود) */}
+      <Modal
+        isOpen={isQuickItemModalOpen}
+        onClose={() => setIsQuickItemModalOpen(false)}
+        title={t('إضافة سلعة سريعة بدون باركود (Quick Custom Item)')}
+        size="md"
+      >
+        <form onSubmit={handleAddCustomItem} className="space-y-4 select-none">
+          <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 font-black text-lg">
+              <Tag className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-amber-900 dark:text-amber-200">
+                {t('إدخال سريع لسلعة غير مسجلة بالباركود')}
+              </h4>
+              <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                {t('يمكنك تخصيص اسم السلعة (مثلاً: تقاشير، سليب، حزام) لتظهر باسمها الدقيق في الفاتورة والسجل')}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Input
+              label={t('اسم السلعة (اختر اسم محدد أو اتركه سلعة غير مسجلة)')}
+              placeholder={t('مثال: تقاشير / سليب / ملابس داخلية')}
+              value={customItemName}
+              onChange={(e) => setCustomItemName(e.target.value)}
+              autoFocus
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-extrabold text-[#1C2B3A] dark:text-slate-200 mb-1 block">
+                  {t('المبلغ / السعر (DA)')} *
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type="number"
+                    min="0"
+                    step="10"
+                    required
+                    placeholder="200"
+                    value={customItemPriceInput}
+                    onChange={(e) => setCustomItemPriceInput(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl text-sm font-black bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent text-[#1C2B3A] dark:text-slate-100"
+                  />
+                  <span className="absolute left-3 text-xs font-black text-text-tertiary">DA</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-extrabold text-[#1C2B3A] dark:text-slate-200 mb-1 block">
+                  {t('الكمية (Quantity)')} *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={customItemQtyInput}
+                  onChange={(e) => setCustomItemQtyInput(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm font-black bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent text-[#1C2B3A] dark:text-slate-100"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsQuickItemModalOpen(false)}
+              className="flex-1"
+            >
+              {t('إلغاء')}
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              className="flex-1 flex items-center justify-center gap-2 font-black"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t('إضافة للسلة')}</span>
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* POS Modals Sub-Component */}
       <POSCheckoutModals

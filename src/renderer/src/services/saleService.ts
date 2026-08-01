@@ -7,6 +7,31 @@ import { useAuthStore } from '@/stores/authStore'
 import { enqueueSyncOperation } from './syncEngine'
 import { recordAuditLog } from './auditLogService'
 
+export const CUSTOM_GENERIC_PRODUCT_ID = 'p-custom-generic-0000'
+export const CUSTOM_GENERIC_VARIANT_ID = 'v-custom-generic-0000'
+
+export async function ensureCustomGenericVariantExists(): Promise<void> {
+  try {
+    const rows = await window.electron.db.query<{ id: string }>(
+      'SELECT id FROM product_variants WHERE id = ?',
+      [CUSTOM_GENERIC_VARIANT_ID]
+    )
+    if (rows.length === 0) {
+      const now = new Date().toISOString()
+      await window.electron.db.execute(
+        `INSERT INTO products (id, category_id, name, price_dzd, created_at, updated_at) VALUES (?, NULL, 'سلعة غير مسجلة', 0, ?, ?)`,
+        [CUSTOM_GENERIC_PRODUCT_ID, now, now]
+      )
+      await window.electron.db.execute(
+        `INSERT INTO product_variants (id, product_id, branch_id, price_dzd, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)`,
+        [CUSTOM_GENERIC_VARIANT_ID, CUSTOM_GENERIC_PRODUCT_ID, DEFAULT_BRANCH_ID, now, now]
+      )
+    }
+  } catch {
+    // Non-critical if already present
+  }
+}
+
 export interface CreateSaleResult {
   saleId: string
   totalDzd: number
@@ -40,6 +65,9 @@ export async function processSale(
 
   // DB-Level Stock Verification (prevent negative overselling in DB)
   for (const item of items) {
+    if (item.variant_id.startsWith('v-custom-')) {
+      continue // Custom unregistered items have unconstrained stock
+    }
     const stockRows = await window.electron.db.query<{ current_stock: number }>(
       `SELECT COALESCE(SUM(quantity_change), 0) as current_stock 
        FROM stock_movements 
@@ -121,27 +149,36 @@ export async function processSale(
     })
   }
 
+  // Ensure placeholder custom generic variant exists in DB to satisfy foreign keys for custom items
+  const hasCustomItems = items.some((i) => i.variant_id.startsWith('v-custom-'))
+  if (hasCustomItems) {
+    await ensureCustomGenericVariantExists()
+  }
+
   // 2. Insert Sale Items & Stock Movements (Ledger entries)
   for (const item of items) {
     const saleItemId = generateUUID()
     const movementId = generateUUID()
+    const isCustom = item.variant_id.startsWith('v-custom-')
+    const targetVariantId = isCustom ? CUSTOM_GENERIC_VARIANT_ID : item.variant_id
 
     // Sale item & Stock movement (negative change for sales)
-    operations.push(
-      {
-        sql: `INSERT INTO sale_items 
-              (id, sale_id, variant_id, quantity, unit_price_dzd, created_at) 
-              VALUES (?, ?, ?, ?, ?, ?)`,
-        params: [
-          saleItemId,
-          saleId,
-          item.variant_id,
-          item.quantity,
-          item.unit_price_dzd,
-          now,
-        ],
-      },
-      {
+    operations.push({
+      sql: `INSERT INTO sale_items 
+            (id, sale_id, variant_id, quantity, unit_price_dzd, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      params: [
+        saleItemId,
+        saleId,
+        targetVariantId,
+        item.quantity,
+        item.unit_price_dzd,
+        now,
+      ],
+    })
+
+    if (!isCustom) {
+      operations.push({
         sql: `INSERT INTO stock_movements 
               (id, branch_id, variant_id, type, quantity_change, reference_id, note, created_by, created_at) 
               VALUES (?, ?, ?, 'sale', ?, ?, 'عملية بيع كاشير', ?, ?)`,
@@ -154,8 +191,8 @@ export async function processSale(
           cashierId,
           now,
         ],
-      }
-    )
+      })
+    }
   }
 
   try {

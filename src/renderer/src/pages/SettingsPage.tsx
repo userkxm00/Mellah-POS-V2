@@ -47,7 +47,7 @@ export function SettingsPage({ onBack }: { readonly onBack: () => void }): React
     (localStorage.getItem('mellah_receipt_language') as ReceiptLanguage) ?? 'ar'
   )
   const [autoPrint, setAutoPrint] = useState<boolean>(
-    localStorage.getItem('mellah_auto_print') === 'true'
+    localStorage.getItem('mellah_auto_print') !== 'false'
   )
 
   // Preview Modals State
@@ -973,14 +973,14 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
               </label>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setIsReceiptPreviewOpen(true)}
                 className="py-3 rounded-2xl bg-blue-50 border border-blue-200 text-accent hover:bg-blue-100 text-xs font-extrabold transition-all btn-press flex items-center justify-center gap-1.5"
               >
                 <Eye className="w-4 h-4" />
-                <span>معاينة الفاتورة الحرارية (Preview)</span>
+                <span>معاينة الفاتورة (Preview)</span>
               </button>
 
               <button
@@ -989,7 +989,39 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                 className="py-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 text-xs font-extrabold transition-all btn-press flex items-center justify-center gap-1.5"
               >
                 <Barcode className="w-4 h-4" />
-                <span>معاينة ملصق الباركود (Preview)</span>
+                <span>معاينة الملصق (Sticker)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  const sampleData = {
+                    storeName: storeName || 'MELLAH BOUTIQUE',
+                    branchAddress: storeAddress || t('الجزائر العاصمة، حي حسيبة بن بوعلي'),
+                    receiptId: 'INV-TEST-8888',
+                    date: new Date().toISOString(),
+                    cashierName: t('أحمد المدير'),
+                    customerName: t('زبون تجريبي'),
+                    items: [
+                      { product_name: t('قميص قطني / Chemise Coton'), size: 'L', color: t('أزرق'), quantity: 1, unit_price: 3500 },
+                    ],
+                    subtotalDzd: 3500,
+                    discountDzd: 0,
+                    totalDzd: 3500,
+                    paymentMethod: 'cash',
+                    footerText: footerText || RECEIPT_TRANSLATIONS[receiptLanguage].defaultFooter,
+                  }
+                  const ok = await printThermalReceipt(sampleData, { printerName: selectedPrinter, paperWidth, language: receiptLanguage })
+                  if (ok) {
+                    addToast({ message: t('تمت طباعة الفاتورة صامتاً ومباشرة للطابعة الحرارية'), variant: 'success' })
+                  } else {
+                    addToast({ message: t('تعذرت الطباعة المباشرة — تحقق من تشغيل الطابعة وتوصيل الكابل'), variant: 'warning' })
+                  }
+                }}
+                className="py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-xs font-extrabold transition-all btn-press flex items-center justify-center gap-1.5"
+              >
+                <Printer className="w-4 h-4 text-emerald-600" />
+                <span>طباعة تجريبية صامتة (Direct Print)</span>
               </button>
             </div>
 

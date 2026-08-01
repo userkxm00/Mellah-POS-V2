@@ -21,6 +21,7 @@ interface CartState {
   discountPercent: number
   discountDzd: number
   addItem: (variant: ProductVariantWithStock, productName: string, defaultPrice: number) => void
+  addCustomItem: (productName: string, priceDzd: number, quantity?: number) => void
   updateQuantity: (variant_id: string, quantity: number) => void
   removeItem: (variant_id: string) => void
   clearCart: () => void
@@ -71,6 +72,26 @@ export const useCartStore = create<CartState>((set, get) => ({
       }
       set((state) => ({ items: [...state.items, newItem] }))
     }
+  },
+
+  addCustomItem: (productName, priceDzd, quantity = 1) => {
+    const customName = productName.trim() || 'سلعة غير مسجلة'
+    const customPrice = Math.max(0, priceDzd)
+    const customQty = Math.max(1, quantity)
+    const uniqueId = `v-custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+
+    const newItem: CartItem = {
+      variant_id: uniqueId,
+      product_id: 'p-custom-generic-0000',
+      product_name: customName,
+      variant_size: null,
+      variant_color: null,
+      barcode: null,
+      unit_price_dzd: customPrice,
+      quantity: customQty,
+      available_stock: 999999,
+    }
+    set((state) => ({ items: [...state.items, newItem] }))
   },
 
   updateQuantity: (variant_id, quantity) => {
