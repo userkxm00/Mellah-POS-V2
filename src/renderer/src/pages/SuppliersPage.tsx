@@ -515,7 +515,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       </Modal>
 
       {/* Supplier Statement Modal */}
-      <Modal isOpen={Boolean(statementSupplier)} onClose={() => setStatementSupplier(null)} title={`📜 كشف حساب وفواتير المورد — ${statementSupplier?.name ?? ''}`} size="lg">
+      <Modal isOpen={Boolean(statementSupplier)} onClose={() => setStatementSupplier(null)} title={`كشف حساب وفواتير المورد — ${statementSupplier?.name ?? ''}`} size="lg">
         <div className="space-y-4">
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl grid grid-cols-2 gap-3 text-center">
             <div>

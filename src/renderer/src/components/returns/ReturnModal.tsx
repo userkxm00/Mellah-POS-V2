@@ -117,7 +117,7 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
       })
 
       addToast({
-        message: `تم تسجيل المرتجع وتوليد وصل الإرجاع الحراري بنجاح! 🧾`,
+        message: `تم تسجيل المرتجع وتوليد وصل الإرجاع الحراري بنجاح!`,
         variant: 'success',
       })
       onSuccess()
@@ -308,7 +308,7 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
                 loading={isSubmitting}
                 onClick={handleConfirmReturn}
               >
-                ✓ تأكيد الإرجاع واستعادة البضاعة للمخزون
+                تأكيد الإرجاع واستعادة البضاعة للمخزون
               </Button>
               <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
                 إلغاء

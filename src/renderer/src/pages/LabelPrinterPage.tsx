@@ -285,7 +285,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
       printWin.document.write(labelHtml)
       printWin.document.close()
       addToast({
-        message: `تم توليد ${totalCount} ملصق باركود حقيقي لمقاسات "${selectedProduct.product_name}" بنجاح! 🖨️`,
+        message: `تم توليد ${totalCount} ملصق باركود حقيقي لمقاسات "${selectedProduct.product_name}" بنجاح!`,
         variant: 'success',
       })
     }

@@ -142,8 +142,8 @@ export function MaintenancePage({ onBack }: { onBack?: () => void }): React.JSX.
     const allPassed = tasks.every((t2) => t2.status !== 'error')
     addToast({
       message: allPassed
-        ? t('تمت الصيانة الشاملة بنجاح ✅')
-        : t('انتهت الصيانة مع بعض التحذيرات ⚠️'),
+        ? t('تمت الصيانة الشاملة بنجاح')
+        : t('انتهت الصيانة مع بعض التحذيرات'),
       variant: allPassed ? 'success' : 'warning',
     })
   }
@@ -157,7 +157,7 @@ export function MaintenancePage({ onBack }: { onBack?: () => void }): React.JSX.
         addToast({ message: `${t('تحديث جديد متوفر')}: v${ver}`, variant: 'info' })
       } else {
         setUpdateVersion(null)
-        addToast({ message: t('أنت تستخدم أحدث إصدار ✅'), variant: 'success' })
+        addToast({ message: t('أنت تستخدم أحدث إصدار'), variant: 'success' })
       }
     } catch (err) {// eslint-disable-next-line no-console
       console.error("[MaintenancePage]", err); addToast({ message: t('فشل فحص التحديثات'), variant: 'error' })
@@ -321,7 +321,7 @@ export function MaintenancePage({ onBack }: { onBack?: () => void }): React.JSX.
                     </div>
                     <p className="text-xs text-text-tertiary mt-0.5">{t(task.description)}</p>
                     {task.status === 'error' && task.error && (
-                      <p className="text-xs text-danger mt-1 font-semibold">❌ {task.error}</p>
+                      <p className="text-xs text-danger mt-1 font-semibold">{task.error}</p>
                     )}
                   </div>
                 </div>

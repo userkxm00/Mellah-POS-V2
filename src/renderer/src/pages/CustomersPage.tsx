@@ -618,8 +618,8 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
               onChange={(e) => setRepayMethod(e.target.value as 'cash' | 'card')}
               className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
             >
-              <option value="cash">{t('💵 نقداً (Cash)')}</option>
-              <option value="card">{t('💳 بطاقة CIB / الذهبية')}</option>
+              <option value="cash">{t('نقداً (Cash)')}</option>
+              <option value="card">{t('بطاقة CIB / الذهبية')}</option>
             </select>
           </div>
 

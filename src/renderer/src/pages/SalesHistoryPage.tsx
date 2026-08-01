@@ -242,7 +242,7 @@ export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.E
       { printerName, paperWidth, language: receiptLanguage }
     )
       .then(() => {
-        addToast({ message: t('تم إرسال أمر الطباعة الحرارية بنجاح 🖨️'), variant: 'success' })
+        addToast({ message: t('تم إرسال أمر الطباعة الحرارية بنجاح'), variant: 'success' })
       })
       .catch(() => {
         addToast({ message: t('تعذرت الطباعة — تحقق من اتصال الطابعة'), variant: 'warning' })
@@ -258,7 +258,7 @@ export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.E
         voidReason.trim(),
         saleItems.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity, product_name: i.product_name }))
       )
-      addToast({ message: `تم إلغاء الفاتورة #${selectedSale.id.slice(0, 8)} وإعادة المخزون بنجاح ✅`, variant: 'success' })
+      addToast({ message: `تم إلغاء الفاتورة #${selectedSale.id.slice(0, 8)} وإعادة المخزون بنجاح`, variant: 'success' })
       setIsVoidModalOpen(false)
       setIsDetailOpen(false)
       setVoidReason('')

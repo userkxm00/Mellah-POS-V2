@@ -593,7 +593,7 @@ export function POSCheckoutPage({
     holdCart(cartItems, selectedCustomerObj?.full_name)
     clearCart()
     setSelectedCustomerId(null)
-    addToast({ message: t('تم تعليق السلة الحالية بنجاح (F2) ⏸️'), variant: 'info' })
+    addToast({ message: `${t('تم تعليق السلة الحالية بنجاح')} (F2)`, variant: 'info' })
   }, [cartItems, addToast, holdCart, clearCart, selectedCustomerObj?.full_name, t])
 
   const filteredVariants = filterVariantsList(variants, selectedCategoryId, searchQuery)
@@ -616,7 +616,7 @@ export function POSCheckoutPage({
         restoreHeldCartItems([{ ...item, available_stock: realStock }], addItem)
       }
       setIsHeldModalOpen(false)
-      addToast({ message: t('تم استرجاع السلة المعلقة بنجاح! 🛒'), variant: 'success' })
+      addToast({ message: t('تم استرجاع السلة المعلقة بنجاح!'), variant: 'success' })
     }
   }
 
@@ -670,7 +670,7 @@ export function POSCheckoutPage({
     const printerName = localStorage.getItem('mellah_printer_name') ?? undefined
     const ok = await window.electron.openCashDrawer(printerName)
     if (ok) {
-      addToast({ message: t('تم إرسال أمر فتح درج النقود بنجاح! 💵'), variant: 'success' })
+      addToast({ message: t('تم إرسال أمر فتح درج النقود بنجاح!'), variant: 'success' })
     } else {
       addToast({ message: t('تم فتح الدرج (أو إرسال التنبيه المحلي للطابعة)'), variant: 'info' })
     }
@@ -684,7 +684,7 @@ export function POSCheckoutPage({
       if (matched) {
         setIsManagerPinOpen(false)
         setManagerPin('')
-        addToast({ message: t('تمت موافقة المدير بنجاح ✅'), variant: 'success' })
+        addToast({ message: t('تمت موافقة المدير بنجاح!'), variant: 'success' })
         executeSaleProcessing()
       } else {
         addToast({ message: t('رمز PIN الخاص بالمدير غير صحيح'), variant: 'error' })
@@ -834,7 +834,7 @@ export function POSCheckoutPage({
       {isReceiptFlying && (
         <div className="fixed bottom-24 right-24 z-70 bg-accent text-white px-4 py-2 rounded-2xl shadow-layered-deep text-xs font-black flex items-center gap-2 animate-bounce transition-all duration-700 transform -translate-y-96 opacity-90 pointer-events-none">
           <Printer className="w-4 h-4 animate-spin" />
-          <span>{t('🧾 جاري ترحيل الفاتورة للطابعة...')}</span>
+          <span>{t('جاري ترحيل الفاتورة للطابعة...')}</span>
         </div>
       )}
 
@@ -1285,7 +1285,7 @@ export function POSCheckoutPage({
                 </div>
                 {!selectedCustomerId && (
                   <p className="text-[10px] font-bold text-red-600 animate-pulse">
-                    ⚠️ تذكير: يجب اختيار أو إضافة زبون لتسجيل الدين في حسابه!
+                    تذكير: يجب اختيار أو إضافة زبون لتسجيل الدين في حسابه!
                   </p>
                 )}
               </div>

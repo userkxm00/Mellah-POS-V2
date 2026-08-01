@@ -365,7 +365,7 @@ export function ProductDetailPage({
             })
           }
         >
-          ⚙️ {t('تعديل المخزون')}
+          {t('تعديل المخزون')}
         </Button>
       ),
     },
@@ -565,7 +565,7 @@ export function ProductDetailPage({
       />
 
       {/* Add Variant Modal */}
-      <Modal isOpen={isAddVariantOpen} onClose={() => setIsAddVariantOpen(false)} title="➕ إضافة خيار جديد (مقاس/لون)">
+      <Modal isOpen={isAddVariantOpen} onClose={() => setIsAddVariantOpen(false)} title={t('إضافة خيار جديد (مقاس/لون)')}>
         <form onSubmit={handleAddVariant} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input label={t('المقاس')} placeholder={t('مثال: XL')} value={newSize} onChange={(e) => setNewSize(e.target.value)} />
@@ -587,7 +587,7 @@ export function ProductDetailPage({
       </Modal>
 
       {/* Stock Movements History Modal */}
-      <Modal isOpen={isMovementsOpen} onClose={() => setIsMovementsOpen(false)} title="📦 سجل حركات المخزون" size="lg">
+      <Modal isOpen={isMovementsOpen} onClose={() => setIsMovementsOpen(false)} title={t('سجل حركات المخزون')} size="lg">
         <div className="max-h-96 overflow-y-auto">
           {isLoadingMovements && <p className="text-xs text-center py-6 text-text-tertiary font-bold">جاري التحميل...</p>}
           {!isLoadingMovements && stockMovements.length === 0 && (
@@ -600,7 +600,7 @@ export function ProductDetailPage({
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} title="⚠️ تأكيد حذف المنتج" size="sm">
+      <Modal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} title={t('تأكيد حذف المنتج')} size="sm">
         <div className="space-y-4 text-center">
           <p className="text-sm text-text-secondary font-bold">
             هل أنت متأكد من حذف المنتج <span className="text-danger font-black">"{product.name}"</span>؟
@@ -611,7 +611,7 @@ export function ProductDetailPage({
               onClick={handleDeleteProduct}
               className="flex-1 py-3 rounded-xl bg-danger text-white text-sm font-bold shadow-ambient btn-press"
             >
-              🗑️ نعم، احذف المنتج
+              نعم، احذف المنتج
             </button>
             <button
               onClick={() => setIsDeleteConfirmOpen(false)}

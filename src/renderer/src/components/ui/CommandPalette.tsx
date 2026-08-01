@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react'
-import { ShoppingCart, Package, User, BarChart2, Receipt, Settings, Plus, Wrench, Tag, Phone } from 'lucide-react'
+import { ShoppingCart, Package, User, BarChart2, Receipt, Settings, Plus, Wrench, Tag, Phone, Search } from 'lucide-react'
 
 export interface CommandItem {
   id: string
@@ -220,7 +220,7 @@ export function CommandPalette({ isOpen, onClose, onNavigate }: CommandPalettePr
       >
         {/* Header Search Input */}
         <div className="p-4 border-b border-gray-200/70 dark:border-slate-800/80 flex items-center gap-3 bg-gray-50/50 dark:bg-slate-800/40">
-          <span className="text-xl text-text-tertiary">🔍</span>
+          <Search className="w-5 h-5 text-text-tertiary" />
           <input
             ref={inputRef}
             type="text"

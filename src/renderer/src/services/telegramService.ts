@@ -238,20 +238,20 @@ export async function sendAppLaunchTelegramNotification(
     })
 
     const messageText = [
-      `🚀 *إشعار إقلاع وتشغيل النظام — MELLAH POS*`,
+      `*إشعار إقلاع وتشغيل النظام — MELLAH POS*`,
       `━━━━━━━━━━━━━━━━━━━━`,
-      `📍 *الفرع:* ${params.branchName}`,
-      `👤 *المستخدم المكون:* ${params.userName}`,
-      `⏰ *التاريخ والوقت:* ${formattedTime}`,
-      `💻 *إصدار التطبيق:* ${params.appVersion || 'v1.0.1 (Windows)'}`,
+      `*الفرع:* ${params.branchName}`,
+      `*المستخدم المكون:* ${params.userName}`,
+      `*التاريخ والوقت:* ${formattedTime}`,
+      `*إصدار التطبيق:* ${params.appVersion || 'v1.0.1 (Windows)'}`,
       `━━━━━━━━━━━━━━━━━━━━`,
-      `🟢 *تم فتح تشغيل برنامج MELLAH POS بنجاح وجاهزية استقبال واستكمال المبيعات تامة.*`,
+      `*تم فتح تشغيل برنامج MELLAH POS بنجاح وجاهزية استقبال واستكمال المبيعات تامة.*`,
     ].join('\n')
 
     return await sendToTelegramAll(creds.botToken, creds.chatIds, messageText)
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('📱 [Telegram] Failed to send app launch notification:', err)
+    console.error('[Telegram] Failed to send app launch notification:', err)
     return { success: false, count: 0 }
   }
 }
@@ -277,14 +277,14 @@ export async function sendShiftOpenedTelegramNotification(
     })
 
     const messageText = [
-      `🏪 *إشعار بداية وردية جديدة — MELLAH POS*`,
+      `*إشعار بداية وردية جديدة — MELLAH POS*`,
       `━━━━━━━━━━━━━━━━━━━━`,
-      `📍 *الفرع:* ${params.branchName}`,
-      `👤 *الكاشير:* ${params.cashierName}`,
-      `💵 *سيولة الفتح (الفكة):* ${params.openingCashDzd.toLocaleString()} دج`,
-      `⏰ *وقت الفتح:* ${formattedTime}`,
+      `*الفرع:* ${params.branchName}`,
+      `*الكاشير:* ${params.cashierName}`,
+      `*سيولة الفتح (الفكة):* ${params.openingCashDzd.toLocaleString()} دج`,
+      `*وقت الفتح:* ${formattedTime}`,
       `━━━━━━━━━━━━━━━━━━━━`,
-      `✅ *تم فتح الصندوق وجاهزية خدمة الزبائن.*`,
+      `*تم فتح الصندوق وجاهزية خدمة الزبائن.*`,
     ].join('\n')
 
     const res = await sendToTelegramAll(token, chatIds, messageText)
@@ -313,12 +313,12 @@ export async function sendSaleCompletedTelegramNotification(
 
     const paymentLabel =
       params.paymentMethod === 'cash'
-        ? 'نقداً 💵'
+        ? 'نقداً'
         : params.paymentMethod === 'card'
-        ? 'بطاقة بانكية 💳'
+        ? 'بطاقة بانكية'
         : params.paymentMethod === 'credit'
-        ? 'بالتقسيط / دَين 📜'
-        : 'مختلط 🔀'
+        ? 'بالتقسيط / دَين'
+        : 'مختلط'
 
     // Format list of sold items
     const itemsFormatted = params.items
@@ -335,24 +335,24 @@ export async function sendSaleCompletedTelegramNotification(
       null
 
     const messageText = [
-      `🧾 *إشعار فاتورة بيع جديدة — MELLAH POS*`,
+      `*إشعار فاتورة بيع جديدة — MELLAH POS*`,
       `━━━━━━━━━━━━━━━━━━━━`,
-      `🆔 *الفاتورة:* ${params.invoiceNumber ? `#${escapeMarkdown(params.invoiceNumber)}` : 'جديدة'}`,
-      `📍 *الفرع:* ${escapeMarkdown(params.branchName)}`,
-      `👤 *الكاشير:* ${escapeMarkdown(params.cashierName)}`,
-      `👥 *الزبون:* ${escapeMarkdown(params.customerName || 'زبون عابر')}`,
-      `💳 *طريقة الدفع:* ${paymentLabel}`,
+      `*الفاتورة:* ${params.invoiceNumber ? `#${escapeMarkdown(params.invoiceNumber)}` : 'جديدة'}`,
+      `*الفرع:* ${escapeMarkdown(params.branchName)}`,
+      `*الكاشير:* ${escapeMarkdown(params.cashierName)}`,
+      `*الزبون:* ${escapeMarkdown(params.customerName || 'زبون عابر')}`,
+      `*طريقة الدفع:* ${paymentLabel}`,
       `━━━━━━━━━━━━━━━━━━━━`,
-      `🛒 *السلع المباعة:*`,
+      `*السلع المباعة:*`,
       itemsFormatted || 'لا توجد عناصر',
       `━━━━━━━━━━━━━━━━━━━━`,
-      `💰 *المجموع النهائي:* *${params.totalDzd.toLocaleString()} دج*`,
-      params.discountDzd > 0 ? `🏷️ *الخصم:* ${params.discountDzd.toLocaleString()} دج` : null,
-      `💵 *المبلغ المدفوع:* ${params.paidAmountDzd.toLocaleString()} دج`,
-      params.remainingChangeDzd > 0 ? `🪙 *المتبقي للزبون:* ${params.remainingChangeDzd.toLocaleString()} دج` : null,
-      `⏰ *الوقت:* ${escapeMarkdown(formattedTime)}`,
+      `*المجموع النهائي:* *${params.totalDzd.toLocaleString()} دج*`,
+      params.discountDzd > 0 ? `*الخصم:* ${params.discountDzd.toLocaleString()} دج` : null,
+      `*المبلغ المدفوع:* ${params.paidAmountDzd.toLocaleString()} دج`,
+      params.remainingChangeDzd > 0 ? `*المتبقي للزبون:* ${params.remainingChangeDzd.toLocaleString()} دج` : null,
+      `*الوقت:* ${escapeMarkdown(formattedTime)}`,
       `━━━━━━━━━━━━━━━━━━━━`,
-      `✨ *شكراً لاستخدامكم نظام MELLAH POS الذكي.*`,
+      `*شكراً لاستخدامكم نظام MELLAH POS الذكي.*`,
     ]
       .filter(Boolean)
       .join('\n')
@@ -360,7 +360,7 @@ export async function sendSaleCompletedTelegramNotification(
     return await sendToTelegramAll(creds.botToken, creds.chatIds, messageText, primaryImg)
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('📱 [Telegram] Failed to send sale notification:', err)
+    console.error('[Telegram] Failed to send sale notification:', err)
     return { success: false, count: 0 }
   }
 }
@@ -378,13 +378,13 @@ export async function sendTestTelegramNotification(
   }
 
   const testMessage = [
-    `🧪 *رسالة تجريبية — MELLAH POS*`,
+    `*رسالة تجريبية — MELLAH POS*`,
     `━━━━━━━━━━━━━━━━━━━━`,
-    `✅ *ربط بوت تلغرام يعمل بنجاح تام!*`,
-    `📡 *عدد المحادثات المستهدفة:* ${chatIds.length} معرف`,
-    `⏰ *الوقت:* ${new Date().toLocaleString('ar-DZ')}`,
+    `*ربط بوت تلغرام يعمل بنجاح تام!*`,
+    `*عدد المحادثات المستهدفة:* ${chatIds.length} معرف`,
+    `*الوقت:* ${new Date().toLocaleString('ar-DZ')}`,
     `━━━━━━━━━━━━━━━━━━━━`,
-    `🚀 *النظام جاهز لإرسال إشعارات الإقلاع والورديات والمبيعات بنجاح.*`,
+    `*النظام جاهز لإرسال إشعارات الإقلاع والورديات والمبيعات بنجاح.*`,
   ].join('\n')
 
   return await sendToTelegramAll(botToken.trim(), chatIds, testMessage)

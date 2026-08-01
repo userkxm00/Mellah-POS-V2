@@ -225,7 +225,7 @@ export function AddProductPage({ onBack, onSuccess }: AddProductPageProps): Reac
                   className="w-20 h-20 object-cover rounded-xl border border-gray-300 dark:border-slate-600 shadow-sm"
                 />
                 <div className="flex-1">
-                  <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ {t('تم اختيار صورة المنتج بنجاح')}</p>
+                  <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{t('تم اختيار صورة المنتج بنجاح')}</p>
                   <p className="text-[11px] text-text-secondary mt-0.5">{t('ستظهر هذه الصورة في الكاشير وإشعارات تلغرام عند البيع.')}</p>
                 </div>
                 <Button

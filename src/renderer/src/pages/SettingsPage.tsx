@@ -245,7 +245,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
       // Refresh store settings in Zustand store
       useStoreSettingsStore.getState().loadSettings()
 
-      addToast({ message: t('تم حفظ إعدادات المتجر وإشعارات تلغرام بنجاح! ✅'), variant: 'success' })
+      addToast({ message: t('تم حفظ إعدادات المتجر وإشعارات تلغرام بنجاح!'), variant: 'success' })
 
       if (currentLang !== initialLang) {
         window.location.reload()
@@ -277,7 +277,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
         },
         { printerName: selectedPrinter || undefined, paperWidth, language: receiptLanguage }
       )
-      addToast({ message: t('تم إرسال أمر الطباعة التجريبية! 🖨️'), variant: 'success' })
+      addToast({ message: t('تم إرسال أمر الطباعة التجريبية!'), variant: 'success' })
     } catch (err) {// eslint-disable-next-line no-console
       console.error("[SettingsPage]", err); addToast({ message: t('فشل طباعة التذكرة التجريبية'), variant: 'error' })
     }
@@ -289,7 +289,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
       const res = await sendTestTelegramNotification(telegramBotToken, telegramChatIds)
       if (res.success) {
         addToast({
-          message: `${t('تم إرسال الرسالة التجريبية بنجاح إلى')} ${res.count} ${t('محادثة في تلغرام! 📱✅')}`,
+          message: `${t('تم إرسال الرسالة التجريبية بنجاح إلى')} ${res.count} ${t('محادثة في تلغرام!')}`,
           variant: 'success',
         })
       } else {
@@ -513,12 +513,13 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                     <Clock className="w-3.5 h-3.5 text-accent" />
                     <span>{t('قفل الجلسة التلقائي عند التوقف (Session Auto-Lock)')}</span>
                   </span>
-                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 ${
                     sessionTimeout === 0
                       ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                       : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                   }`}>
-                    {sessionTimeout === 0 ? t('🔴 القفل التلقائي معطل') : `${t('🟢 مفعل بعد')} ${sessionTimeout} ${t('دقيقة')}`}
+                    <span className={`w-1.5 h-1.5 rounded-full ${sessionTimeout === 0 ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'}`} />
+                    <span>{sessionTimeout === 0 ? t('القفل التلقائي معطل') : `${t('مفعل بعد')} ${sessionTimeout} ${t('دقيقة')}`}</span>
                   </span>
                 </label>
 
@@ -540,15 +541,15 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                     }}
                     className="flex-1 px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer"
                   >
-                    <option value={0}>🚫 {t('معطل (إيقاف القفل التلقائي للجلسة نهائياً)')}</option>
-                    <option value={1}>⚡ {t('دقيقة واحدة (1 دقيقة)')}</option>
-                    <option value={3}>⚡ {t('3 دقائق')}</option>
-                    <option value={5}>⏳ {t('5 دقائق (الافتراضي)')}</option>
-                    <option value={10}>⏳ {t('10 دقائق')}</option>
-                    <option value={15}>⏳ {t('15 دقيقة')}</option>
-                    <option value={30}>⏳ {t('30 دقيقة')}</option>
-                    <option value={60}>⏳ {t('ساعة واحدة (60 دقيقة)')}</option>
-                    <option value="custom">✏️ {t('وقت مخصص (تحديد عدد الدقائق يدوياً)')}</option>
+                    <option value={0}>{t('معطل (إيقاف القفل التلقائي للجلسة نهائياً)')}</option>
+                    <option value={1}>{t('دقيقة واحدة (1 دقيقة)')}</option>
+                    <option value={3}>{t('3 دقائق')}</option>
+                    <option value={5}>{t('5 دقائق (الافتراضي)')}</option>
+                    <option value={10}>{t('10 دقائق')}</option>
+                    <option value={15}>{t('15 دقيقة')}</option>
+                    <option value={30}>{t('30 دقيقة')}</option>
+                    <option value={60}>{t('ساعة واحدة (60 دقيقة)')}</option>
+                    <option value="custom">{t('وقت مخصص (تحديد عدد الدقائق يدوياً)')}</option>
                   </select>
 
                   {(isCustomTimeout || ![0, 1, 3, 5, 10, 15, 30, 60].includes(sessionTimeout)) && (
@@ -629,7 +630,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                         onChange={(e) => setTelegramNotifyAppLaunch(e.target.checked)}
                         className="w-4 h-4 rounded text-accent focus:ring-accent"
                       />
-                      <span className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200">🚀 {t('فتح وتنسيق التطبيق')}</span>
+                      <span className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200">{t('فتح وتنسيق التطبيق')}</span>
                     </label>
 
                     <label className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-slate-800/60 border border-gray-200/80 dark:border-slate-700/80 cursor-pointer hover:border-accent transition-all">
@@ -639,7 +640,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                         onChange={(e) => setTelegramNotifySale(e.target.checked)}
                         className="w-4 h-4 rounded text-accent focus:ring-accent"
                       />
-                      <span className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200">💰 {t('فواتير المبيعات + الصور')}</span>
+                      <span className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200">{t('فواتير المبيعات + الصور')}</span>
                     </label>
 
                     <label className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-slate-800/60 border border-gray-200/80 dark:border-slate-700/80 cursor-pointer hover:border-accent transition-all">
@@ -649,7 +650,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                         onChange={(e) => setTelegramNotifyShift(e.target.checked)}
                         className="w-4 h-4 rounded text-accent focus:ring-accent"
                       />
-                      <span className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200">🏪 {t('بداية الورديات والصندوق')}</span>
+                      <span className="text-xs font-bold text-[#1C2B3A] dark:text-slate-200">{t('بداية الورديات والصندوق')}</span>
                     </label>
                   </div>
                 </div>
@@ -737,7 +738,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                         if (window.electron?.updateWindowIcon) {
                           window.electron.updateWindowIcon(color.value, color.hover)
                         }
-                        addToast({ message: `${t('تم اختيار')} ${color.name} ${t('كلون للنظام الرئيسي!')} 🎨`, variant: 'success', duration: 2000 })
+                        addToast({ message: `${t('تم اختيار')} ${color.name} ${t('كلون للنظام الرئيسي!')}`, variant: 'success', duration: 2000 })
                       }}
                       title={color.name}
                       className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-800 shadow-md transition-transform hover:scale-110 focus:outline-none ring-2 ring-transparent hover:ring-accent"
@@ -757,9 +758,10 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                   <button
                     type="button"
                     onClick={() => soundService.playSuccess()}
-                    className="text-[10px] text-accent font-bold hover:underline"
+                    className="text-[10px] text-accent font-bold hover:underline flex items-center gap-1"
                   >
-                    🔊 تجربة الصوت
+                    <Volume2 className="w-3 h-3" />
+                    <span>تجربة الصوت</span>
                   </button>
                 </div>
                 <div className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-slate-800/60 rounded-2xl border border-gray-200/80 dark:border-slate-700/80">
@@ -847,9 +849,9 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                   onChange={(e) => setReceiptLanguage(e.target.value as ReceiptLanguage)}
                   className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
                 >
-                  <option value="ar">🇩🇿 العربية (Arabic - RTL)</option>
-                  <option value="fr">🇫🇷 Français (French - LTR)</option>
-                  <option value="en">🇬🇧 English (English - LTR)</option>
+                  <option value="ar">العربية (Arabic - RTL)</option>
+                  <option value="fr">Français (French - LTR)</option>
+                  <option value="en">English (English - LTR)</option>
                 </select>
               </div>
             </div>
@@ -1125,7 +1127,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
         </div>
       </Modal>
 
-      {/* 🧾 Thermal Receipt Live Preview Modal */}
+      {/* Thermal Receipt Live Preview Modal */}
       <Modal
         isOpen={isReceiptPreviewOpen}
         onClose={() => setIsReceiptPreviewOpen(false)}
@@ -1147,9 +1149,9 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                   onChange={(e) => setReceiptLanguage(e.target.value as ReceiptLanguage)}
                   className="px-2.5 py-1 rounded-lg bg-white border border-gray-300 text-xs font-black text-text-primary"
                 >
-                  <option value="ar">🇩🇿 العربية (Arabic)</option>
-                  <option value="fr">🇫🇷 Français (French)</option>
-                  <option value="en">🇬🇧 English (English)</option>
+                  <option value="ar">العربية (Arabic)</option>
+                  <option value="fr">Français (French)</option>
+                  <option value="en">English (English)</option>
                 </select>
               </div>
             </div>
@@ -1233,7 +1235,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
         </div>
       </Modal>
 
-      {/* 🏷️ Barcode Sticker Live Preview Modal */}
+      {/* Barcode Sticker Live Preview Modal */}
       <Modal
         isOpen={isBarcodePreviewOpen}
         onClose={() => setIsBarcodePreviewOpen(false)}

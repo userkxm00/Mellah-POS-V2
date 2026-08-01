@@ -83,7 +83,7 @@ export function UsersPage({ onBack }: { readonly onBack?: () => void }): React.J
         [userId, DEFAULT_BRANCH_ID, fullName.trim(), role, hashedPin, now, now]
       )
 
-      addToast({ message: `${t('تم إضافة')} ${fullName.trim()} ${t('بنجاح')} ✅`, variant: 'success' })
+      addToast({ message: `${t('تم إضافة')} ${fullName.trim()} ${t('بنجاح')}`, variant: 'success' })
       recordAuditLog('user_created', 'users', `إضافة مستخدم: ${fullName.trim()} (${role})`, userId).catch(() => {})
       setFullName('')
       setRole('cashier')
@@ -126,7 +126,7 @@ export function UsersPage({ onBack }: { readonly onBack?: () => void }): React.J
         'UPDATE users SET full_name = ?, role = ?, updated_at = ? WHERE id = ?',
         [editName.trim(), editRole, now, editingUser.id]
       )
-      addToast({ message: `${t('تم تحديث بيانات المستخدم')} "${editName.trim()}" ✅`, variant: 'success' })
+      addToast({ message: `${t('تم تحديث بيانات المستخدم')} "${editName.trim()}"`, variant: 'success' })
       recordAuditLog('user_updated', 'users', `تعديل المستخدم: ${editName.trim()} (${editRole})`, editingUser.id).catch(() => {})
       setEditingUser(null)
       await loadUsers()
@@ -156,7 +156,7 @@ export function UsersPage({ onBack }: { readonly onBack?: () => void }): React.J
         'UPDATE users SET pin_hash = ?, updated_at = ? WHERE id = ?',
         [hashedPin, now, changePinUser.id]
       )
-      addToast({ message: `${t('تم تغيير رمز PIN لـ')} "${changePinUser.full_name}" ✅`, variant: 'success' })
+      addToast({ message: `${t('تم تغيير رمز PIN لـ')} "${changePinUser.full_name}"`, variant: 'success' })
       recordAuditLog('user_pin_changed', 'users', `تغيير PIN: ${changePinUser.full_name}`, changePinUser.id).catch(() => {})
       setChangePinUser(null)
       setNewPin('')
