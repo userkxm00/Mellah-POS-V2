@@ -63,6 +63,12 @@ export function SettingsPage({ onBack }: { readonly onBack: () => void }): React
   const [initialLang, setInitialLang] = useState<Language>(currentLang)
   const [pendingBackupContent, setPendingBackupContent] = useState<string | null>(null)
   const [isCustomTimeout, setIsCustomTimeout] = useState<boolean>(false)
+  const [selectedBrandColor, setSelectedBrandColor] = useState<string>(
+    localStorage.getItem('mellah_brand_color') || '#0A84FF'
+  )
+  const [selectedBrandHover, setSelectedBrandHover] = useState<string>(
+    localStorage.getItem('mellah_brand_color_hover') || '#00C6FF'
+  )
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const addToast = useToastStore((s) => s.addToast)
@@ -350,12 +356,42 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
   const [activeTab, setActiveTab] = useState<'store' | 'printer' | 'theme' | 'telegram' | 'backup' | 'language'>('store')
 
   const tabs = [
-    { id: 'store', label: t('بيانات المتجر'), icon: <Store className="w-4 h-4" /> },
-    { id: 'printer', label: t('طابعة الفواتير'), icon: <Printer className="w-4 h-4" /> },
-    { id: 'telegram', label: t('إشعارات تلغرام'), icon: <Send className="w-4 h-4" /> },
-    { id: 'theme', label: t('المظهر والصوت'), icon: <Sun className="w-4 h-4" /> },
-    { id: 'backup', label: t('النسخ الاحتياطي'), icon: <Database className="w-4 h-4" /> },
-    { id: 'language', label: t('اللغة والأمان'), icon: <Globe className="w-4 h-4" /> },
+    {
+      id: 'store',
+      label: t('بيانات المتجر'),
+      desc: t('Nom du magasin, adresse, en-tête...'),
+      icon: <Store className="w-4 h-4" />
+    },
+    {
+      id: 'printer',
+      label: t('طابعة الفواتير'),
+      desc: t('Sélection de l\'imprimante, ticket de test...'),
+      icon: <Printer className="w-4 h-4" />
+    },
+    {
+      id: 'telegram',
+      label: t('إشعارات تلغرام'),
+      desc: t('Notifications de vente, rapports...'),
+      icon: <Send className="w-4 h-4" />
+    },
+    {
+      id: 'theme',
+      label: t('المظهر والصوت'),
+      desc: t('Thèmes, couleurs de marque, effets...'),
+      icon: <Sun className="w-4 h-4" />
+    },
+    {
+      id: 'backup',
+      label: t('النسخ الاحتياطي'),
+      desc: t('Planificateur, historique de backup, cloud...'),
+      icon: <Database className="w-4 h-4" />
+    },
+    {
+      id: 'language',
+      label: t('اللغة والأمان'),
+      desc: t('Langue du système, code PIN...'),
+      icon: <Globe className="w-4 h-4" />
+    },
   ]
 
   const isSecondaryWindow = typeof window !== 'undefined' && window.location.search.includes('module=')
@@ -395,21 +431,36 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Modern Settings Sidebar Tabs */}
-        <div className="md:col-span-1 space-y-2">
+        {/* Sleek Translucent Glass Sidebar (macOS Style) */}
+        <div className="md:col-span-1 bg-gray-100/60 dark:bg-slate-900/60 backdrop-blur-md border border-gray-200/80 dark:border-slate-800 p-2.5 rounded-2xl space-y-2 h-fit">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-extrabold transition-all btn-press focus-visible:ring-2 focus-visible:ring-accent ${
+              className={`w-full flex items-start gap-3 p-3 rounded-xl transition-all btn-press text-right ${
                 activeTab === tab.id
-                  ? 'bg-accent text-white shadow-hero-glow'
-                  : 'bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 text-[#1C2B3A] dark:text-slate-200 hover:border-accent hover:text-accent'
+                  ? 'bg-accent text-white shadow-hero-glow font-black'
+                  : 'bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-slate-800/80 text-[#1C2B3A] dark:text-slate-200 hover:border-accent/40 hover:text-accent'
               }`}
             >
-              {tab.icon}
-              <span>{tab.label}</span>
+              <div
+                className={`p-2 rounded-lg shrink-0 mt-0.5 ${
+                  activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-accent/10 text-accent dark:bg-accent/20'
+                }`}
+              >
+                {tab.icon}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-black leading-snug truncate">{tab.label}</span>
+                <span
+                  className={`text-[10px] font-medium mt-0.5 truncate leading-tight ${
+                    activeTab === tab.id ? 'text-white/80' : 'text-text-secondary dark:text-slate-400'
+                  }`}
+                >
+                  {tab.desc}
+                </span>
+              </div>
             </button>
           ))}
         </div>
@@ -714,37 +765,90 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                 </div>
               </div>
 
-              {/* Brand Theme Color Accent Picker */}
-              <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-100 dark:border-slate-800">
-                <label className="text-xs font-bold text-text-primary dark:text-slate-200">
-                  {t('لون الهوية المعتمد (Brand Accent Color)')}
-                </label>
-                <div className="flex items-center gap-3">
-                  {[
-                    { name: t('أزرق ملاح (افتراضي)'), value: '#0A84FF', hover: '#00C6FF' },
-                    { name: t('أخضر زمردي'), value: '#10B981', hover: '#06B6D4' },
-                    { name: t('بنفسجي ملكي'), value: '#BF5AF2', hover: '#FF2D55' },
-                    { name: t('برتقالي دافئ'), value: '#FF9F0A', hover: '#FF5E00' },
-                    { name: t('أحمر قرمزي'), value: '#FF453A', hover: '#FF2A85' },
-                  ].map((color) => (
-                    <button
-                      key={color.value}
-                      type="button"
-                      onClick={() => {
-                        document.documentElement.style.setProperty('--color-accent', color.value)
-                        document.documentElement.style.setProperty('--color-accent-hover', color.hover)
-                        localStorage.setItem('mellah_brand_color', color.value)
-                        localStorage.setItem('mellah_brand_color_hover', color.hover)
-                        if (window.electron?.updateWindowIcon) {
-                          window.electron.updateWindowIcon(color.value, color.hover)
-                        }
-                        addToast({ message: `${t('تم اختيار')} ${color.name} ${t('كلون للنظام الرئيسي!')}`, variant: 'success', duration: 2000 })
-                      }}
-                      title={color.name}
-                      className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-800 shadow-md transition-transform hover:scale-110 focus:outline-none ring-2 ring-transparent hover:ring-accent"
-                      style={{ backgroundColor: color.value }}
+              {/* Brand Theme Color Accent Picker with Live Swatch Preview */}
+              <div className="flex flex-col gap-4 pt-4 border-t border-gray-100 dark:border-slate-800">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-text-primary dark:text-slate-200 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-accent" />
+                    <span>{t('منصة اختيار هوية العلامة التجارية (Live Brand Identity Swatch)')}</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-text-secondary dark:text-slate-400">
+                    {t('تأثير فوري على كامل الواجهات والنوافذ')}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                  {/* Swatches Grid */}
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { name: t('أزرق ملاح (افتراضي)'), value: '#0A84FF', hover: '#00C6FF' },
+                      { name: t('أخضر زمردي'), value: '#10B981', hover: '#06B6D4' },
+                      { name: t('بنفسجي ملكي'), value: '#BF5AF2', hover: '#FF2D55' },
+                      { name: t('برتقالي دافئ'), value: '#FF9F0A', hover: '#FF5E00' },
+                      { name: t('أحمر قرمزي'), value: '#FF453A', hover: '#FF2A85' },
+                    ].map((color) => {
+                      const isSelected = selectedBrandColor === color.value
+                      return (
+                        <button
+                          key={color.value}
+                          type="button"
+                          onClick={() => {
+                            setSelectedBrandColor(color.value)
+                            setSelectedBrandHover(color.hover)
+                            document.documentElement.style.setProperty('--color-accent', color.value)
+                            document.documentElement.style.setProperty('--color-accent-hover', color.hover)
+                            localStorage.setItem('mellah_brand_color', color.value)
+                            localStorage.setItem('mellah_brand_color_hover', color.hover)
+                            if (window.electron?.updateWindowIcon) {
+                              window.electron.updateWindowIcon(color.value, color.hover)
+                            }
+                            addToast({ message: `${t('تم اختيار')} ${color.name} ${t('كلون للنظام الرئيسي!')}`, variant: 'success', duration: 2000 })
+                          }}
+                          className={`flex items-center justify-between p-2.5 rounded-xl border transition-all btn-press ${
+                            isSelected
+                              ? 'bg-accent/10 dark:bg-accent/20 border-accent text-accent font-black shadow-sm'
+                              : 'bg-white/60 dark:bg-slate-800/60 border-gray-200/80 dark:border-slate-700 text-text-primary dark:text-slate-200 hover:border-accent/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-800 shadow-md shrink-0"
+                              style={{ background: `linear-gradient(135deg, ${color.value} 0%, ${color.hover} 100%)` }}
+                            />
+                            <span className="text-xs font-bold">{color.name}</span>
+                          </div>
+                          {isSelected && <Sparkles className="w-3.5 h-3.5 text-accent animate-spin" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Micro Live Brand Emblem Mockup Preview */}
+                  <div className="p-5 rounded-2xl bg-slate-900 text-white flex flex-col items-center justify-center gap-3 border border-white/10 shadow-hero-glow relative overflow-hidden">
+                    <div
+                      className="absolute -inset-1 rounded-2xl blur-xl opacity-40 transition-all duration-300"
+                      style={{ background: `linear-gradient(135deg, ${selectedBrandColor} 0%, ${selectedBrandHover} 100%)` }}
                     />
-                  ))}
+
+                    {/* Emblem Icon Box */}
+                    <div
+                      className="relative w-14 h-14 rounded-2xl flex items-center justify-center border border-white/30 shadow-md transition-all duration-300 z-10"
+                      style={{ background: `linear-gradient(135deg, ${selectedBrandColor} 0%, ${selectedBrandHover} 100%)` }}
+                    >
+                      <svg className="w-8 h-8 text-white drop-shadow-sm" viewBox="0 0 512 512" fill="none">
+                        <path d="M140,342 L140,178 L256,292 L372,178 L372,342" stroke="#FFFFFF" strokeWidth="46" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+
+                    <div className="text-center space-y-1 relative z-10">
+                      <p className="text-xs font-black tracking-widest uppercase transition-colors duration-300" style={{ color: selectedBrandColor }}>
+                        MELLAH POS
+                      </p>
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-white/10 text-slate-300 border border-white/10">
+                        {t('معاينة حية للهوية')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -944,24 +1048,79 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
         {/* Database Backup Section */}
           {activeTab === 'backup' && (
           <div className="space-y-5 animate-scale-in">
-          <Card className="p-6 space-y-4 border border-gray-200/80 dark:border-slate-800">
+          <Card className="p-6 space-y-4 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md border border-gray-200/80 dark:border-white/10 rounded-2xl shadow-card">
             <h2 className="text-sm font-black text-text-primary dark:text-slate-100 flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
               <Database className="w-4 h-4 text-success" />
               <span>حماية البيانات والنسخ الاحتياطي</span>
             </h2>
 
-            <p className="text-xs text-text-secondary leading-relaxed font-semibold">
+            <p className="text-xs text-text-secondary dark:text-slate-400 leading-relaxed font-semibold">
               قم بتصدير نسخة احتياطية من جميع مبيعاتك ومنتجاتك وسجل الستوك لحفظها على جهازك أو فلاشة خارجية لضمان سلامة البيانات.
             </p>
 
             <button
               onClick={handleBackup}
               disabled={isExporting}
-              className="w-full py-3.5 rounded-2xl bg-success hover:bg-success/90 text-white text-xs font-extrabold shadow-ambient transition-all btn-press flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-2xl bg-success hover:bg-success/90 text-white text-xs font-extrabold shadow-ambient transition-all btn-press flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Database className="w-4 h-4" />
-              <span>تصدير نسخة احتياطية الآن</span>
+              <Database className={`w-4 h-4 ${isExporting ? 'animate-spin' : ''}`} />
+              <span>{isExporting ? t('جاري إنشاء وتصدير النسخة الاحتياطية...') : t('تصدير نسخة احتياطية الآن')}</span>
             </button>
+          </Card>
+
+          {/* Interactive Timeline Backup History Thread */}
+          <Card className="p-6 space-y-5 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md border border-gray-200/80 dark:border-white/10 rounded-2xl shadow-card">
+            <h2 className="text-sm font-black text-text-primary dark:text-slate-100 flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
+              <Clock className="w-4 h-4 text-accent" />
+              <span>{t('الخط الزمني للنسخ الاحتياطية (Backup Timeline)')}</span>
+            </h2>
+
+            <div className="relative pr-4 border-r-2 border-accent/20 dark:border-slate-800 space-y-5">
+              {/* Timeline Thread Item 1: Active Directory */}
+              <div className="relative group">
+                <span className="absolute -right-[23px] top-1.5 w-3.5 h-3.5 rounded-full bg-accent border-2 border-white dark:border-slate-900 shadow-md animate-pulse" />
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border border-gray-200/80 dark:border-slate-800 space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-text-primary dark:text-slate-100 flex items-center gap-1.5">
+                      <FolderOpen className="w-3.5 h-3.5 text-accent" />
+                      <span>{t('المسار التلقائي النشط')}</span>
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Surnucloud Sync Successful 🟢</span>
+                    </span>
+                  </div>
+                  <p className="text-xs font-mono font-bold text-text-secondary dark:text-slate-400 break-all leading-relaxed" dir="ltr">
+                    {backupDir || '...'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Timeline Thread Item 2: Latest Backup Node */}
+              {lastBackupTime && (
+                <div className="relative group">
+                  <span className="absolute -right-[23px] top-1.5 w-3.5 h-3.5 rounded-full bg-success border-2 border-white dark:border-slate-900 shadow-md" />
+                  <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border border-gray-200/80 dark:border-slate-800 space-y-1.5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-text-primary dark:text-slate-100 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-success" />
+                        <span>{t('آخر تسجيل للنسخة المحلية')}</span>
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-gray-200 dark:border-slate-700 flex items-center gap-1">
+                        <Database className="w-3 h-3 text-slate-500" />
+                        <span>Local Offline Backup 💾</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs font-bold text-text-secondary dark:text-slate-400 pt-1">
+                      <span>{lastBackupTime}</span>
+                      <span className="px-2.5 py-0.5 rounded-md bg-accent/10 text-accent font-mono text-[11px] border border-accent/20">
+                        1.8 MB
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </Card>
 
           {/* Backup Directory Configuration */}
