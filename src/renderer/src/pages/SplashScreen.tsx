@@ -9,16 +9,34 @@ interface SplashScreenProps {
 export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
   const [isFadingOut, setIsFadingOut] = useState(false)
+  const [progress, setProgress] = useState(0)
 
   useEffect(() => {
-    // Premium 1.8s auto-dismiss holding window
+    // 1. Smoothly increment progress using a lightweight interval
+    const duration = 1400 // 1.4 seconds to reach 100%
+    const step = 2.5 // Increment step
+    const intervalTime = (duration / 100) * step // calculate delay
+
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(progressInterval)
+          return 100
+        }
+        return prev + step
+      })
+    }, intervalTime)
+
+    // 2. Auto-dismiss splash screen at 1.8 seconds (giving 400ms holding window at 100%)
     const timer = setTimeout(() => {
       setIsFadingOut(true)
-      // Wait for fade-out animation to complete before signaling parent
       setTimeout(onFinished, 300)
     }, 1800)
 
-    return () => clearTimeout(timer)
+    return () => {
+      clearInterval(progressInterval)
+      clearTimeout(timer)
+    }
   }, [onFinished])
 
   return (
@@ -103,13 +121,15 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
         </div>
 
         {/* High-End Glass Loading Bar */}
-        <div className="w-56 h-1.5 rounded-full bg-gray-200 dark:bg-slate-800/80 border border-gray-300/50 dark:border-slate-700/50 overflow-hidden mt-2 p-0.5 shadow-inner">
+        <div className="w-56 h-1.5 rounded-full bg-gray-200 dark:bg-slate-800/80 border border-gray-300/50 dark:border-slate-700/50 overflow-hidden mt-2 p-0.5 shadow-inner relative">
           <div
             className="h-full rounded-full"
             style={{
+              width: `${progress}%`,
+              transition: 'width 0.1s linear',
               background: 'linear-gradient(90deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #00C6FF) 100%)',
-              animation: 'splash-progress 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards',
-              boxShadow: '0 0 12px var(--color-accent, #0A84FF)'
+              boxShadow: '0 0 12px var(--color-accent, #0A84FF)',
+              willChange: 'width'
             }}
           />
         </div>
@@ -123,10 +143,6 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
         @keyframes splash-shimmer {
           0% { transform: translateX(-150%) rotate(25deg); }
           100% { transform: translateX(150%) rotate(25deg); }
-        }
-        @keyframes splash-progress {
-          0% { width: 0%; }
-          100% { width: 100%; }
         }
         @keyframes splash-pulse-glow {
           0% { opacity: 0.15; transform: scale(0.95); }
