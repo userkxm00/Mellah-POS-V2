@@ -11,12 +11,12 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
   const [isFadingOut, setIsFadingOut] = useState(false)
 
   useEffect(() => {
-    // Auto-dismiss after 1.4s — never block the user
+    // Premium 1.8s auto-dismiss holding window
     const timer = setTimeout(() => {
       setIsFadingOut(true)
       // Wait for fade-out animation to complete before signaling parent
       setTimeout(onFinished, 300)
-    }, 1100)
+    }, 1800)
 
     return () => clearTimeout(timer)
   }, [onFinished])
@@ -108,7 +108,7 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
             className="h-full rounded-full"
             style={{
               background: 'linear-gradient(90deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #00C6FF) 100%)',
-              animation: 'splash-progress 1.1s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+              animation: 'splash-progress 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards',
               boxShadow: '0 0 12px var(--color-accent, #0A84FF)'
             }}
           />
