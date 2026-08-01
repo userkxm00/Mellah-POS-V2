@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Delete,
-  ArrowLeft,
+  ArrowRight,
   Crown,
   UserCheck,
   Briefcase,
-  ChevronRight,
   KeyRound
 } from 'lucide-react'
 import { Button } from '@/components/ui'
@@ -236,20 +235,21 @@ export function LoginPage(): React.JSX.Element {
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-[#F2F2F7] dark:bg-slate-950 p-6 select-none relative overflow-hidden">
-      {/* Ambient glow */}
-      <div className="absolute w-[600px] h-[600px] bg-accent/10 rounded-full blur-3xl pointer-events-none -top-20 -right-20" />
-      <div className="absolute w-[400px] h-[400px] bg-accent/5 rounded-full blur-3xl pointer-events-none -bottom-10 -left-10" />
+      {/* Modern 3-Blob Ambient Moving Glow */}
+      <div className="absolute w-[650px] h-[650px] bg-gradient-to-tr from-pink-400/20 via-accent/20 to-blue-400/20 rounded-full blur-3xl pointer-events-none -top-32 -right-32 animate-blob" />
+      <div className="absolute w-[550px] h-[550px] bg-gradient-to-br from-purple-500/20 via-pink-400/15 to-accent/20 rounded-full blur-3xl pointer-events-none -bottom-24 -left-24 animate-blob animation-delay-2000" />
+      <div className="absolute w-[450px] h-[450px] bg-gradient-to-r from-teal-400/20 via-sky-400/20 to-indigo-500/15 rounded-full blur-3xl pointer-events-none top-1/3 left-1/3 animate-blob animation-delay-4000" />
 
-      {/* PIN Card */}
-      <div className="relative w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl p-8 rounded-3xl shadow-2xl border border-gray-200/80 dark:border-slate-800 flex flex-col items-center page-enter">
-        {/* Sleek Glass Back Button */}
+      {/* Frosted Glassmorphism PIN Card */}
+      <div className="relative w-full max-w-md bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl p-8 rounded-3xl shadow-ambient-lg border border-white/60 dark:border-white/10 flex flex-col items-center page-enter">
+        {/* Sleek Circular Glass Back Button */}
         <button
           type="button"
           onClick={handleBackToUserPicker}
-          className="absolute top-5 right-5 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-extrabold text-slate-600 dark:text-slate-300 hover:text-accent transition-all shadow-sm hover:scale-105 group cursor-pointer border border-gray-200/60 dark:border-slate-700/60"
+          className="absolute top-5 right-5 flex items-center justify-center w-10 h-10 rounded-full bg-white/60 dark:bg-slate-800/60 hover:bg-white/90 dark:hover:bg-slate-800 border border-white/70 dark:border-slate-700/70 text-slate-700 dark:text-slate-200 hover:text-accent shadow-sm hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer group backdrop-blur-md"
+          title={t('العودة')}
         >
-          <span>{t('العودة')}</span>
-          <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          <ArrowRight className={`w-4.5 h-4.5 transform transition-transform group-hover:scale-110 ${document.documentElement.dir === 'rtl' ? '' : 'rotate-180'}`} />
         </button>
 
         {/* Selected user avatar */}
@@ -298,21 +298,21 @@ export function LoginPage(): React.JSX.Element {
                 className={`w-4 h-4 rounded-full transition-all duration-300 transform ${
                   hasValue
                     ? 'scale-125 ring-4 ring-accent/20 border-transparent'
-                    : 'bg-gray-200 dark:bg-slate-700 border border-gray-300 dark:border-slate-600'
+                    : 'bg-white/60 dark:bg-slate-700/60 border border-white/80 dark:border-slate-600'
                 }`}
               />
             )
           })}
         </div>
 
-        {/* Keypad Grid (3×4) — Forced LTR with Numpad Active Glow */}
+        {/* Keypad Grid (3×4) — Tactile Glass Numpad */}
         <div dir="ltr" className="grid grid-cols-3 gap-3 w-full max-w-[280px]">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
             <button
               key={digit}
               type="button"
               onClick={() => handleDigit(digit)}
-              className="h-14 rounded-2xl bg-white dark:bg-slate-800 hover:bg-accent/10 hover:border-accent hover:text-accent active:bg-accent active:text-white active:scale-95 text-slate-900 dark:text-slate-100 font-black text-2xl shadow-sm border border-gray-200/80 dark:border-slate-700/80 transition-all duration-150 cursor-pointer flex items-center justify-center"
+              className="h-14 rounded-2xl bg-white/45 dark:bg-white/5 hover:bg-white/75 dark:hover:bg-white/15 active:bg-accent active:text-white text-slate-900 dark:text-slate-100 font-black text-2xl border border-white/60 dark:border-white/10 hover:border-white/90 hover:scale-105 active:scale-95 shadow-sm backdrop-blur-md transition-all duration-150 cursor-pointer flex items-center justify-center btn-press"
             >
               {digit}
             </button>
@@ -322,7 +322,7 @@ export function LoginPage(): React.JSX.Element {
           <button
             type="button"
             onClick={handleClear}
-            className="h-14 rounded-2xl bg-gray-100 dark:bg-slate-800/80 hover:bg-rose-500/10 hover:text-rose-600 hover:border-rose-500/30 active:scale-95 text-slate-600 dark:text-slate-300 font-black text-xs border border-gray-200/80 dark:border-slate-700/80 transition-all duration-150 cursor-pointer flex items-center justify-center"
+            className="h-14 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 active:scale-95 text-rose-600 dark:text-rose-400 font-black text-xs border border-rose-500/25 hover:border-rose-500/40 hover:scale-105 shadow-sm backdrop-blur-md transition-all duration-150 cursor-pointer flex items-center justify-center btn-press"
           >
             {t('مسح C')}
           </button>
@@ -331,7 +331,7 @@ export function LoginPage(): React.JSX.Element {
           <button
             type="button"
             onClick={() => handleDigit('0')}
-            className="h-14 rounded-2xl bg-white dark:bg-slate-800 hover:bg-accent/10 hover:border-accent hover:text-accent active:bg-accent active:text-white active:scale-95 text-slate-900 dark:text-slate-100 font-black text-2xl shadow-sm border border-gray-200/80 dark:border-slate-700/80 transition-all duration-150 cursor-pointer flex items-center justify-center"
+            className="h-14 rounded-2xl bg-white/45 dark:bg-white/5 hover:bg-white/75 dark:hover:bg-white/15 active:bg-accent active:text-white text-slate-900 dark:text-slate-100 font-black text-2xl border border-white/60 dark:border-white/10 hover:border-white/90 hover:scale-105 active:scale-95 shadow-sm backdrop-blur-md transition-all duration-150 cursor-pointer flex items-center justify-center btn-press"
           >
             0
           </button>
@@ -340,23 +340,25 @@ export function LoginPage(): React.JSX.Element {
           <button
             type="button"
             onClick={handleBackspace}
-            className="h-14 rounded-2xl bg-gray-100 dark:bg-slate-800/80 hover:bg-gray-200 dark:hover:bg-slate-700 active:scale-95 text-slate-600 dark:text-slate-300 font-extrabold text-lg border border-gray-200/80 dark:border-slate-700/80 transition-all duration-150 cursor-pointer flex items-center justify-center"
+            className="h-14 rounded-2xl bg-white/45 dark:bg-white/5 hover:bg-white/75 dark:hover:bg-white/15 active:scale-95 text-slate-700 dark:text-slate-200 font-extrabold text-lg border border-white/60 dark:border-white/10 hover:scale-105 shadow-sm backdrop-blur-md transition-all duration-150 cursor-pointer flex items-center justify-center btn-press"
           >
             <Delete className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Submit Button */}
+        {/* Pulsing Submit Button */}
         <Button
           variant="primary"
           size="lg"
-          className="w-full max-w-[280px] mt-6 py-3.5 font-black shadow-ambient flex items-center justify-center gap-2"
+          className={`w-full max-w-[280px] mt-6 py-3.5 font-black shadow-ambient flex items-center justify-center gap-2 transition-all ${
+            pin.length >= 4 ? 'animate-pulse hover:scale-102 ring-4 ring-accent/30' : ''
+          }`}
           disabled={pin.length < 4}
           loading={isLoading}
           onClick={() => handleLogin()}
         >
           <span>{t('تسجيل الدخول')}</span>
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowRight className={`w-4 h-4 transform transition-transform ${document.documentElement.dir === 'rtl' ? 'rotate-180' : ''}`} />
         </Button>
       </div>
     </div>
