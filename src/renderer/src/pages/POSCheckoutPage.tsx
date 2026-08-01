@@ -1040,7 +1040,7 @@ export function POSCheckoutPage({
                             soundService.playError()
                           }
                         }}
-                        className={`p-3.5 border backdrop-blur-md transition-all duration-300 flex flex-col justify-between h-40 rounded-3xl will-change-transform ${
+                        className={`p-3.5 border backdrop-blur-md transition-all duration-300 flex flex-col justify-between h-40 rounded-2xl will-change-transform ${
                           isOutOfStock
                             ? 'opacity-50 grayscale bg-gray-50/60 dark:bg-slate-900/30 border-gray-200/60 dark:border-slate-800 cursor-not-allowed'
                             : 'bg-white/70 dark:bg-slate-900/50 border-gray-200/80 dark:border-white/10 cursor-pointer hover:border-accent/50 hover:scale-[1.02] hover:shadow-layered-md'
@@ -1053,10 +1053,10 @@ export function POSCheckoutPage({
                                 <img
                                   src={v.image_url}
                                   alt={v.product_name}
-                                  className="w-9 h-9 rounded-xl object-cover shrink-0 border border-gray-200 dark:border-slate-700 shadow-sm"
+                                  className="w-10 h-10 rounded-xl object-cover shrink-0 border border-gray-200 dark:border-slate-700 shadow-sm"
                                 />
                               ) : (
-                                <div className="w-9 h-9 rounded-xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center shrink-0 border border-accent/20">
+                                <div className="w-10 h-10 rounded-xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center shrink-0 border border-accent/20">
                                   <Package className="w-4 h-4 text-accent" />
                                 </div>
                               )}

@@ -336,7 +336,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
       </div>
 
       {/* Top Search & Category Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 bg-white dark:bg-slate-900 p-4 rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-layered-sm">
+      <div className="flex flex-col sm:flex-row items-center gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-200/80 dark:border-slate-800 shadow-layered-sm">
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-text-tertiary absolute right-3.5 top-1/2 -translate-y-1/2" />
           <Input
@@ -489,7 +489,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                               {variant.size ? `${t('مقاس:')} ${variant.size}` : t('مقاس عادي')} 
                               {variant.color ? ` | ${t('لون:')} ${variant.color}` : ''}
                             </span>
-                            <span className="text-[10px] font-mono font-bold text-text-tertiary bg-white px-2 py-0.5 rounded-md border border-gray-200">
+                            <span className="text-[10px] font-mono font-bold text-text-tertiary bg-white px-2 py-0.5 rounded-lg border border-gray-200">
                               {variant.barcode ?? t('بدون باركود')}
                             </span>
                           </div>

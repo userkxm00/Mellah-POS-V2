@@ -283,7 +283,7 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
 
         return (
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-accent/10 text-accent font-black text-sm flex items-center justify-center border border-accent/20">
+            <div className="w-10 h-10 rounded-full bg-accent/10 text-accent font-black text-sm flex items-center justify-center border border-accent/20">
               {row.full_name.charAt(0)}
             </div>
             <div>

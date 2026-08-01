@@ -261,7 +261,7 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
             <img
               src={row.image_url}
               alt={row.name}
-              className="w-9 h-9 rounded-xl object-cover shrink-0 border border-gray-200/80"
+              className="w-10 h-10 rounded-xl object-cover shrink-0 border border-gray-200/80"
             />
           ) : (
             <div className="p-2.5 rounded-xl bg-accent/10 text-accent border border-accent/20 shrink-0">

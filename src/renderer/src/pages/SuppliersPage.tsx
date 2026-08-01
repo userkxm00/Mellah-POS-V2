@@ -274,7 +274,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       sortable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-blue-50 text-accent font-black text-sm flex items-center justify-center border border-blue-200">
+          <div className="w-10 h-10 rounded-full bg-blue-50 text-accent font-black text-sm flex items-center justify-center border border-blue-200">
             <Truck className="w-4 h-4" />
           </div>
           <div>

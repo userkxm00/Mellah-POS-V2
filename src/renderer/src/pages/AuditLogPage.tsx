@@ -169,7 +169,7 @@ export function AuditLogPage({ onBack }: { onBack?: () => void }): React.JSX.Ele
             )}
           </div>
           <h1 className="text-2xl font-black text-text-primary dark:text-slate-100 flex items-center gap-2">
-            <ClipboardList className="w-6 h-6 text-accent" />
+            <ClipboardList className="w-5 h-5 text-accent" />
             <span>{t('سجل التغييرات والعمليات (Audit Log Viewer)')}</span>
           </h1>
         </div>

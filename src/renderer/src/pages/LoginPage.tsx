@@ -169,7 +169,7 @@ export function LoginPage(): React.JSX.Element {
                     key={user.id}
                     type="button"
                     onClick={() => setSelectedUser(user)}
-                    className="p-6 rounded-3xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800 shadow-md hover:shadow-2xl hover:border-accent/60 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col items-center gap-3.5 group relative overflow-hidden"
+                    className="p-6 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800 shadow-md hover:shadow-2xl hover:border-accent/60 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col items-center gap-3.5 group relative overflow-hidden"
                   >
                     {/* Ambient Hover Accent Sheen */}
                     <div className="absolute inset-0 bg-gradient-to-tr from-accent/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -241,7 +241,7 @@ export function LoginPage(): React.JSX.Element {
       <div className="absolute w-[450px] h-[450px] bg-gradient-to-r from-teal-400/20 via-sky-400/20 to-indigo-500/15 rounded-full blur-3xl pointer-events-none top-1/3 left-1/3 animate-blob animation-delay-4000" />
 
       {/* Frosted Glassmorphism PIN Card */}
-      <div className="relative w-full max-w-md bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl p-8 rounded-3xl shadow-ambient-lg border border-white/60 dark:border-white/10 flex flex-col items-center page-enter">
+      <div className="relative w-full max-w-md bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl p-8 rounded-2xl shadow-ambient-lg border border-white/60 dark:border-white/10 flex flex-col items-center page-enter">
         {/* Sleek Circular Glass Back Button */}
         <button
           type="button"
@@ -267,7 +267,7 @@ export function LoginPage(): React.JSX.Element {
             className="relative w-20 h-20 rounded-full text-white font-black text-3xl flex items-center justify-center border-2 border-white/40 shadow-lg"
           >
             {initial}
-            <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-slate-900 border-2 border-white flex items-center justify-center text-xs shadow-md">
+            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-slate-900 border-2 border-white flex items-center justify-center text-xs shadow-md">
               {meta.icon}
             </div>
           </div>

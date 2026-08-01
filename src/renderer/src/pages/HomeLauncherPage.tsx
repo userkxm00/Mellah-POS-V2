@@ -336,7 +336,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
 
           {/* User Profile Tile */}
           <div className="flex items-center gap-2.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-gray-200/80 dark:border-slate-700/80 px-3.5 py-1.5 rounded-full shadow-layered-sm">
-            <div className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center font-black text-xs border border-accent/20">
+            <div className="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center font-black text-xs border border-accent/20">
               {currentUser.full_name.charAt(0)}
             </div>
             <div className="flex flex-col">
@@ -370,7 +370,7 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
             background: 'linear-gradient(135deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #0070E0) 100%)',
             color: '#FFFFFF'
           }}
-          className="relative overflow-hidden p-6 rounded-3xl shadow-lg border border-white/30 flex flex-col md:flex-row items-center justify-between gap-6 group"
+          className="relative overflow-hidden p-6 rounded-2xl shadow-lg border border-white/30 flex flex-col md:flex-row items-center justify-between gap-6 group"
         >
           {/* Banner Reflection Light Sweep */}
           <div
