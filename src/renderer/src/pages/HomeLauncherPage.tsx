@@ -450,7 +450,10 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         {/* Section Header */}
         <div className="flex items-center justify-between pt-2">
           <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
+            <span className="relative flex h-2 w-2 items-center justify-center">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+            </span>
             <span>{t('وحدات النظام المتوفرة')}</span>
           </h3>
           <span className="text-xs font-bold text-text-tertiary">
@@ -494,11 +497,11 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
                 onClick={() => onNavigate(tile.id)}
                 className="launcher-tile group flex flex-col items-center text-center p-6 justify-center gap-3 min-h-[160px] relative"
               >
-                {/* Icon Container with Kinetic Micro Pulse Ripple */}
+                {/* Icon Container with Soft Translucent Hover Glow */}
                 <div
                   className={`w-14 h-14 rounded-2xl ${tile.iconBg} flex items-center justify-center shadow-layered-sm group-hover:scale-110 transition-all duration-300 relative overflow-hidden group-hover:ring-4 group-hover:ring-accent/30`}
                 >
-                  <div className="absolute inset-0 rounded-2xl bg-white/25 opacity-0 group-hover:animate-ping pointer-events-none" />
+                  <div className="absolute inset-0 rounded-2xl bg-white/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                   {tile.icon}
                 </div>
 

@@ -269,8 +269,23 @@
   100% { opacity: 1; transform: translateX(0); }
 }
 
-/* Reduced Motion Override */
+/* Reduced Motion Accessibility Override */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-ping,
+  .animate-pulse,
+  .animate-bounce,
+  .animate-spin,
+  .animate-blob,
+  .launcher-tile-hero,
+  .launcher-tile,
   .stagger-item,
   .page-enter,
   .btn-press {
