@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import type { DatabaseSync as DatabaseSyncType } from 'node:sqlite'
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { DatabaseSync } = require('node:sqlite')
 import fs from 'node:fs'
@@ -6,7 +7,7 @@ import path from 'node:path'
 import os from 'os'
 
 describe('Database Schema (0001_init migration)', () => {
-  let db: DatabaseSync
+  let db: DatabaseSyncType
   let dbPath: string
 
   beforeAll(() => {
