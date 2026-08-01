@@ -8,16 +8,36 @@ interface SplashScreenProps {
 
 export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
+  const language = useLanguageStore((s) => s.language)
   const [isFadingOut, setIsFadingOut] = useState(false)
+  const [progress, setProgress] = useState(0)
 
   useEffect(() => {
-    // Premium 2.0-second display duration before smooth fade-out
+    // 1. Smoothly increment progress state from 0 to 100 over 2.8 seconds
+    const duration = 2800 // 2.8s
+    const step = 2 // 2% increments
+    const intervalTime = (duration / 100) * step
+
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(progressInterval)
+          return 100
+        }
+        return prev + step
+      })
+    }, intervalTime)
+
+    // 2. Auto-dismiss splash screen at 3.2 seconds (holds at 100% for 400ms before fading out)
     const timer = setTimeout(() => {
       setIsFadingOut(true)
       setTimeout(onFinished, 300)
-    }, 2000)
+    }, 3200)
 
-    return () => clearTimeout(timer)
+    return () => {
+      clearInterval(progressInterval)
+      clearTimeout(timer)
+    }
   }, [onFinished])
 
   return (
@@ -61,12 +81,12 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
             }}
             className="relative w-28 h-28 rounded-[32px] flex items-center justify-center shadow-hero-glow border border-white/30 overflow-hidden"
           >
-            {/* Infinite Shimmer Light Sweep Ray across Monogram */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full splash-shimmer pointer-events-none" />
+            {/* Shimmer Light Sweep Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full splash-shimmer pointer-events-none" />
 
             {/* Monogram M Vector */}
             <svg
-              className="w-16 h-16 text-white drop-shadow-md relative z-10"
+              className="w-16 h-16 text-white drop-shadow-md"
               viewBox="0 0 512 512"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -100,6 +120,21 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
             {t('نظام نقاط البيع والتشغيل الذكي')}
           </p>
         </div>
+
+        {/* High-End Glass Loading Bar - GPU Accelerated scaleX */}
+        <div className="w-56 h-1.5 rounded-full bg-gray-200 dark:bg-slate-800/80 border border-gray-300/50 dark:border-slate-700/50 overflow-hidden mt-2 p-0.5 shadow-inner relative">
+          <div
+            className="h-full rounded-full w-full"
+            style={{
+              transform: `scaleX(${progress / 100})`,
+              transformOrigin: language === 'fr' ? 'left' : 'right',
+              transition: 'transform 0.15s linear',
+              background: 'linear-gradient(90deg, var(--color-accent, #0A84FF) 0%, var(--color-accent-hover, #00C6FF) 100%)',
+              boxShadow: '0 0 12px var(--color-accent, #0A84FF)',
+              willChange: 'transform'
+            }}
+          />
+        </div>
       </div>
 
       <style>{`
@@ -116,7 +151,7 @@ export function SplashScreen({ onFinished }: SplashScreenProps): React.JSX.Eleme
           100% { opacity: 0.35; transform: scale(1.1); }
         }
         .splash-shimmer {
-          animation: splash-shimmer 2s infinite ease-in-out;
+          animation: splash-shimmer 2.5s infinite ease-in-out;
         }
       `}</style>
     </div>
