@@ -307,58 +307,60 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
 
         <div className="flex items-center gap-4 relative z-10">
           {/* Sync status & Reconnect button */}
-          <div className="flex items-center gap-2">
-            <div
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold transition-all shadow-sm ${
-                isOnline
-                  ? 'bg-success/10 text-success border-success/20'
-                  : 'bg-danger/10 text-danger border-danger/20 animate-pulse'
-              }`}
-            >
+          {/* Single Unified Frosted Glass Status & User Account Bar */}
+          <div className="flex items-center gap-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800 p-1.5 pr-2.5 rounded-full shadow-card">
+            {/* User Avatar with Pulsing Online Status Dot */}
+            <div className="relative flex items-center">
+              <div className="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center font-black text-xs border border-accent/20">
+                {currentUser.full_name.charAt(0)}
+              </div>
               <span
-                className={`w-2.5 h-2.5 rounded-full ${
+                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
                   isOnline ? 'bg-success animate-pulse' : 'bg-danger'
                 }`}
+                title={isOnline ? t('أونلاين (متزامن)') : t('أوفلاين (محلي)')}
               />
-              <span>{isOnline ? t('أونلاين (متزامن)') : t('أوفلاين (محلي)')}</span>
             </div>
 
+            {/* User Info */}
+            <div className="flex flex-col min-w-0 pr-1">
+              <span className="text-xs font-black text-text-primary dark:text-slate-100 leading-tight truncate">
+                {currentUser.full_name}
+              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] font-bold text-text-secondary dark:text-slate-400 leading-none">
+                  {t(badge.label)}
+                </span>
+                <span className="text-[9px] font-bold text-slate-300 dark:text-slate-600">•</span>
+                <span className={`text-[10px] font-bold ${isOnline ? 'text-success' : 'text-danger'}`}>
+                  {isOnline ? t('أونلاين') : t('أوفلاين')}
+                </span>
+              </div>
+            </div>
+
+            <div className="h-5 w-px bg-gray-200 dark:bg-slate-800 mx-0.5" />
+
+            {/* Silent Reconnect Button */}
             <button
               onClick={handleManualReconnect}
               disabled={isReconnecting}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-slate-900/90 border border-gray-200/80 dark:border-slate-700/80 text-text-primary dark:text-slate-100 hover:border-accent hover:text-accent text-xs font-bold shadow-layered-sm transition-all btn-press disabled:opacity-50"
+              className="p-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-accent hover:bg-accent/10 transition-colors disabled:opacity-50"
               title={t('إعادة الاتصال بالشبكة والمزامنة يدوياً')}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isReconnecting ? 'animate-spin text-accent' : ''}`} />
-              <span>{isReconnecting ? t('جاري الفحص...') : t('إعادة الاتصال')}</span>
+            </button>
+
+            {/* Logout Button */}
+            <button
+              onClick={() => {
+                if (window.confirm(t('هل تريد تسجيل الخروج؟'))) logout()
+              }}
+              className="p-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-danger hover:bg-danger/10 transition-colors"
+              title={t('تسجيل الخروج')}
+            >
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
-
-          {/* User Profile Tile */}
-          <div className="flex items-center gap-2.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-gray-200/80 dark:border-slate-700/80 px-3.5 py-1.5 rounded-full shadow-layered-sm">
-            <div className="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center font-black text-xs border border-accent/20">
-              {currentUser.full_name.charAt(0)}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-black text-text-primary dark:text-slate-100 leading-none">
-                {currentUser.full_name}
-              </span>
-              <span className="text-[10px] font-bold text-text-secondary dark:text-slate-300 mt-0.5">
-                {t(badge.label)}
-              </span>
-            </div>
-          </div>
-
-          {/* Logout */}
-          <button
-            onClick={() => {
-              if (window.confirm(t('هل تريد تسجيل الخروج؟'))) logout()
-            }}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gray-200/80 dark:bg-slate-800/80 text-text-primary dark:text-slate-100 hover:bg-danger/10 hover:text-danger text-xs font-black transition-colors btn-press"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>{t('خروج')}</span>
-          </button>
         </div>
       </header>
 

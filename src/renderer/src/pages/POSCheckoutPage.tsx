@@ -1206,9 +1206,9 @@ export function POSCheckoutPage({
                       )}
                       <div className="flex-1 min-w-0">
                         <h4 className="font-extrabold text-xs text-[#1C2B3A] dark:text-slate-100 truncate">{item.product_name}</h4>
-                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#6B7A8D] dark:text-slate-400 mt-0.5">
-                          {item.variant_size && <span className="bg-gray-100 dark:bg-slate-700/80 px-1.5 py-0.5 rounded-md">{t('مقاس:')} {item.variant_size}</span>}
-                          {item.variant_color && <span className="bg-gray-100 dark:bg-slate-700/80 px-1.5 py-0.5 rounded-md">{t('لون:')} {t(item.variant_color)}</span>}
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#6B7A8D] dark:text-slate-300 mt-0.5">
+                          {item.variant_size && <span className="bg-gray-100 dark:bg-slate-700/90 text-[#1C2B3A] dark:text-slate-200 border border-gray-200/80 dark:border-slate-600/60 px-1.5 py-0.5 rounded-lg">{t('مقاس:')} {item.variant_size}</span>}
+                          {item.variant_color && <span className="bg-gray-100 dark:bg-slate-700/90 text-[#1C2B3A] dark:text-slate-200 border border-gray-200/80 dark:border-slate-600/60 px-1.5 py-0.5 rounded-lg">{t('لون:')} {t(item.variant_color)}</span>}
                         </div>
                         <span className="currency font-black text-accent text-xs block mt-0.5">
                           {formatCurrency(item.unit_price_dzd)}

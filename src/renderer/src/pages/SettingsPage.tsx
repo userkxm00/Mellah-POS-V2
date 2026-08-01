@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { ArrowRight, ExternalLink, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode, FolderOpen, RefreshCw, HardDrive, Moon, Sun, Volume2, VolumeX, Send, Bell } from 'lucide-react'
+import { ArrowRight, ExternalLink, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode, FolderOpen, RefreshCw, HardDrive, Moon, Sun, Volume2, VolumeX, Send, Bell, Sparkles } from 'lucide-react'
 import { Card, Input, Modal, Button } from '@/components/ui'
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { exportDatabaseBackup, importDatabaseBackup } from '@/services/backupService'
@@ -909,6 +909,35 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
               </button>
             </div>
           </Card>
+          )}
+
+          {/* Sticky Floating Glass Action Bar */}
+          {(activeTab === 'store' || activeTab === 'telegram' || activeTab === 'printer') && (
+            <div className="sticky bottom-4 z-40 mt-6 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800 p-3.5 rounded-2xl shadow-elevated flex items-center justify-between gap-4 animate-scale-in">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 pr-2">
+                <Sparkles className="w-4 h-4 text-accent" />
+                <span>{t('تغييراتك غير محفوظة بعد، اضغط حفظ للتطبيق المباشر')}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleTestPrint}
+                  className="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-text-primary dark:text-slate-200 text-xs font-extrabold transition-all btn-press flex items-center gap-1.5"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>{t('طباعة تجريبية')}</span>
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-6 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-black shadow-ambient transition-all btn-press flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? t('جاري الحفظ...') : t('حفظ التغييرات')}</span>
+                </button>
+              </div>
+            </div>
           )}
         </form>
 

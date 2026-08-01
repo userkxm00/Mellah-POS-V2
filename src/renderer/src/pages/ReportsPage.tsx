@@ -21,7 +21,8 @@ import {
   Tooltip,
   BarChart,
   Bar,
-  Cell
+  Cell,
+  CartesianGrid
 } from 'recharts'
 import { Card, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
@@ -397,18 +398,19 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
               <AreaChart data={dailyChartData}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0A84FF" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#0A84FF" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--color-accent, #0A84FF)" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="var(--color-accent, #0A84FF)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="day" stroke="#AEAEB2" fontSize={11} />
-                <YAxis stroke="#AEAEB2" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#94A3B8" opacity={0.2} />
+                <XAxis dataKey="day" stroke="#94A3B8" fontSize={11} />
+                <YAxis stroke="#94A3B8" fontSize={11} />
                 <Tooltip
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={(val: any) => [`${(Number(val) || 0).toLocaleString()} DA`, t('المبيعات')]}
-                  contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e5ea', fontWeight: 'bold' }}
+                  contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', fontWeight: 'bold', color: '#F8FAFC' }}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="#0A84FF" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                <Area type="monotone" dataKey="revenue" stroke="var(--color-accent, #0A84FF)" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -424,12 +426,13 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={paymentData}>
-                <XAxis dataKey="name" stroke="#AEAEB2" fontSize={11} />
-                <YAxis stroke="#AEAEB2" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#94A3B8" opacity={0.2} />
+                <XAxis dataKey="name" stroke="#94A3B8" fontSize={11} />
+                <YAxis stroke="#94A3B8" fontSize={11} />
                 <Tooltip
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={(val: any) => [`${(Number(val) || 0).toLocaleString()} DA`, t('المبلغ')]}
-                  contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e5ea', fontWeight: 'bold' }}
+                  contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', fontWeight: 'bold', color: '#F8FAFC' }}
                 />
                 <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
                   {paymentData.map((entry, index) => (
