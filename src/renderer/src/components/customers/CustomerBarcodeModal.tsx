@@ -83,27 +83,27 @@ export const CustomerBarcodeModal: React.FC<CustomerBarcodeModalProps> = ({
             <span>{t('معاينة حية على حجم الملصق الحراري (40mm × 30mm)')}</span>
           </div>
 
-          {/* 40mm x 30mm Simulated Label Frame */}
-          <div className="w-[200px] h-[150px] bg-white text-black p-2.5 rounded-lg border-2 border-dashed border-gray-300 shadow-md flex flex-col justify-between items-center text-center select-none font-sans">
-            <div className="w-full text-[10px] font-black border-b border-black pb-0.5 tracking-tight truncate">
+          {/* 40mm x 30mm Compact Simulated Label Frame */}
+          <div className="w-[180px] h-[135px] bg-white text-black p-2 rounded border-2 border-dashed border-gray-300 shadow-md flex flex-col justify-between items-center text-center select-none font-sans overflow-hidden">
+            <div className="w-full text-[9.5px] font-black border-b border-black pb-0.5 tracking-tight truncate">
               {storeSettings.store_name}
             </div>
 
-            <div className="w-full my-1">
-              <div className="text-[12px] font-black leading-none truncate">{customer.full_name}</div>
+            <div className="w-full my-0.5">
+              <div className="text-[11px] font-black leading-tight truncate">{customer.full_name}</div>
               {customer.phone && (
-                <div className="text-[9px] font-mono font-bold text-gray-700 mt-0.5">{customer.phone}</div>
+                <div className="text-[8.5px] font-mono font-extrabold text-gray-800">{customer.phone}</div>
               )}
             </div>
 
             {/* High-Density Barcode SVG */}
             <div
-              className="w-full flex items-center justify-center"
+              className="w-full flex items-center justify-center my-0.5"
               dangerouslySetInnerHTML={{ __html: barcodeSvg }}
             />
 
             {storeSettings.loyalty_enabled && customer.loyalty_points !== undefined && (
-              <div className="text-[9px] font-black bg-gray-100 px-2 py-0.5 rounded border border-gray-300">
+              <div className="text-[8px] font-black bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">
                 النقاط: {customer.loyalty_points} نقطة
               </div>
             )}

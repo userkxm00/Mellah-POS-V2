@@ -414,7 +414,7 @@ export function buildCustomerCardHtml(
           width: 40mm;
           height: 30mm;
           margin: 0 auto;
-          padding: 1.5mm;
+          padding: 1mm;
           box-sizing: border-box;
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
           background: #ffffff;
@@ -429,7 +429,7 @@ export function buildCustomerCardHtml(
         .header {
           font-size: 8px;
           font-weight: 900;
-          border-bottom: 0.5pt solid #000;
+          border-bottom: 0.8pt solid #000;
           width: 100%;
           padding-bottom: 1px;
           margin-bottom: 1px;
@@ -438,7 +438,7 @@ export function buildCustomerCardHtml(
           text-overflow: ellipsis;
         }
         .customer-name {
-          font-size: 9px;
+          font-size: 9.5px;
           font-weight: 900;
           line-height: 1.1;
           margin-top: 1px;
@@ -448,9 +448,10 @@ export function buildCustomerCardHtml(
           width: 100%;
         }
         .customer-phone {
-          font-size: 7px;
-          font-weight: 700;
-          color: #333;
+          font-size: 7.5px;
+          font-weight: 800;
+          font-family: monospace;
+          color: #111;
           margin-bottom: 1px;
         }
         .barcode-container {
@@ -461,17 +462,16 @@ export function buildCustomerCardHtml(
           margin: 0 auto;
         }
         .barcode-container svg {
-          width: 90%;
-          height: 22px;
+          width: 95%;
+          height: 24px;
         }
         .points-badge {
           font-size: 7px;
           font-weight: 800;
           background: #f0f0f0;
-          border: 0.5pt solid #999;
+          border: 0.5pt solid #888;
           border-radius: 2px;
           padding: 0.5px 3px;
-          margin-top: 1px;
         }
       </style>
     </head>
