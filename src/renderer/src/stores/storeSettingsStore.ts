@@ -9,6 +9,10 @@ export interface StoreSettings {
   logo_url: string | null
   default_language: string
   session_timeout_minutes: number
+  loyalty_enabled: boolean
+  loyalty_spend_per_point_dzd: number
+  loyalty_point_value_dzd: number
+  loyalty_expiry_months: number
 }
 
 interface StoreSettingsState {
@@ -25,6 +29,10 @@ const DEFAULT_SETTINGS: StoreSettings = {
   logo_url: null,
   default_language: 'ar',
   session_timeout_minutes: 5,
+  loyalty_enabled: false,
+  loyalty_spend_per_point_dzd: 1000,
+  loyalty_point_value_dzd: 1,
+  loyalty_expiry_months: 0,
 }
 
 export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
@@ -33,12 +41,28 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
 
   loadSettings: async () => {
     try {
-      const rows = await window.electron.db.query<StoreSettings>(
+      const rows = await window.electron.db.query<{
+        store_name: string
+        store_address: string
+        store_phone: string
+        receipt_footer_text: string
+        logo_url: string | null
+        default_language: string
+        session_timeout_minutes: number
+        loyalty_enabled: number
+        loyalty_spend_per_point_dzd: number
+        loyalty_point_value_dzd: number
+        loyalty_expiry_months: number
+      }>(
         `SELECT store_name, COALESCE(store_address, '') as store_address, 
                 COALESCE(store_phone, '') as store_phone,
                 COALESCE(receipt_footer_text, '') as receipt_footer_text, 
                 logo_url, default_language,
-                COALESCE(session_timeout_minutes, 5) as session_timeout_minutes
+                COALESCE(session_timeout_minutes, 5) as session_timeout_minutes,
+                COALESCE(loyalty_enabled, 0) as loyalty_enabled,
+                COALESCE(loyalty_spend_per_point_dzd, 1000) as loyalty_spend_per_point_dzd,
+                COALESCE(loyalty_point_value_dzd, 1) as loyalty_point_value_dzd,
+                COALESCE(loyalty_expiry_months, 0) as loyalty_expiry_months
          FROM store_settings WHERE branch_id = ?`,
         [DEFAULT_BRANCH_ID]
       )
@@ -52,6 +76,10 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
             logo_url: rows[0].logo_url || null,
             default_language: rows[0].default_language || 'ar',
             session_timeout_minutes: rows[0].session_timeout_minutes ?? 5,
+            loyalty_enabled: Number(rows[0].loyalty_enabled) === 1,
+            loyalty_spend_per_point_dzd: rows[0].loyalty_spend_per_point_dzd ?? 1000,
+            loyalty_point_value_dzd: rows[0].loyalty_point_value_dzd ?? 1,
+            loyalty_expiry_months: rows[0].loyalty_expiry_months ?? 0,
           },
           loaded: true,
         })

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { ArrowRight, ExternalLink, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode, FolderOpen, RefreshCw, HardDrive, Moon, Sun, Volume2, VolumeX, Send, Bell, Sparkles } from 'lucide-react'
+import { ArrowRight, ExternalLink, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode, FolderOpen, RefreshCw, HardDrive, Moon, Sun, Volume2, VolumeX, Send, Bell, Sparkles, Award } from 'lucide-react'
 import { Card, Input, Modal, Button } from '@/components/ui'
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { exportDatabaseBackup, importDatabaseBackup } from '@/services/backupService'
@@ -89,6 +89,12 @@ export function SettingsPage({ onBack }: { readonly onBack: () => void }): React
   const [telegramNotifyShift, setTelegramNotifyShift] = useState<boolean>(true)
   const [isTestingTelegram, setIsTestingTelegram] = useState<boolean>(false)
 
+  // Loyalty Program Settings State
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState<boolean>(false)
+  const [loyaltySpendPerPoint, setLoyaltySpendPerPoint] = useState<number>(1000)
+  const [loyaltyPointValue, setLoyaltyPointValue] = useState<number>(1)
+  const [loyaltyExpiryMonths, setLoyaltyExpiryMonths] = useState<number>(0)
+
 async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
   try {
     if (typeof window !== 'undefined' && window.electron?.getPrinters) {
@@ -122,8 +128,12 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
         telegram_notify_app_launch: number | null
         telegram_notify_sale: number | null
         telegram_notify_shift: number | null
+        loyalty_enabled: number | null
+        loyalty_spend_per_point_dzd: number | null
+        loyalty_point_value_dzd: number | null
+        loyalty_expiry_months: number | null
       }>(
-        'SELECT store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes, telegram_bot_token, telegram_chat_ids, telegram_notify_app_launch, telegram_notify_sale, telegram_notify_shift FROM store_settings WHERE branch_id = ?',
+        'SELECT store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes, telegram_bot_token, telegram_chat_ids, telegram_notify_app_launch, telegram_notify_sale, telegram_notify_shift, loyalty_enabled, loyalty_spend_per_point_dzd, loyalty_point_value_dzd, loyalty_expiry_months FROM store_settings WHERE branch_id = ?',
         [DEFAULT_BRANCH_ID]
       )
 
@@ -157,6 +167,10 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
         setTelegramNotifyAppLaunch(rows[0].telegram_notify_app_launch === 1)
         setTelegramNotifySale(rows[0].telegram_notify_sale === 1)
         setTelegramNotifyShift(rows[0].telegram_notify_shift === 1)
+        setLoyaltyEnabled(rows[0].loyalty_enabled === 1)
+        setLoyaltySpendPerPoint(rows[0].loyalty_spend_per_point_dzd ?? 1000)
+        setLoyaltyPointValue(rows[0].loyalty_point_value_dzd ?? 1)
+        setLoyaltyExpiryMonths(rows[0].loyalty_expiry_months ?? 0)
       }
     } catch (err) {// eslint-disable-next-line no-console
       console.error("[SettingsPage]", err); // Default fallback settings
@@ -204,9 +218,10 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
       await window.electron.db.execute(
         `INSERT INTO store_settings (
            branch_id, store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes,
-           telegram_bot_token, telegram_chat_ids, telegram_notify_app_launch, telegram_notify_sale, telegram_notify_shift, updated_at
+           telegram_bot_token, telegram_chat_ids, telegram_notify_app_launch, telegram_notify_sale, telegram_notify_shift,
+           loyalty_enabled, loyalty_spend_per_point_dzd, loyalty_point_value_dzd, loyalty_expiry_months, updated_at
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(branch_id) DO UPDATE SET
            store_name=excluded.store_name,
            store_address=excluded.store_address,
@@ -219,6 +234,10 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
            telegram_notify_app_launch=excluded.telegram_notify_app_launch,
            telegram_notify_sale=excluded.telegram_notify_sale,
            telegram_notify_shift=excluded.telegram_notify_shift,
+           loyalty_enabled=excluded.loyalty_enabled,
+           loyalty_spend_per_point_dzd=excluded.loyalty_spend_per_point_dzd,
+           loyalty_point_value_dzd=excluded.loyalty_point_value_dzd,
+           loyalty_expiry_months=excluded.loyalty_expiry_months,
            updated_at=excluded.updated_at`,
         [
           DEFAULT_BRANCH_ID,
@@ -233,6 +252,10 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
           telegramNotifyAppLaunch ? 1 : 0,
           telegramNotifySale ? 1 : 0,
           telegramNotifyShift ? 1 : 0,
+          loyaltyEnabled ? 1 : 0,
+          Math.max(1, loyaltySpendPerPoint || 1000),
+          Math.max(0.01, loyaltyPointValue || 1),
+          Math.max(0, loyaltyExpiryMonths || 0),
           now
         ]
       )
@@ -353,7 +376,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
     }
   }
 
-  const [activeTab, setActiveTab] = useState<'store' | 'printer' | 'theme' | 'telegram' | 'backup' | 'language'>('store')
+  const [activeTab, setActiveTab] = useState<'store' | 'printer' | 'loyalty' | 'theme' | 'telegram' | 'backup' | 'language'>('store')
 
   const tabs = [
     {
@@ -367,6 +390,12 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
       label: t('طابعة الفواتير'),
       desc: t('Sélection de l\'imprimante, ticket de test...'),
       icon: <Printer className="w-4 h-4" />
+    },
+    {
+      id: 'loyalty',
+      label: t('نقاط الولاء والزبائن'),
+      desc: t('Programme de fidélité, points...'),
+      icon: <Award className="w-4 h-4" />
     },
     {
       id: 'telegram',
@@ -621,6 +650,112 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
               </div>
             </div>
           </Card>
+          )}
+
+          {/* Loyalty Program Settings Card */}
+          {activeTab === 'loyalty' && (
+            <Card className="p-6 space-y-5 border border-gray-200/80 dark:border-slate-800 animate-scale-in">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
+                <h2 className="text-sm font-black text-text-primary dark:text-slate-100 flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-500" />
+                  <span>{t('برنامج نقاط الولاء ومكافآت الزبائن (Loyalty Points Program)')}</span>
+                </h2>
+                <span
+                  className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                    loyaltyEnabled
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : 'bg-gray-500/10 text-gray-500 border-gray-500/20'
+                  }`}
+                >
+                  {loyaltyEnabled ? t('مفعل (Active)') : t('معطل (Disabled)')}
+                </span>
+              </div>
+
+              {/* Toggle Switch */}
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20">
+                <div className="space-y-1">
+                  <label htmlFor="loyalty-toggle" className="text-xs font-black text-text-primary dark:text-slate-100 flex items-center gap-2 cursor-pointer">
+                    <span>{t('تفعيل نظام جمع واستبدال النقاط')}</span>
+                  </label>
+                  <p className="text-[11px] text-text-secondary dark:text-slate-400">
+                    {t('عند التفعيل، يكسب الزبون نقاطاً تلقائياً عند كل عملية شراء، ويكون قادراً على استبدالها بخصومات في شاشة POS.')}
+                  </p>
+                </div>
+                <input
+                  id="loyalty-toggle"
+                  type="checkbox"
+                  checked={loyaltyEnabled}
+                  onChange={(e) => setLoyaltyEnabled(e.target.checked)}
+                  className="w-5 h-5 rounded text-accent focus:ring-accent cursor-pointer"
+                />
+              </div>
+
+              {/* Rates Settings Grid */}
+              <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 transition-all duration-200 ${loyaltyEnabled ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-primary dark:text-slate-200">
+                    {t('المبلغ المطلوب لكسب نقطة واحدة (دج)')}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={loyaltySpendPerPoint || ''}
+                    onChange={(e) => setLoyaltySpendPerPoint(Math.max(1, Number.parseInt(e.target.value, 10) || 1))}
+                    className="w-full px-3 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-accent"
+                    placeholder="1000"
+                  />
+                  <p className="text-[10px] text-text-tertiary">
+                    {t('مثال: 1000 دج = نقطة واحدة لكل 1000 دج مشتريات')}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-primary dark:text-slate-200">
+                    {t('قيمة النقطة الواحدة عند الخصم (دج)')}
+                  </label>
+                  <input
+                    type="number"
+                    min={0.01}
+                    step={0.1}
+                    value={loyaltyPointValue || ''}
+                    onChange={(e) => setLoyaltyPointValue(Math.max(0.01, Number.parseFloat(e.target.value) || 1))}
+                    className="w-full px-3 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-accent"
+                    placeholder="1"
+                  />
+                  <p className="text-[10px] text-text-tertiary">
+                    {t('مثال: 1 دج = 100 نقطة تعطي خصماً بقيمة 100 دج')}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-primary dark:text-slate-200">
+                    {t('صلاحية النقاط بالأشهر (0 = بلا حدود)')}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={loyaltyExpiryMonths}
+                    onChange={(e) => setLoyaltyExpiryMonths(Math.max(0, Number.parseInt(e.target.value, 10) || 0))}
+                    className="w-full px-3 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-accent"
+                    placeholder="0"
+                  />
+                  <p className="text-[10px] text-text-tertiary">
+                    {t('ضع 0 لجعل النقاط دائمة ولا تنتهي صلاحيتها أبداً')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Informational Banner */}
+              <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-medium space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                  <span>{t('ملاحظة مستقلة خاصة ببطاقات الزبائن والباركود:')}</span>
+                </p>
+                <p className="text-[11px] leading-relaxed">
+                  {t('طباعة بطاقة الزبون وكود الباركود الخاص به تعمل في جميع الأوقات بشكل مستقل تماماً، سواء كان برنامج نقاط الولاء مفعلاً أو معطلاً.')}
+                </p>
+              </div>
+            </Card>
           )}
 
           {/* Telegram Notifications Settings Card */}
