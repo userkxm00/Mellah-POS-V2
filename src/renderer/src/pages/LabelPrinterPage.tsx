@@ -306,8 +306,12 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
             height: 14mm;
           }
           .price { 
-            font-size: 11px; 
+            font-size: 13.5px; 
             font-weight: 900; 
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            letter-spacing: -0.2px;
+            margin-top: 1px;
+            color: #000;
           }
           .page-break { page-break-after: always; }
         </style>
@@ -645,7 +649,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                         />
 
                         {activePreviewVariant && (
-                          <div className="text-[10px] font-black text-black">
+                          <div className="text-[13px] font-black text-black tracking-tight leading-none">
                             {formatCurrency(activePreviewVariant.price_dzd)}
                           </div>
                         )}
