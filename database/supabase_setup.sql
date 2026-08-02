@@ -119,6 +119,7 @@ CREATE TABLE customers (
   branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
   full_name TEXT NOT NULL,
   phone TEXT,
+  barcode TEXT UNIQUE,
   loyalty_points INTEGER DEFAULT 0,
   store_credit_balance NUMERIC(12,2) DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -183,6 +184,10 @@ CREATE TABLE store_settings (
   telegram_notify_app_launch INTEGER DEFAULT 1,
   telegram_notify_sale INTEGER DEFAULT 1,
   telegram_notify_shift INTEGER DEFAULT 1,
+  loyalty_enabled INTEGER DEFAULT 0,
+  loyalty_spend_per_point_dzd NUMERIC(12,2) DEFAULT 1000,
+  loyalty_point_value_dzd NUMERIC(12,2) DEFAULT 1,
+  loyalty_expiry_months INTEGER DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
