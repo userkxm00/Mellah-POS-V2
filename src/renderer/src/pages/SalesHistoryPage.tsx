@@ -294,7 +294,15 @@ export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.E
   })
 
   const validSales = filteredSales.filter((s) => s.status !== 'voided')
-  const dayTotalDzd = validSales.reduce((acc, curr) => acc + curr.total_dzd, 0)
+  const totalSalesVolumeDzd = validSales.reduce((acc, curr) => acc + curr.total_dzd, 0)
+  const totalCashCollectedDzd = validSales.reduce(
+    (acc, curr) => acc + (curr.paid_amount_dzd ?? curr.total_dzd),
+    0
+  )
+  const totalCreditRemainingDzd = validSales.reduce(
+    (acc, curr) => acc + Math.max(0, curr.total_dzd - (curr.paid_amount_dzd ?? curr.total_dzd)),
+    0
+  )
 
   const [sortKey, setSortKey] = useState<string>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
@@ -479,20 +487,39 @@ export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.E
         </button>
       </div>
 
-      {/* Summary Stat Card */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="p-4 bg-accent/5 border border-accent/20">
-          <p className="text-xs text-text-tertiary font-bold mb-1">{t('إجمالي الفواتير النشطة')}</p>
-          <p className="text-2xl font-black text-text-primary">{validSales.length} {t('فاتورة')}</p>
+      {/* Summary Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="p-4 bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/25">
+          <p className="text-xs text-emerald-700 dark:text-emerald-400 font-black mb-1">
+            {t('المقبوض النقدي في لاكاس (Encaissement Caisse)')}
+          </p>
+          <p className="currency text-emerald-600 dark:text-emerald-400 font-black text-2xl">
+            {formatCurrency(totalCashCollectedDzd)}
+          </p>
         </Card>
+
         <Card className="p-4 bg-accent/5 border border-accent/20">
-          <p className="text-xs text-text-tertiary font-bold mb-1">{t('إجمالي المبيعات المحُددة')}</p>
-          <p className="currency text-accent font-black text-2xl">{formatCurrency(dayTotalDzd)}</p>
+          <p className="text-xs text-text-tertiary font-bold mb-1">
+            {t('إجمالي قيمة المبيعات (Sales Volume)')}
+          </p>
+          <p className="currency text-accent font-black text-2xl">
+            {formatCurrency(totalSalesVolumeDzd)}
+          </p>
         </Card>
-        <Card className="p-4 bg-danger/5 border border-danger/20">
-          <p className="text-xs text-text-tertiary font-bold mb-1">{t('فواتير ملغاة')}</p>
-          <p className="text-2xl font-black text-danger">
-            {filteredSales.filter((s) => s.status === 'voided').length} {t('فاتورة')}
+
+        <Card className="p-4 bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/25">
+          <p className="text-xs text-amber-700 dark:text-amber-400 font-black mb-1">
+            {t('ديون كريدي متبقية (Credit Remaining)')}
+          </p>
+          <p className="currency text-amber-600 dark:text-amber-400 font-black text-2xl">
+            {formatCurrency(totalCreditRemainingDzd)}
+          </p>
+        </Card>
+
+        <Card className="p-4 bg-gray-100/80 dark:bg-slate-800/80 border border-gray-200/80 dark:border-slate-700">
+          <p className="text-xs text-text-tertiary font-bold mb-1">{t('الفواتير النشطة والملغاة')}</p>
+          <p className="text-xl font-black text-text-primary dark:text-slate-100">
+            {validSales.length} {t('نشطة')} <span className="text-xs text-text-tertiary font-bold">({filteredSales.filter((s) => s.status === 'voided').length} {t('ملغاة')})</span>
           </p>
         </Card>
       </div>
