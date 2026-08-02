@@ -376,3 +376,136 @@ export async function printThermalReturnReceipt(
   }
   return true
 }
+
+export interface CustomerCardData {
+  customerName: string
+  customerPhone?: string | null
+  barcode: string
+  loyaltyPoints?: number
+}
+
+export function buildCustomerCardHtml(
+  data: CustomerCardData,
+  storeSettings?: { store_name?: string; loyalty_enabled?: boolean }
+): string {
+  const storeName = storeSettings?.store_name || 'بوتيك الملاح للملابس'
+  const isLoyaltyEnabled = storeSettings?.loyalty_enabled ?? false
+  const barcodeSvg = generateBarcodeSvg(data.barcode)
+
+  return `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="utf-8">
+      <title>كارت الزبون - ${data.customerName}</title>
+      <style>
+        @page {
+          size: 40mm 30mm;
+          margin: 0;
+        }
+        @media print {
+          body {
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+          }
+        }
+        body {
+          width: 40mm;
+          height: 30mm;
+          margin: 0 auto;
+          padding: 1.5mm;
+          box-sizing: border-box;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: #ffffff;
+          color: #000000;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: space-between;
+          text-align: center;
+          overflow: hidden;
+        }
+        .header {
+          font-size: 8px;
+          font-weight: 900;
+          border-bottom: 0.5pt solid #000;
+          width: 100%;
+          padding-bottom: 1px;
+          margin-bottom: 1px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .customer-name {
+          font-size: 9px;
+          font-weight: 900;
+          line-height: 1.1;
+          margin-top: 1px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          width: 100%;
+        }
+        .customer-phone {
+          font-size: 7px;
+          font-weight: 700;
+          color: #333;
+          margin-bottom: 1px;
+        }
+        .barcode-container {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin: 0 auto;
+        }
+        .barcode-container svg {
+          width: 90%;
+          height: 22px;
+        }
+        .points-badge {
+          font-size: 7px;
+          font-weight: 800;
+          background: #f0f0f0;
+          border: 0.5pt solid #999;
+          border-radius: 2px;
+          padding: 0.5px 3px;
+          margin-top: 1px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">${storeName}</div>
+      <div class="customer-name">${data.customerName}</div>
+      ${data.customerPhone ? `<div class="customer-phone">${data.customerPhone}</div>` : ''}
+      <div class="barcode-container">
+        ${barcodeSvg}
+      </div>
+      ${isLoyaltyEnabled && data.loyaltyPoints !== undefined ? `<div class="points-badge">النقاط: ${data.loyaltyPoints} نقطة</div>` : ''}
+    </body>
+    </html>
+  `
+}
+
+export async function printCustomerCardLabel(
+  data: CustomerCardData,
+  storeSettings?: { store_name?: string; loyalty_enabled?: boolean },
+  printerName?: string
+): Promise<boolean> {
+  const html = buildCustomerCardHtml(data, storeSettings)
+  if (typeof window !== 'undefined' && window.electron?.printHtml) {
+    return await window.electron.printHtml(html, printerName || localStorage.getItem('mellah_printer_name') || undefined)
+  } else if (typeof window !== 'undefined') {
+    const printWindow = window.open('', '_blank', 'width=300,height=300')
+    if (printWindow) {
+      printWindow.document.write(html)
+      printWindow.document.close()
+      printWindow.focus()
+      printWindow.print()
+      printWindow.close()
+      return true
+    }
+  }
+  return false
+}

@@ -6,12 +6,15 @@ import {
   Tag,
   Search,
   Layers,
-  Sparkles
+  Sparkles,
+  Award
 } from 'lucide-react'
 import { Card, Input } from '@/components/ui'
 import { formatCurrency } from '@/lib/format'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
+import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
+import { printCustomerCardLabel } from '@/services/receiptService'
 
 interface ProductVariantItem {
   id: string
@@ -39,9 +42,19 @@ interface CategoryItem {
   name: string
 }
 
+interface CustomerPrintItem {
+  id: string
+  full_name: string
+  phone: string | null
+  barcode: string | null
+  loyalty_points: number
+}
+
 export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
   useLanguageStore((s) => s.version)
+  const [printTab, setPrintTab] = useState<'products' | 'customers'>('products')
+  const [customers, setCustomers] = useState<CustomerPrintItem[]>([])
   const [products, setProducts] = useState<ProductGroup[]>([])
   const [categories, setCategories] = useState<CategoryItem[]>([])
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
@@ -106,12 +119,54 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
       if (groupedList.length > 0) {
         setSelectedProductId(groupedList[0].product_id)
       }
+
+      // 3. Fetch customers with barcodes for customer card printing
+      const custRows = await window.electron.db
+        .query<{ id: string; full_name: string; phone: string | null; barcode: string | null; loyalty_points: number }>(
+          'SELECT id, full_name, phone, barcode, loyalty_points FROM customers WHERE deleted_at IS NULL ORDER BY full_name'
+        )
+        .catch(() => [])
+      setCustomers(custRows)
     } catch (err) {// eslint-disable-next-line no-console
       console.error("[LabelPrinterPage]", err); addToast({ message: t('فشل تحميل المنتجات للطباعة'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
   }, [addToast, t])
+
+  const handlePrintCustomerCard = async (customer: CustomerPrintItem): Promise<void> => {
+    try {
+      let custBarcode = customer.barcode
+      if (!custBarcode) {
+        custBarcode = `CUST-${customer.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
+        const now = new Date().toISOString()
+        await window.electron.db.execute(
+          'UPDATE customers SET barcode = ?, updated_at = ? WHERE id = ?',
+          [custBarcode, now, customer.id]
+        )
+        customer.barcode = custBarcode
+      }
+
+      const storeSettings = useStoreSettingsStore.getState().settings
+      const printed = await printCustomerCardLabel(
+        {
+          customerName: customer.full_name,
+          customerPhone: customer.phone,
+          barcode: custBarcode,
+          loyaltyPoints: customer.loyalty_points,
+        },
+        storeSettings
+      )
+
+      if (printed) {
+        addToast({ message: `${t('تم إرسال بطاقة الزبون')} (${customer.full_name}) ${t('إلى الطابعة بنجاح!')}`, variant: 'success' })
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[LabelPrinterPage] Print card error:', err)
+      addToast({ message: t('فشل طباعة بطاقة الزبون'), variant: 'error' })
+    }
+  }
 
   useEffect(() => {
     loadData()
@@ -333,225 +388,316 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
             {t('طباعة بطاقات الأسعار والباركود للملابس (Price Tags)')}
           </h1>
         </div>
-      </div>
 
-      {/* Top Search & Category Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-200/80 dark:border-slate-800 shadow-layered-sm">
-        <div className="relative flex-1 w-full">
-          <Search className="w-4 h-4 text-text-tertiary absolute right-3.5 top-1/2 -translate-y-1/2" />
-          <Input
-            placeholder={t('البحث باسم المنتج، المقاس، اللون، أو الباركود...')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-10 bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 text-xs font-bold"
-          />
-        </div>
-
-        {/* Category Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0">
+        {/* Mode Switcher Tabs */}
+        <div className="flex items-center gap-2 bg-gray-100 dark:bg-slate-900 p-1 rounded-2xl border border-gray-200/80 dark:border-slate-800">
           <button
-            onClick={() => setSelectedCategoryId(null)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all shrink-0 ${
-              selectedCategoryId === null
+            type="button"
+            onClick={() => setPrintTab('products')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all btn-press ${
+              printTab === 'products'
                 ? 'bg-accent text-white shadow-ambient'
-                : 'bg-gray-100 dark:bg-slate-800 text-text-secondary hover:bg-gray-200 dark:hover:bg-slate-700'
+                : 'text-text-secondary dark:text-slate-400 hover:text-text-primary'
             }`}
           >
-            الكل ({products.length})
+            <Tag className="w-4 h-4" />
+            <span>{t('🏷️ تيكيتات الملابس والأسعار')}</span>
           </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategoryId(cat.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all shrink-0 ${
-                selectedCategoryId === cat.id
-                  ? 'bg-accent text-white shadow-ambient'
-                  : 'bg-gray-100 dark:bg-slate-800 text-text-secondary hover:bg-gray-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
+          <button
+            type="button"
+            onClick={() => setPrintTab('customers')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all btn-press ${
+              printTab === 'customers'
+                ? 'bg-accent text-white shadow-ambient'
+                : 'text-text-secondary dark:text-slate-400 hover:text-text-primary'
+            }`}
+          >
+            <Award className="w-4 h-4" />
+            <span>{t('💳 بطاقات الزبائن والولاء')}</span>
+          </button>
         </div>
       </div>
 
-      {/* Main Grid: Left Products List, Right Variant Breakdown & Print */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Products List Picker (Left Column) */}
-        <div className="lg:col-span-5 space-y-3">
-          <p className="text-xs font-bold text-text-secondary flex items-center gap-1.5 px-1">
-            <Layers className="w-3.5 h-3.5 text-accent" />
-            <span>اختر المنتج لطباعة تيكيتات مقاساته وألوانه:</span>
-          </p>
+      {/* Products Tab View */}
+      {printTab === 'products' && (
+        <>
+          {/* Top Search & Category Filter Bar */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-200/80 dark:border-slate-800 shadow-layered-sm">
+            <div className="relative flex-1 w-full">
+              <Search className="w-4 h-4 text-text-tertiary absolute right-3.5 top-1/2 -translate-y-1/2" />
+              <Input
+                placeholder={t('البحث باسم المنتج، المقاس، اللون، أو الباركود...')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pr-10 bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 text-xs font-bold"
+              />
+            </div>
 
-          <div className="max-h-[520px] overflow-y-auto space-y-2 pr-1">
-            {isLoading ? (
-              <div className="p-8 text-center text-xs font-bold text-text-tertiary">
-                جاري تحميل المنتجات...
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 text-xs font-bold text-text-tertiary">
-                لا تتوفر منتجات تطابق البحث
-              </div>
-            ) : (
-              filteredProducts.map((prod) => {
-                const isSelected = prod.product_id === selectedProductId
-                const totalStock = prod.variants.reduce((acc, v) => acc + v.current_stock, 0)
-
-                return (
-                  <button
-                    key={prod.product_id}
-                    onClick={() => setSelectedProductId(prod.product_id)}
-                    className={`w-full text-right p-4 rounded-2xl border transition-all flex items-center justify-between ${
-                      isSelected
-                        ? 'bg-accent/10 border-accent ring-2 ring-accent/20 shadow-layered-sm'
-                        : 'bg-white dark:bg-slate-900 border-gray-200/80 dark:border-slate-800 hover:border-accent/40 hover:bg-gray-50/80 dark:hover:bg-slate-800/80 shadow-layered-sm'
-                    }`}
-                  >
-                    <div>
-                      <h4 className="text-xs font-black text-text-primary">{prod.product_name}</h4>
-                      <p className="text-[10px] font-bold text-text-tertiary mt-0.5">
-                        {prod.category_name ? t(prod.category_name) : t('بدون فئة')} • {prod.variants.length} {t('خيارات')}
-                      </p>
-                    </div>
-
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
-                        totalStock > 0
-                          ? 'bg-success/10 text-success border-success/20'
-                          : 'bg-danger/10 text-danger border-danger/20'
-                      }`}
-                    >
-                      {totalStock} {t('قطعة بالمخزون')}
-                    </span>
-                  </button>
-                )
-              })
-            )}
+            {/* Category Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0">
+              <button
+                onClick={() => setSelectedCategoryId(null)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all shrink-0 ${
+                  selectedCategoryId === null
+                    ? 'bg-accent text-white shadow-ambient'
+                    : 'bg-gray-100 dark:bg-slate-800 text-text-secondary hover:bg-gray-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                الكل ({products.length})
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategoryId(cat.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all shrink-0 ${
+                    selectedCategoryId === cat.id
+                      ? 'bg-accent text-white shadow-ambient'
+                      : 'bg-gray-100 dark:bg-slate-800 text-text-secondary hover:bg-gray-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Selected Product Breakdown & Print Config (Right Column) */}
-        <div className="lg:col-span-7 space-y-4">
-          {selectedProduct ? (
-            <Card className="p-6 space-y-6 border border-gray-200/80 shadow-layered">
-              {/* Selected Product Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-                <div>
-                  <div className="inline-flex items-center gap-1.5 bg-accent/10 text-accent px-2.5 py-0.5 rounded-full text-[10px] font-extrabold mb-1">
-                    <Sparkles className="w-3 h-3" />
-                    <span>{t('طباعة التيكيتات لجميع الخيارات بالتسلسل')}</span>
-                  </div>
-                  <h2 className="text-base font-black text-text-primary">
-                    {selectedProduct.product_name}
-                  </h2>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <select
-                    value={labelSize}
-                    onChange={(e) => setLabelSize(e.target.value as '40x30' | '50x25' | '58x40')}
-                    className="px-3 py-2 rounded-xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                  >
-                    <option value="40x30">40×30 مم (Standard Tag)</option>
-                    <option value="50x25">50×25 مم (Compact Tag)</option>
-                    <option value="58x40">58×40 مم (Large Tag)</option>
-                  </select>
-
-                  <button
-                    onClick={handlePrintProductLabels}
-                    className="px-5 py-3 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-extrabold shadow-ambient transition-all btn-press flex items-center gap-2"
-                  >
-                    <Printer className="w-4 h-4" />
-                    <span>{t('طباعة باركود حقيقي')} ({currentTotalLabels})</span>
-                  </button>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Products Sidebar List */}
+            <Card padding="compact" className="overflow-hidden border border-gray-200/80 dark:border-slate-800 md:col-span-1 h-[calc(100vh-250px)] flex flex-col">
+              <div className="p-3.5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+                <span className="text-xs font-black text-text-primary dark:text-slate-100 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-accent" />
+                  <span>قائمة المنتجات ({filteredProducts.length})</span>
+                </span>
+                <span className="text-[10px] text-text-tertiary font-bold">اختر منتجاً لتعديل الكمية</span>
               </div>
 
-              {/* Variants Table */}
-              <div className="space-y-3">
-                <p className="text-xs font-bold text-text-secondary">
-                  {t('حدد عدد الملصقات لكل مقاس ولون:')}
-                </p>
-
-                <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
-                  {selectedProduct.variants.map((variant) => {
-                    const printCount = printQuantities[variant.id] ?? 0
+              <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-slate-800">
+                {isLoading ? (
+                  <div className="p-6 text-center text-xs font-bold text-text-tertiary">جاري تحميل قائمة الملابس...</div>
+                ) : filteredProducts.length === 0 ? (
+                  <div className="p-6 text-center text-xs font-bold text-text-tertiary">لا توجد منتجات تطابق البحث</div>
+                ) : (
+                  filteredProducts.map((prod) => {
+                    const isSelected = prod.product_id === selectedProductId
+                    const totalQty = prod.variants.reduce((acc, v) => acc + (printQuantities[v.id] ?? 0), 0)
 
                     return (
-                      <div
-                        key={variant.id}
-                        className="bg-gray-50/80 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-200/80 dark:border-slate-700/60 flex items-center justify-between gap-3"
+                      <button
+                        key={prod.product_id}
+                        onClick={() => setSelectedProductId(prod.product_id)}
+                        className={`w-full text-right p-3.5 transition-all flex items-center justify-between group cursor-pointer ${
+                          isSelected
+                            ? 'bg-accent/10 dark:bg-accent/20 font-black border-r-4 border-accent text-accent'
+                            : 'hover:bg-gray-50/80 dark:hover:bg-slate-800/60 text-text-primary dark:text-slate-200'
+                        }`}
                       >
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-text-primary">
-                              {variant.size ? `${t('مقاس:')} ${variant.size}` : t('مقاس عادي')} 
-                              {variant.color ? ` | ${t('لون:')} ${variant.color}` : ''}
-                            </span>
-                            <span className="text-[10px] font-mono font-bold text-text-tertiary bg-white px-2 py-0.5 rounded-lg border border-gray-200">
-                              {variant.barcode ?? t('بدون باركود')}
-                            </span>
+                        <div className="space-y-1 min-w-0 flex-1 pl-2">
+                          <p className="text-xs font-black truncate">{prod.product_name}</p>
+                          <div className="flex items-center gap-2 text-[10px] text-text-tertiary font-bold">
+                            <span>{prod.category_name ?? 'بدون تصنيف'}</span>
+                            <span>•</span>
+                            <span>{prod.variants.length} مقاسات</span>
                           </div>
-                          <p className="text-[10px] font-bold text-text-secondary">
-                            السعر: {formatCurrency(variant.price_dzd)} • المخزون الحالي: {variant.current_stock} قطعة
-                          </p>
                         </div>
 
-                        {/* Label Count Input */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[11px] font-bold text-text-tertiary">العدد:</span>
-                          <input
-                            type="number"
-                            min="0"
-                            max="500"
-                            value={printCount}
-                            onChange={(e) =>
-                              handleUpdateQuantity(variant.id, Number.parseInt(e.target.value, 10) || 0)
-                            }
-                            className="w-20 px-3 py-1.5 rounded-xl text-xs font-black font-mono bg-white border border-gray-300 text-center focus:outline-none focus:ring-2 focus:ring-accent"
-                          />
-                        </div>
-                      </div>
+                        <span
+                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
+                            totalQty > 0
+                              ? 'bg-accent/15 text-accent border border-accent/20'
+                              : 'bg-gray-100 dark:bg-slate-800 text-text-tertiary'
+                          }`}
+                        >
+                          {totalQty} ملصق
+                        </span>
+                      </button>
                     )
-                  })}
-                </div>
-              </div>
-
-              {/* Tag Preview Box */}
-              <div className="bg-gray-100/70 rounded-2xl p-4 border border-gray-200 flex flex-col items-center justify-center text-center">
-                <p className="text-[11px] font-bold text-text-tertiary mb-2 flex items-center gap-1">
-                  <Tag className="w-3.5 h-3.5 text-accent" />
-                  <span>معاينة نموذج البطاقة الحرارية (40mm × 30mm)</span>
-                </p>
-
-                {selectedProduct.variants[0] && (
-                  <div className="w-[180px] h-[130px] bg-white rounded-xl border-2 border-dashed border-gray-400 p-2.5 shadow-sm flex flex-col items-center justify-between">
-                    <p className="font-extrabold text-[10px] text-text-primary truncate w-full">
-                      {selectedProduct.product_name}
-                    </p>
-                    <p className="text-[8px] font-bold text-text-secondary">
-                      {selectedProduct.variants[0].size ? `مقاس: ${selectedProduct.variants[0].size}` : ''}
-                      {selectedProduct.variants[0].color ? ` | لون: ${selectedProduct.variants[0].color}` : ''}
-                    </p>
-                    <div className="font-mono text-[9px] font-bold tracking-widest border-y border-black w-full py-0.5 my-0.5">
-                      ||||||||||||||||||||||<br />
-                      {selectedProduct.variants[0].barcode ?? '690123456789'}
-                    </div>
-                    <p className="font-black text-xs text-text-primary">
-                      {formatCurrency(selectedProduct.variants[0].price_dzd)}
-                    </p>
-                  </div>
+                  })
                 )}
               </div>
             </Card>
-          ) : (
-            <Card className="p-12 text-center text-xs font-bold text-text-tertiary border border-gray-200/80">
-              اختر منتجاً من القائمة الجانبية لعرض وتوليد ملصقات التيكيتات.
-            </Card>
-          )}
-        </div>
-      </div>
+
+            {/* Selected Product Variants & Print Settings (Right Column) */}
+            <div className="md:col-span-2 space-y-4">
+              {selectedProduct ? (
+                <Card className="p-6 space-y-5 border border-gray-200/80 dark:border-slate-800 animate-scale-in">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-slate-800">
+                    <div>
+                      <h2 className="text-base font-black text-text-primary dark:text-slate-100 flex items-center gap-2">
+                        <span>{selectedProduct.product_name}</span>
+                        {selectedProduct.category_name && (
+                          <span className="text-xs font-bold text-text-tertiary font-normal">({selectedProduct.category_name})</span>
+                        )}
+                      </h2>
+                      <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
+                        حدد الكمية المراد طباعتها لكل مقاس/لون ثم اضغط طباعة الباركود.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={handlePrintProductLabels}
+                      disabled={currentTotalLabels === 0}
+                      className="px-5 py-2.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-extrabold shadow-hero-glow transition-all btn-press flex items-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>طباعة تيكيتات الباركود ({currentTotalLabels})</span>
+                    </button>
+                  </div>
+
+                  {/* Label Size Preset Picker */}
+                  <div className="flex items-center justify-between gap-4 p-3 rounded-2xl bg-gray-50/80 dark:bg-slate-800/80 border border-gray-200/80 dark:border-slate-700">
+                    <span className="text-xs font-bold text-text-secondary dark:text-slate-300 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-accent" />
+                      <span>مقاس الورق الحراري (Label Preset):</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {(['40x30', '50x25', '58x40'] as const).map((sz) => (
+                        <button
+                          key={sz}
+                          type="button"
+                          onClick={() => setLabelSize(sz)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all btn-press ${
+                            labelSize === sz
+                              ? 'bg-accent text-white shadow-layered-sm'
+                              : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-text-secondary hover:text-text-primary'
+                          }`}
+                        >
+                          {sz === '40x30' ? '40mm × 30mm (قياسي)' : sz === '50x25' ? '50mm × 25mm' : '58mm × 40mm'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Variants List Table */}
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-black text-text-primary dark:text-slate-200">مقاسات وألوان هذا المنتج:</h3>
+                    <div className="divide-y divide-gray-100 dark:divide-slate-800 border border-gray-100 dark:border-slate-800 rounded-2xl overflow-hidden">
+                      {selectedProduct.variants.map((variant) => {
+                        const qty = printQuantities[variant.id] ?? 0
+                        return (
+                          <div
+                            key={variant.id}
+                            className="p-3.5 flex items-center justify-between bg-white dark:bg-slate-900 hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors"
+                          >
+                            <div className="space-y-0.5">
+                              <p className="text-xs font-black text-text-primary dark:text-slate-100 flex items-center gap-2">
+                                {variant.size && <span>المقاس: {variant.size}</span>}
+                                {variant.color && <span>• اللون: {variant.color}</span>}
+                                {!variant.size && !variant.color && <span>قياسي</span>}
+                              </p>
+                              <p className="text-[11px] text-text-tertiary font-mono">
+                                الباركود: {variant.barcode || variant.sku || 'غير محدد'} • السعر: {formatCurrency(variant.price_dzd)}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-text-tertiary font-bold">
+                                المخزون: <b className="text-text-primary dark:text-slate-200">{variant.current_stock}</b>
+                              </span>
+                              <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 p-1 rounded-xl border border-gray-200 dark:border-slate-700">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateQuantity(variant.id, qty - 1)}
+                                  className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-xs font-black shadow-sm flex items-center justify-center transition-colors"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={qty}
+                                  onChange={(e) => handleUpdateQuantity(variant.id, Number.parseInt(e.target.value, 10) || 0)}
+                                  className="w-12 text-center text-xs font-black bg-transparent focus:outline-none dark:text-slate-100"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateQuantity(variant.id, qty + 1)}
+                                  className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-xs font-black shadow-sm flex items-center justify-center transition-colors"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                <Card className="p-12 text-center text-xs font-bold text-text-tertiary border border-gray-200/80">
+                  اختر منتجاً من القائمة الجانبية لعرض وتوليد ملصقات التيكيتات.
+                </Card>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Customers Cards Tab View */}
+      {printTab === 'customers' && (
+        <Card className="p-6 space-y-5 border border-gray-200/80 dark:border-slate-800">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
+            <div className="space-y-1">
+              <h2 className="text-sm font-black text-text-primary dark:text-slate-100 flex items-center gap-2">
+                <Award className="w-4 h-4 text-accent" />
+                <span>{t('طباعة بطاقات الزبائن والولاء الحرارية (Customer Cards)')}</span>
+              </h2>
+              <p className="text-xs text-text-secondary dark:text-slate-400">
+                {t('طباعة ملصقات 40mm × 30mm الحاوية على باركود الزبون الفريد CUST- والمعلومات.')}
+              </p>
+            </div>
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-accent/10 text-accent border border-accent/20">
+              {customers.length} {t('زبون مسجل')}
+            </span>
+          </div>
+
+          <div className="relative w-full">
+            <Search className="w-4 h-4 text-text-tertiary absolute right-3.5 top-1/2 -translate-y-1/2" />
+            <Input
+              placeholder={t('ابحث باسم الزبون أو رقم الهاتف لتصفية البطاقات...')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-10 bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-xs font-bold"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {customers
+              .filter(
+                (c) =>
+                  searchQuery.trim() === '' ||
+                  c.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  (c.phone && c.phone.includes(searchQuery))
+              )
+              .map((cust) => (
+                <div
+                  key={cust.id}
+                  className="p-4 rounded-2xl bg-gray-50/80 dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 flex items-center justify-between gap-3 hover:border-accent/40 transition-all shadow-layered-sm"
+                >
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <p className="text-xs font-black text-text-primary dark:text-slate-100 truncate">{cust.full_name}</p>
+                    <p className="text-[11px] font-bold text-text-secondary dark:text-slate-400 font-mono truncate">
+                      {cust.phone || t('بدون هاتف')}
+                    </p>
+                    <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900">
+                      {cust.loyalty_points} {t('نقطة')}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handlePrintCustomerCard(cust)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-bold shadow-ambient transition-all btn-press shrink-0"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>{t('طباعة')}</span>
+                  </button>
+                </div>
+              ))}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { ArrowRight, ExternalLink, Plus, Search, Award, Phone, Trash2, History, Receipt, Edit3, Wallet } from 'lucide-react'
+import { ArrowRight, ExternalLink, Plus, Search, Award, Phone, Trash2, History, Receipt, Edit3, Wallet, Printer } from 'lucide-react'
 import { Card, Input, Modal, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
 import { DEFAULT_BRANCH_ID, useShiftStore } from '@/stores/shiftStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
+import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
+import { printCustomerCardLabel } from '@/services/receiptService'
 
 interface CustomerItem {
   id: string
   full_name: string
   phone: string | null
+  barcode: string | null
   loyalty_points: number
   store_credit_balance: number
   total_debt_dzd: number
@@ -74,7 +77,7 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
     try {
       const rows = await window.electron.db.query<CustomerItem>(`
         SELECT 
-          c.id, c.full_name, c.phone, c.loyalty_points, 
+          c.id, c.full_name, c.phone, c.barcode, c.loyalty_points, 
           COALESCE(c.store_credit_balance, 0) as store_credit_balance,
           (
             COALESCE((SELECT SUM(s.remaining_debt_dzd) FROM sales s WHERE s.customer_id = c.id AND s.status = 'completed' AND s.deleted_at IS NULL), 0) -
@@ -111,10 +114,11 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
     setIsSubmitting(true)
     try {
       const id = generateUUID()
+      const barcode = `CUST-${id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
       const now = new Date().toISOString()
       await window.electron.db.execute(
-        'INSERT INTO customers (id, branch_id, full_name, phone, loyalty_points, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [id, DEFAULT_BRANCH_ID, fullName.trim(), phone.trim() || null, 0, now, now]
+        'INSERT INTO customers (id, branch_id, full_name, phone, barcode, loyalty_points, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, DEFAULT_BRANCH_ID, fullName.trim(), phone.trim() || null, barcode, 0, now, now]
       )
 
       addToast({ message: t('تم إضافة الزبون بنجاح!'), variant: 'success' })
@@ -126,6 +130,42 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
       console.error("[CustomersPage]", err); addToast({ message: t('فشل إضافة الزبون'), variant: 'error' })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handlePrintCustomerCardLabel = async (customer: CustomerItem): Promise<void> => {
+    try {
+      let custBarcode = customer.barcode
+      if (!custBarcode) {
+        custBarcode = `CUST-${customer.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
+        const now = new Date().toISOString()
+        await window.electron.db.execute(
+          'UPDATE customers SET barcode = ?, updated_at = ? WHERE id = ?',
+          [custBarcode, now, customer.id]
+        )
+        customer.barcode = custBarcode
+      }
+
+      const storeSettings = useStoreSettingsStore.getState().settings
+      const printed = await printCustomerCardLabel(
+        {
+          customerName: customer.full_name,
+          customerPhone: customer.phone,
+          barcode: custBarcode,
+          loyaltyPoints: customer.loyalty_points,
+        },
+        storeSettings
+      )
+
+      if (printed) {
+        addToast({ message: `${t('تم إرسال بطاقة الزبون')} (${customer.full_name}) ${t('إلى الطابعة بنجاح!')}`, variant: 'success' })
+      } else {
+        addToast({ message: t('تعذر إرسال البطاقة إلى الطابعة، يرجى التأكد من توصيل الطابعة'), variant: 'warning' })
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[CustomersPage] Print card error:', err)
+      addToast({ message: t('فشل طباعة بطاقة الزبون'), variant: 'error' })
     }
   }
 
@@ -354,6 +394,15 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
       align: 'left',
       render: (row) => (
         <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center justify-end gap-1">
+          <button
+            onClick={() => handlePrintCustomerCardLabel(row)}
+            aria-label={t('طباعة بطاقة الزبون والباركود')}
+            title={t('طباعة كارت الزبون (40mm × 30mm)')}
+            className="flex items-center gap-1 text-xs text-sky-600 dark:text-sky-400 font-bold bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 px-2 py-1 rounded-lg transition-colors btn-press"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>{t('كارت')}</span>
+          </button>
           <button
             onClick={() => handleOpenTimeline(row)}
             aria-label={t('عرض سجل المشتريات')}
