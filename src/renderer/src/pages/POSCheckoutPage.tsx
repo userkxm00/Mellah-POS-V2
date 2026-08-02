@@ -40,6 +40,7 @@ import { printThermalReceipt } from '@/services/receiptService'
 import { useShiftStore, DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { generateUUID } from '@/lib/uuid'
 import { POSCheckoutModals } from '@/components/pos/POSCheckoutModals'
+import { POSDebtRepaymentModal } from '@/components/pos/POSDebtRepaymentModal'
 import type { PaymentMethod } from '@/types/database'
 
 interface ProductVariantItem {
@@ -75,6 +76,7 @@ interface CustomerOption {
   barcode?: string | null
   loyalty_points: number
   store_credit_balance?: number
+  total_debt_dzd?: number
 }
 
 function filterVariantsList(
@@ -132,7 +134,21 @@ async function fetchPOSBranchData(branchId: string): Promise<{
     [branchId]
   )
   const custRows = await window.electron.db.query<CustomerOption>(
-    `SELECT id, full_name, phone, barcode, loyalty_points, COALESCE(store_credit_balance, 0) as store_credit_balance FROM customers WHERE branch_id = ? AND deleted_at IS NULL ORDER BY full_name`,
+    `SELECT 
+       c.id, c.full_name, c.phone, c.barcode, c.loyalty_points, 
+       COALESCE(c.store_credit_balance, 0) as store_credit_balance,
+       COALESCE((
+         SELECT SUM(s.total_dzd - COALESCE(s.paid_amount_dzd, 0))
+         FROM sales s
+         WHERE s.customer_id = c.id AND s.deleted_at IS NULL
+       ), 0) - COALESCE((
+         SELECT SUM(cp.amount_dzd)
+         FROM customer_payments cp
+         WHERE cp.customer_id = c.id
+       ), 0) as total_debt_dzd
+     FROM customers c 
+     WHERE c.branch_id = ? AND c.deleted_at IS NULL 
+     ORDER BY c.full_name`,
     [branchId]
   )
   const variantRows = await window.electron.db.query<ProductVariantItem>(
@@ -533,6 +549,7 @@ export function POSCheckoutPage({
   const [isCloseShiftOpen, setIsCloseShiftOpen] = useState<boolean>(false)
   const [isLocked, setIsLocked] = useState<boolean>(false)
   const [isQuickAddCustomerOpen, setIsQuickAddCustomerOpen] = useState<boolean>(false)
+  const [isPOSDebtModalOpen, setIsPOSDebtModalOpen] = useState<boolean>(false)
   const [isProcessingSale, setIsProcessingSale] = useState<boolean>(false)
   const [showConfetti, setShowConfetti] = useState<boolean>(false)
   const [isReceiptFlying, setIsReceiptFlying] = useState<boolean>(false)
@@ -1216,7 +1233,7 @@ export function POSCheckoutPage({
                 <option value="">— {t('اختر زبون لجمع نقاط الولاء')} —</option>
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.full_name} ({c.loyalty_points} نقطة) {c.store_credit_balance ? `• رصيد: ${c.store_credit_balance} دج` : ''}
+                    {c.full_name} ({c.loyalty_points} نقطة) {c.store_credit_balance ? `• رصيد: ${c.store_credit_balance} دج` : ''} {c.total_debt_dzd && c.total_debt_dzd > 0 ? `• دين: ${c.total_debt_dzd.toLocaleString('ar-DZ')} دج` : ''}
                   </option>
                 ))}
               </select>
@@ -1230,9 +1247,9 @@ export function POSCheckoutPage({
               </button>
             </div>
 
-            {/* Redeem Points & Store Credit Quick Buttons */}
+            {/* Redeem Points, Store Credit & Debt Repayment Quick Buttons */}
             {selectedCustomerObj && (
-              <div className="flex gap-2 pt-1">
+              <div className="flex flex-wrap gap-1.5 pt-1">
                 {selectedCustomerObj.loyalty_points >= 100 && (
                   <button
                     onClick={handleRedeemPoints}
@@ -1249,6 +1266,16 @@ export function POSCheckoutPage({
                   >
                     <Wallet className="w-3 h-3" />
                     <span>تطبيق رصيد المتجر ({selectedCustomerObj.store_credit_balance} دج)</span>
+                  </button>
+                ) : null}
+                {selectedCustomerObj.total_debt_dzd && selectedCustomerObj.total_debt_dzd > 0 ? (
+                  <button
+                    onClick={() => setIsPOSDebtModalOpen(true)}
+                    className="flex-1 py-1 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/25 text-[10px] font-black flex items-center justify-center gap-1 btn-press shadow-sm"
+                    title={t('تسديد دين هذا الزبون مباشرة')}
+                  >
+                    <Wallet className="w-3 h-3 text-amber-500" />
+                    <span>تسديد الدين ({selectedCustomerObj.total_debt_dzd.toLocaleString('ar-DZ')} دج)</span>
                   </button>
                 ) : null}
               </div>
@@ -1649,6 +1676,13 @@ export function POSCheckoutPage({
           <span>{t('تفريغ السلة')}</span>
         </div>
       </footer>
+
+      <POSDebtRepaymentModal
+        isOpen={isPOSDebtModalOpen}
+        onClose={() => setIsPOSDebtModalOpen(false)}
+        customer={selectedCustomerObj ?? null}
+        onPaymentSuccess={() => loadData()}
+      />
 
       <ToastContainer />
     </div>
