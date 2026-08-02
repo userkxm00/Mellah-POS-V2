@@ -31,6 +31,8 @@ interface SaleRow {
   total_dzd: number
   cash_amount_dzd: number | null
   card_amount_dzd: number | null
+  paid_amount_dzd: number | null
+  remaining_debt_dzd: number | null
   payment_method: string
   status: string
   void_reason: string | null
@@ -58,6 +60,7 @@ interface ShiftOption {
 function getPaymentMethodStyle(pm: string): string {
   if (pm === 'cash') return 'bg-success/10 text-success border-success/20'
   if (pm === 'card') return 'bg-accent/10 text-accent border-accent/20'
+  if (pm === 'credit') return 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 font-black'
   return 'bg-warning/10 text-warning border-warning/20'
 }
 
@@ -70,6 +73,7 @@ function getPaymentMethodIcon(pm: string): React.JSX.Element {
 function getPaymentMethodName(pm: string, t: (k: string) => string): string {
   if (pm === 'cash') return t('نقداً')
   if (pm === 'card') return t('بطاقة CIB')
+  if (pm === 'credit') return t('كريدي (تقسيط)')
   return t('مزدوج')
 }
 
@@ -88,6 +92,12 @@ function getStatusLabel(status: string, t: (k: string) => string): string {
 function getPaymentMethodLabel(sale: SaleRow, t: (k: string) => string): string {
   if (sale.payment_method === 'cash') return t('نقداً')
   if (sale.payment_method === 'card') return t('بطاقة CIB')
+  if (sale.payment_method === 'credit') {
+    const paid = sale.paid_amount_dzd ?? sale.total_dzd
+    const debt = Math.max(0, sale.total_dzd - paid)
+    if (debt === 0) return t('كريدي (خالصة بالكامل)')
+    return `${t('كريدي (عربون:')} ${formatCurrency(paid)} | ${t('متبقي:')} ${formatCurrency(debt)})`
+  }
   return `${t('مزدوج')} (${sale.cash_amount_dzd ?? 0} ${t('دج نقد')} + ${sale.card_amount_dzd ?? 0} ${t('دج كارت')})`
 }
 
@@ -168,7 +178,10 @@ export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.E
       const rows = await window.electron.db.query<SaleRow>(
         `SELECT 
            s.id, s.created_at, s.subtotal_dzd, s.discount_dzd, s.total_dzd,
-           s.cash_amount_dzd, s.card_amount_dzd, s.payment_method, s.status, s.void_reason,
+           s.cash_amount_dzd, s.card_amount_dzd,
+           COALESCE(s.paid_amount_dzd, s.total_dzd) as paid_amount_dzd,
+           COALESCE(s.remaining_debt_dzd, 0) as remaining_debt_dzd,
+           s.payment_method, s.status, s.void_reason,
            u.full_name as cashier_name,
            c.full_name as customer_name,
            (SELECT COUNT(*) FROM sale_items si WHERE si.sale_id = s.id) as item_count
@@ -356,16 +369,38 @@ export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.E
       key: 'total_dzd',
       header: t('مبلغ الفاتورة'),
       sortable: true,
-      render: (row) => (
-        <div>
-          <span className={`currency font-black text-sm block ${row.status === 'voided' ? 'line-through text-text-tertiary' : 'text-accent'}`}>
-            {formatCurrency(row.total_dzd)}
-          </span>
-          {(row.discount_dzd ?? 0) > 0 ? (
-            <span className="text-[10px] text-danger font-bold block">{t('الخصم (دج):')} {formatCurrency(row.discount_dzd as number)}</span>
-          ) : null}
-        </div>
-      ),
+      render: (row) => {
+        const isCredit = row.payment_method === 'credit'
+        const paid = row.paid_amount_dzd ?? row.total_dzd
+        const debt = Math.max(0, row.total_dzd - paid)
+
+        return (
+          <div className="space-y-0.5">
+            <span className={`currency font-black text-sm block ${row.status === 'voided' ? 'line-through text-text-tertiary' : 'text-accent'}`}>
+              {formatCurrency(row.total_dzd)}
+            </span>
+            {isCredit && (
+              <div className="text-[10px] font-bold space-y-0.5">
+                <span className="text-emerald-600 dark:text-emerald-400 block">
+                  {t('عربون كاش:')} {formatCurrency(paid)}
+                </span>
+                {debt > 0 ? (
+                  <span className="text-amber-600 dark:text-amber-400 block font-black">
+                    {t('متبقي كريدي:')} {formatCurrency(debt)}
+                  </span>
+                ) : (
+                  <span className="text-emerald-600 dark:text-emerald-400 block font-bold">
+                    {t('خالصة بالكامل')}
+                  </span>
+                )}
+              </div>
+            )}
+            {(row.discount_dzd ?? 0) > 0 ? (
+              <span className="text-[10px] text-danger font-bold block">{t('الخصم (دج):')} {formatCurrency(row.discount_dzd as number)}</span>
+            ) : null}
+          </div>
+        )
+      },
     },
     {
       key: 'status',

@@ -4,6 +4,7 @@ import { generateUUID } from '@/lib/uuid'
 import { logger } from '@/lib/logger'
 import { DEFAULT_BRANCH_ID, DEFAULT_CASHIER_ID } from '@/stores/shiftStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
 import { enqueueSyncOperation } from './syncEngine'
 import { recordAuditLog } from './auditLogService'
 
@@ -136,9 +137,13 @@ export async function processSale(
     ],
   })
 
-  // 1b. Update Customer Loyalty Points (Add points earned, deduct points redeemed)
+  // 1b. Update Customer Loyalty Points (Add points earned if loyalty enabled, deduct points redeemed)
   if (customerId) {
-    const pointsEarned = Math.floor(totalDzd / 100)
+    const settings = useStoreSettingsStore.getState().settings
+    const spendPerPoint = settings.loyalty_spend_per_point_dzd || 1000
+    const pointsEarned = settings.loyalty_enabled
+      ? Math.floor(totalDzd / Math.max(1, spendPerPoint))
+      : 0
     const pointsDeducted = Math.max(0, Math.floor(redeemedPointsDzd ?? 0))
     operations.push({
       sql: `UPDATE customers 
