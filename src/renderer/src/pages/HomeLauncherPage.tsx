@@ -224,14 +224,20 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
   const [todayTxCount, setTodayTxCount] = useState<number>(0)
 
   useEffect(() => {
-    (async () => {
+    async function fetchDashboardMetrics(): Promise<void> {
       try {
         const todayStr = new Date().toISOString().split('T')[0]
-        const rows = await window.electron.db.query<{ total: number; count: number }>(`
-          SELECT COALESCE(SUM(total_dzd), 0) as total, COUNT(*) as count 
-          FROM sales 
-          WHERE status = 'completed' AND date(created_at) = ?
-        `, [todayStr])
+        const rows = await window.electron.db.query<{ total: number; count: number }>(
+          `
+          SELECT 
+            (
+              COALESCE((SELECT SUM(COALESCE(paid_amount_dzd, total_dzd)) FROM sales WHERE status = 'completed' AND date(created_at) = ?), 0) +
+              COALESCE((SELECT SUM(amount_dzd) FROM customer_payments WHERE date(created_at) = ?), 0)
+            ) as total,
+            COALESCE((SELECT COUNT(*) FROM sales WHERE status = 'completed' AND date(created_at) = ?), 0) as count
+        `,
+          [todayStr, todayStr, todayStr]
+        )
         if (rows.length > 0) {
           setTodaySalesDzd(rows[0].total)
           setTodayTxCount(rows[0].count)
@@ -240,7 +246,8 @@ export function HomeLauncherPage({ onNavigate }: HomeLauncherPageProps): React.J
         // eslint-disable-next-line no-console
         console.error('[HomeLauncherPage]', err)
       }
-    })()
+    }
+    fetchDashboardMetrics()
   }, [])
 
   const addToast = useToastStore((s) => s.addToast)
