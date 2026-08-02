@@ -72,6 +72,7 @@ interface CustomerOption {
   id: string
   full_name: string
   phone: string | null
+  barcode?: string | null
   loyalty_points: number
   store_credit_balance?: number
 }
@@ -131,7 +132,7 @@ async function fetchPOSBranchData(branchId: string): Promise<{
     [branchId]
   )
   const custRows = await window.electron.db.query<CustomerOption>(
-    `SELECT id, full_name, phone, loyalty_points, COALESCE(store_credit_balance, 0) as store_credit_balance FROM customers WHERE branch_id = ? AND deleted_at IS NULL ORDER BY full_name`,
+    `SELECT id, full_name, phone, barcode, loyalty_points, COALESCE(store_credit_balance, 0) as store_credit_balance FROM customers WHERE branch_id = ? AND deleted_at IS NULL ORDER BY full_name`,
     [branchId]
   )
   const variantRows = await window.electron.db.query<ProductVariantItem>(
@@ -154,10 +155,11 @@ async function fetchPOSBranchData(branchId: string): Promise<{
 
 async function quickAddCustomerToDb(name: string, phone: string): Promise<string> {
   const id = generateUUID()
+  const barcode = `CUST-${id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
   const now = new Date().toISOString()
   await window.electron.db.execute(
-    'INSERT INTO customers (id, branch_id, full_name, phone, loyalty_points, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?)',
-    [id, DEFAULT_BRANCH_ID, name.trim(), phone.trim() || null, now, now]
+    'INSERT INTO customers (id, branch_id, full_name, phone, barcode, loyalty_points, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 0, ?, ?)',
+    [id, DEFAULT_BRANCH_ID, name.trim(), phone.trim() || null, barcode, now, now]
   )
   return id
 }
@@ -227,15 +229,44 @@ function buildReceiptPayload(
 function executeBarcodeScan(
   scannedBarcode: string,
   variants: ProductVariantItem[],
+  customers: CustomerOption[],
+  setSelectedCustomerId: (id: string | null) => void,
   addItem: (variant: ProductVariantItem, name: string, price: number) => void,
   addToast: (toast: { message: string; variant: 'success' | 'warning' | 'error' | 'info'; duration?: number }) => void,
   t: (key: string) => string
 ): void {
-  const match = variants.find((v) => v.barcode === scannedBarcode || v.sku === scannedBarcode)
+  const cleanCode = (scannedBarcode || '').trim()
+
+  // 1. Customer Barcode Card Scan (starts with CUST-)
+  if (cleanCode.toUpperCase().startsWith('CUST-')) {
+    const custMatch = customers.find(
+      (c) => c.barcode && c.barcode.toUpperCase() === cleanCode.toUpperCase()
+    )
+
+    if (custMatch) {
+      setSelectedCustomerId(custMatch.id)
+      soundService.playScan()
+      addToast({
+        message: `${t('تم تحديد الزبون تلقائياً:')} ${custMatch.full_name} (${custMatch.loyalty_points} ${t('نقطة')})`,
+        variant: 'success',
+        duration: 3000,
+      })
+    } else {
+      soundService.playError()
+      addToast({
+        message: `${t('بطاقة زبون غير مسجلة في القاعدة')} [${cleanCode}]`,
+        variant: 'warning',
+      })
+    }
+    return
+  }
+
+  // 2. Product Barcode Scan
+  const match = variants.find((v) => v.barcode === cleanCode || v.sku === cleanCode)
   if (!match) {
     soundService.playError()
     addToast({
-      message: `${t('الباركود')} [${scannedBarcode}] ${t('غير موجود في القاعدة')}`,
+      message: `${t('الباركود')} [${cleanCode}] ${t('غير موجود في القاعدة')}`,
       variant: 'warning',
     })
     return
@@ -598,9 +629,17 @@ export function POSCheckoutPage({
   // Handle Barcode Scanner input
   const handleBarcodeScan = useCallback(
     (scannedBarcode: string) => {
-      executeBarcodeScan(scannedBarcode, variants, addItem, addToast, t)
+      executeBarcodeScan(
+        scannedBarcode,
+        variants,
+        customers,
+        setSelectedCustomerId,
+        addItem,
+        addToast,
+        t
+      )
     },
-    [variants, addItem, addToast, t]
+    [variants, customers, setSelectedCustomerId, addItem, addToast, t]
   )
 
   useBarcodeScanner({ onScan: handleBarcodeScan })
