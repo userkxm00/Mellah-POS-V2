@@ -35,10 +35,16 @@ export function SettingsPage({ onBack }: { readonly onBack: () => void }): React
   const soundVolume = useThemeStore((s) => s.soundVolume)
   const setSoundVolume = useThemeStore((s) => s.setSoundVolume)
 
-  // Printer & Receipt settings
+  const storeSettingsObj = useStoreSettingsStore((s) => s.settings)
   const [printers, setPrinters] = useState<PrinterInfo[]>([])
   const [selectedPrinter, setSelectedPrinter] = useState<string>(
-    localStorage.getItem('mellah_printer_name') ?? ''
+    storeSettingsObj.receipt_printer_name || localStorage.getItem('mellah_printer_name') || ''
+  )
+  const [selectedLabelPrinter, setSelectedLabelPrinter] = useState<string>(
+    storeSettingsObj.label_printer_name || ''
+  )
+  const [labelLanguage, setLabelLanguage] = useState<'ar' | 'fr' | 'en'>(
+    storeSettingsObj.barcode_label_language || 'ar'
   )
   const [paperWidth, setPaperWidth] = useState<'80mm' | '58mm'>(
     (localStorage.getItem('mellah_paper_width') as '80mm' | '58mm') ?? '80mm'
@@ -219,9 +225,10 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
         `INSERT INTO store_settings (
            branch_id, store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes,
            telegram_bot_token, telegram_chat_ids, telegram_notify_app_launch, telegram_notify_sale, telegram_notify_shift,
-           loyalty_enabled, loyalty_spend_per_point_dzd, loyalty_point_value_dzd, loyalty_expiry_months, updated_at
+           loyalty_enabled, loyalty_spend_per_point_dzd, loyalty_point_value_dzd, loyalty_expiry_months,
+           receipt_printer_name, label_printer_name, barcode_label_language, updated_at
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(branch_id) DO UPDATE SET
            store_name=excluded.store_name,
            store_address=excluded.store_address,
@@ -238,6 +245,9 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
            loyalty_spend_per_point_dzd=excluded.loyalty_spend_per_point_dzd,
            loyalty_point_value_dzd=excluded.loyalty_point_value_dzd,
            loyalty_expiry_months=excluded.loyalty_expiry_months,
+           receipt_printer_name=excluded.receipt_printer_name,
+           label_printer_name=excluded.label_printer_name,
+           barcode_label_language=excluded.barcode_label_language,
            updated_at=excluded.updated_at`,
         [
           DEFAULT_BRANCH_ID,
@@ -256,6 +266,9 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
           Math.max(1, loyaltySpendPerPoint || 1000),
           Math.max(0.01, loyaltyPointValue || 1),
           Math.max(0, loyaltyExpiryMonths || 0),
+          selectedPrinter.trim(),
+          selectedLabelPrinter.trim(),
+          labelLanguage,
           now
         ]
       )
@@ -1049,24 +1062,47 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
               <span>إعدادات طابعة الفواتير الحرارية (Thermal Printer)</span>
             </h2>
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="printer-select" className="text-xs font-bold text-text-primary dark:text-slate-200">طابعة الفواتير المتصلة بالكمبيوتر</label>
-              <select
-                id="printer-select"
-                value={selectedPrinter}
-                onChange={(e) => setSelectedPrinter(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
-              >
-                <option value="">الطابعة الافتراضية للفرع</option>
-                {printers.map((p) => (
-                  <option key={p.name} value={p.name}>
-                    {p.name} {p.isDefault ? '(الافتراضية للنظام)' : ''}
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="printer-select" className="text-xs font-bold text-text-primary dark:text-slate-200">
+                  {t('1️⃣ طابعة الفواتير (Imprimante Tickets)')}
+                </label>
+                <select
+                  id="printer-select"
+                  value={selectedPrinter}
+                  onChange={(e) => setSelectedPrinter(e.target.value)}
+                  className="w-full px-4 py-3 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
+                >
+                  <option value="">{t('الطابعة الافتراضية للفواتير')}</option>
+                  {printers.map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.name} {p.isDefault ? '(الافتراضية للنظام)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="label-printer-select" className="text-xs font-bold text-text-primary dark:text-slate-200">
+                  {t('2️⃣ طابعة ملصقات الباركود (Imprimante Étiquettes Barcode)')}
+                </label>
+                <select
+                  id="label-printer-select"
+                  value={selectedLabelPrinter}
+                  onChange={(e) => setSelectedLabelPrinter(e.target.value)}
+                  className="w-full px-4 py-3 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
+                >
+                  <option value="">{t('طابعة الباركود الحرارية (40mm × 30mm)')}</option>
+                  {printers.map((p) => (
+                    <option key={`label-${p.name}`} value={p.name}>
+                      {p.name} {p.isDefault ? '(الافتراضية للنظام)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="paper-width-select" className="text-xs font-bold text-text-primary dark:text-slate-200">عرض ورق الفاتورة الحرارية</label>
                 <select
@@ -1091,6 +1127,20 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                   <option value="ar">العربية (Arabic - RTL)</option>
                   <option value="fr">Français (French - LTR)</option>
                   <option value="en">English (English - LTR)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="label-lang-select" className="text-xs font-bold text-text-primary dark:text-slate-200">لغة ملصقات الباركود (Label Language)</label>
+                <select
+                  id="label-lang-select"
+                  value={labelLanguage}
+                  onChange={(e) => setLabelLanguage(e.target.value as 'ar' | 'fr' | 'en')}
+                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
+                >
+                  <option value="ar">العربية (Arabic)</option>
+                  <option value="fr">Français (French)</option>
+                  <option value="en">English (English)</option>
                 </select>
               </div>
             </div>

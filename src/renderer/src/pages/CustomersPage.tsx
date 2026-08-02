@@ -7,8 +7,10 @@ import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
-import { printCustomerCardLabel } from '@/services/receiptService'
 import { resolveActiveShiftId } from '@/lib/shiftUtils'
+import { generateCustomerBarcode } from '@/lib/customerUtils'
+import { CustomerBarcodeModal } from '@/components/customers/CustomerBarcodeModal'
+import { CustomerDetailsModal } from '@/components/customers/CustomerDetailsModal'
 
 interface CustomerItem {
   id: string
@@ -49,6 +51,8 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
 
   const [selectedTimelineCustomer, setSelectedTimelineCustomer] = useState<CustomerItem | null>(null)
+  const [selectedDetailsCustomer, setSelectedDetailsCustomer] = useState<CustomerItem | null>(null)
+  const [selectedBarcodeCustomer, setSelectedBarcodeCustomer] = useState<CustomerItem | null>(null)
   const [customerSalesHistory, setCustomerSalesHistory] = useState<CustomerSaleRow[]>([])
   const [customerPaymentsHistory, setCustomerPaymentsHistory] = useState<CustomerPaymentRow[]>([])
   const [isTimelineLoading, setIsTimelineLoading] = useState<boolean>(false)
@@ -71,6 +75,7 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
   const [isEditSaving, setIsEditSaving] = useState<boolean>(false)
 
   const addToast = useToastStore((s) => s.addToast)
+  const storeSettings = useStoreSettingsStore((s) => s.settings)
 
   const loadCustomers = useCallback(async () => {
     setIsLoading(true)
@@ -114,7 +119,7 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
     setIsSubmitting(true)
     try {
       const id = generateUUID()
-      const barcode = `CUST-${id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
+      const barcode = generateCustomerBarcode(Date.now())
       const now = new Date().toISOString()
       await window.electron.db.execute(
         'INSERT INTO customers (id, branch_id, full_name, phone, barcode, loyalty_points, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -133,40 +138,19 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
     }
   }
 
-  const handlePrintCustomerCardLabel = async (customer: CustomerItem): Promise<void> => {
-    try {
-      let custBarcode = customer.barcode
-      if (!custBarcode) {
-        custBarcode = `CUST-${customer.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
-        const now = new Date().toISOString()
-        await window.electron.db.execute(
-          'UPDATE customers SET barcode = ?, updated_at = ? WHERE id = ?',
-          [custBarcode, now, customer.id]
-        )
-        customer.barcode = custBarcode
-      }
-
-      const storeSettings = useStoreSettingsStore.getState().settings
-      const printed = await printCustomerCardLabel(
-        {
-          customerName: customer.full_name,
-          customerPhone: customer.phone,
-          barcode: custBarcode,
-          loyaltyPoints: customer.loyalty_points,
-        },
-        storeSettings
-      )
-
-      if (printed) {
-        addToast({ message: `${t('تم إرسال بطاقة الزبون')} (${customer.full_name}) ${t('إلى الطابعة بنجاح!')}`, variant: 'success' })
-      } else {
-        addToast({ message: t('تعذر إرسال البطاقة إلى الطابعة، يرجى التأكد من توصيل الطابعة'), variant: 'warning' })
-      }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[CustomersPage] Print card error:', err)
-      addToast({ message: t('فشل طباعة بطاقة الزبون'), variant: 'error' })
+  const handlePrintCustomerCardLabel = (customer: CustomerItem): void => {
+    let custBarcode = customer.barcode
+    if (!custBarcode) {
+      custBarcode = generateCustomerBarcode(Date.now())
+      window.electron.db.execute('UPDATE customers SET barcode = ? WHERE id = ?', [custBarcode, customer.id])
+        .then(() => loadCustomers())
+        .catch(() => null)
     }
+
+    setSelectedBarcodeCustomer({
+      ...customer,
+      barcode: custBarcode,
+    })
   }
 
   const handleDeleteCustomer = async (id: string, name: string): Promise<void> => {
@@ -315,7 +299,7 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
       : String(valB).localeCompare(String(valA))
   })
 
-  const columns: Column<CustomerItem>[] = [
+  const rawColumns: Column<CustomerItem>[] = [
     {
       key: 'full_name',
       header: t('اسم الزبون والتصنيف'),
@@ -332,13 +316,17 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
                 : { label: t('عضوية عادية'), color: 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20' }
 
         return (
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-accent/10 text-accent font-black text-sm flex items-center justify-center border border-accent/20">
+          <div
+            onClick={() => setSelectedDetailsCustomer(row)}
+            className="flex items-center gap-3 cursor-pointer group/name"
+            title={t('انقر لفتح الملف الشخصي الكامل للزبون')}
+          >
+            <div className="w-10 h-10 rounded-full bg-accent/10 group-hover/name:bg-accent group-hover/name:text-white transition-colors text-accent font-black text-sm flex items-center justify-center border border-accent/20 shadow-sm">
               {row.full_name.charAt(0)}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-black text-text-primary text-sm">{row.full_name}</span>
+                <span className="font-black text-text-primary group-hover/name:text-accent transition-colors text-sm underline-offset-2 group-hover/name:underline">{row.full_name}</span>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${tier.color}`}>
                   {tier.label}
                 </span>
@@ -440,6 +428,10 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
       ),
     },
   ]
+
+  const columns = storeSettings.loyalty_enabled
+    ? rawColumns
+    : rawColumns.filter((c) => c.key !== 'loyalty_points')
 
   const isSecondaryWindow = typeof window !== 'undefined' && window.location.search.includes('module=')
 
@@ -725,6 +717,27 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
           </div>
         </div>
       </Modal>
+
+      {/* Customer Details Modal */}
+      <CustomerDetailsModal
+        isOpen={selectedDetailsCustomer !== null}
+        onClose={() => setSelectedDetailsCustomer(null)}
+        customer={selectedDetailsCustomer}
+        onOpenBarcodeModal={(c) => setSelectedBarcodeCustomer(c)}
+        onPayDebt={(c) => {
+          setPayingDebtCustomer(c)
+          setRepayAmountDzd(String(c.total_debt_dzd))
+        }}
+        onEditCustomer={(c) => handleOpenEditCustomer(c)}
+        onViewHistory={(c) => handleOpenTimeline(c)}
+      />
+
+      {/* Customer Barcode Sticker Modal */}
+      <CustomerBarcodeModal
+        isOpen={selectedBarcodeCustomer !== null}
+        onClose={() => setSelectedBarcodeCustomer(null)}
+        customer={selectedBarcodeCustomer}
+      />
     </div>
   )
 }

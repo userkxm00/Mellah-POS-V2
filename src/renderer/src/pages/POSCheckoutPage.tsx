@@ -28,6 +28,8 @@ import { ConfettiBurst } from '@/components/ui/ConfettiBurst'
 import { soundService } from '@/services/soundService'
 import { formatCurrency } from '@/lib/format'
 import { sendSaleCompletedTelegramNotification } from '@/services/telegramService'
+import { generateCustomerBarcode } from '@/lib/customerUtils'
+import { CustomerBarcodeModal } from '@/components/customers/CustomerBarcodeModal'
 import { useCartStore, type CartItem } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
@@ -169,15 +171,15 @@ async function fetchPOSBranchData(branchId: string): Promise<{
   return { categories: catRows, customers: custRows, variants: variantRows }
 }
 
-async function quickAddCustomerToDb(name: string, phone: string): Promise<string> {
+async function quickAddCustomerToDb(name: string, phone: string): Promise<{ id: string; barcode: string }> {
   const id = generateUUID()
-  const barcode = `CUST-${id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
+  const barcode = generateCustomerBarcode(Date.now())
   const now = new Date().toISOString()
   await window.electron.db.execute(
     'INSERT INTO customers (id, branch_id, full_name, phone, barcode, loyalty_points, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 0, ?, ?)',
     [id, DEFAULT_BRANCH_ID, name.trim(), phone.trim() || null, barcode, now, now]
   )
-  return id
+  return { id, barcode }
 }
 
 async function verifyManagerPinHash(pinInput: string): Promise<boolean> {
@@ -249,7 +251,8 @@ function executeBarcodeScan(
   setSelectedCustomerId: (id: string | null) => void,
   addItem: (variant: ProductVariantItem, name: string, price: number) => void,
   addToast: (toast: { message: string; variant: 'success' | 'warning' | 'error' | 'info'; duration?: number }) => void,
-  t: (key: string) => string
+  t: (key: string) => string,
+  isLoyaltyEnabled?: boolean
 ): void {
   const cleanCode = (scannedBarcode || '').trim()
 
@@ -263,7 +266,9 @@ function executeBarcodeScan(
       setSelectedCustomerId(custMatch.id)
       soundService.playScan()
       addToast({
-        message: `${t('تم تحديد الزبون تلقائياً:')} ${custMatch.full_name} (${custMatch.loyalty_points} ${t('نقطة')})`,
+        message: isLoyaltyEnabled
+          ? `${t('تم تحديد الزبون تلقائياً:')} ${custMatch.full_name} (${custMatch.loyalty_points} ${t('نقطة')})`
+          : `${t('تم تحديد الزبون تلقائياً:')} ${custMatch.full_name}`,
         variant: 'success',
         duration: 3000,
       })
@@ -550,6 +555,7 @@ export function POSCheckoutPage({
   const [isLocked, setIsLocked] = useState<boolean>(false)
   const [isQuickAddCustomerOpen, setIsQuickAddCustomerOpen] = useState<boolean>(false)
   const [isPOSDebtModalOpen, setIsPOSDebtModalOpen] = useState<boolean>(false)
+  const [selectedPosBarcodeCustomer, setSelectedPosBarcodeCustomer] = useState<{ full_name: string; phone?: string | null; barcode?: string | null; loyalty_points?: number } | null>(null)
   const [isProcessingSale, setIsProcessingSale] = useState<boolean>(false)
   const [showConfetti, setShowConfetti] = useState<boolean>(false)
   const [isReceiptFlying, setIsReceiptFlying] = useState<boolean>(false)
@@ -731,7 +737,7 @@ export function POSCheckoutPage({
     }
 
     try {
-      const id = await quickAddCustomerToDb(newCustName, newCustPhone)
+      const { id } = await quickAddCustomerToDb(newCustName, newCustPhone)
       addToast({ message: t('تم إضافة الزبون بنجاح!'), variant: 'success' })
       setIsQuickAddCustomerOpen(false)
       setNewCustName('')
@@ -1230,10 +1236,10 @@ export function POSCheckoutPage({
                 onChange={(e) => setSelectedCustomerId(e.target.value || null)}
                 className="flex-1 px-3 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 dark:text-slate-100 border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent"
               >
-                <option value="">— {t('اختر زبون لجمع نقاط الولاء')} —</option>
+                <option value="">— {storeSettings.loyalty_enabled ? t('اختر زبون لجمع نقاط الولاء') : t('اختر زبون')} —</option>
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.full_name} ({c.loyalty_points} نقطة) {c.store_credit_balance ? `• رصيد: ${c.store_credit_balance} دج` : ''} {c.total_debt_dzd && c.total_debt_dzd > 0 ? `• دين: ${c.total_debt_dzd.toLocaleString('ar-DZ')} دج` : ''}
+                    {c.full_name} {storeSettings.loyalty_enabled ? `(${c.loyalty_points} نقطة)` : ''} {c.store_credit_balance ? `• رصيد: ${c.store_credit_balance} دج` : ''} {c.total_debt_dzd && c.total_debt_dzd > 0 ? `• دين: ${c.total_debt_dzd.toLocaleString('ar-DZ')} دج` : ''}
                   </option>
                 ))}
               </select>
@@ -1250,7 +1256,7 @@ export function POSCheckoutPage({
             {/* Redeem Points, Store Credit & Debt Repayment Quick Buttons */}
             {selectedCustomerObj && (
               <div className="flex flex-wrap gap-1.5 pt-1">
-                {selectedCustomerObj.loyalty_points >= 100 && (
+                {storeSettings.loyalty_enabled && selectedCustomerObj.loyalty_points >= 100 && (
                   <button
                     onClick={handleRedeemPoints}
                     className="flex-1 py-1 px-2 rounded-lg bg-warning/10 text-warning border border-warning/20 text-[10px] font-black flex items-center justify-center gap-1 btn-press"
@@ -1278,6 +1284,15 @@ export function POSCheckoutPage({
                     <span>تسديد الدين ({selectedCustomerObj.total_debt_dzd.toLocaleString('ar-DZ')} دج)</span>
                   </button>
                 ) : null}
+
+                <button
+                  onClick={() => setSelectedPosBarcodeCustomer(selectedCustomerObj)}
+                  className="py-1 px-2.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-700 dark:text-sky-400 border border-sky-500/25 text-[10px] font-black flex items-center justify-center gap-1 btn-press shadow-sm"
+                  title={t('معاينة وطباعة ملصق الباركود لبطاقة الزبون')}
+                >
+                  <Printer className="w-3.5 h-3.5 text-sky-500" />
+                  <span>{t('طبع كارت')}</span>
+                </button>
               </div>
             )}
           </div>
@@ -1682,6 +1697,13 @@ export function POSCheckoutPage({
         onClose={() => setIsPOSDebtModalOpen(false)}
         customer={selectedCustomerObj ?? null}
         onPaymentSuccess={() => loadData()}
+      />
+
+      {/* Customer Barcode Sticker Thermal Modal */}
+      <CustomerBarcodeModal
+        isOpen={selectedPosBarcodeCustomer !== null}
+        onClose={() => setSelectedPosBarcodeCustomer(null)}
+        customer={selectedPosBarcodeCustomer}
       />
 
       <ToastContainer />

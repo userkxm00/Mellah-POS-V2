@@ -13,6 +13,9 @@ export interface StoreSettings {
   loyalty_spend_per_point_dzd: number
   loyalty_point_value_dzd: number
   loyalty_expiry_months: number
+  receipt_printer_name: string
+  label_printer_name: string
+  barcode_label_language: 'ar' | 'fr' | 'en'
 }
 
 interface StoreSettingsState {
@@ -33,6 +36,9 @@ const DEFAULT_SETTINGS: StoreSettings = {
   loyalty_spend_per_point_dzd: 1000,
   loyalty_point_value_dzd: 1,
   loyalty_expiry_months: 0,
+  receipt_printer_name: '',
+  label_printer_name: '',
+  barcode_label_language: 'ar',
 }
 
 export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
@@ -53,6 +59,9 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
         loyalty_spend_per_point_dzd: number
         loyalty_point_value_dzd: number
         loyalty_expiry_months: number
+        receipt_printer_name?: string | null
+        label_printer_name?: string | null
+        barcode_label_language?: string | null
       }>(
         `SELECT store_name, COALESCE(store_address, '') as store_address, 
                 COALESCE(store_phone, '') as store_phone,
@@ -62,7 +71,10 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
                 COALESCE(loyalty_enabled, 0) as loyalty_enabled,
                 COALESCE(loyalty_spend_per_point_dzd, 1000) as loyalty_spend_per_point_dzd,
                 COALESCE(loyalty_point_value_dzd, 1) as loyalty_point_value_dzd,
-                COALESCE(loyalty_expiry_months, 0) as loyalty_expiry_months
+                COALESCE(loyalty_expiry_months, 0) as loyalty_expiry_months,
+                COALESCE(receipt_printer_name, '') as receipt_printer_name,
+                COALESCE(label_printer_name, '') as label_printer_name,
+                COALESCE(barcode_label_language, 'ar') as barcode_label_language
          FROM store_settings WHERE branch_id = ?`,
         [DEFAULT_BRANCH_ID]
       )
@@ -80,6 +92,9 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
             loyalty_spend_per_point_dzd: rows[0].loyalty_spend_per_point_dzd ?? 1000,
             loyalty_point_value_dzd: rows[0].loyalty_point_value_dzd ?? 1,
             loyalty_expiry_months: rows[0].loyalty_expiry_months ?? 0,
+            receipt_printer_name: rows[0].receipt_printer_name || '',
+            label_printer_name: rows[0].label_printer_name || '',
+            barcode_label_language: (rows[0].barcode_label_language as 'ar' | 'fr' | 'en') || 'ar',
           },
           loaded: true,
         })
