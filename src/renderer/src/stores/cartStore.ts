@@ -78,7 +78,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     const customName = productName.trim() || 'سلعة غير مسجلة'
     const customPrice = Math.max(0, priceDzd)
     const customQty = Math.max(1, quantity)
-    const uniqueId = `v-custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    const uniqueId = `v-custom-${Date.now()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`
 
     const newItem: CartItem = {
       variant_id: uniqueId,

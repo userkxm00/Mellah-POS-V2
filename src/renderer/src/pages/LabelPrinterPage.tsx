@@ -670,7 +670,15 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                           <div
                             key={variant.id}
                             onClick={() => setSelectedVariantId(variant.id)}
-                            className={`p-3.5 flex items-center justify-between cursor-pointer transition-colors ${
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                setSelectedVariantId(variant.id)
+                              }
+                            }}
+                            tabIndex={0}
+                            role="button"
+                            className={`p-3.5 flex items-center justify-between cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                               isPreviewActive
                                 ? 'bg-accent/5 dark:bg-accent/15 border-r-4 border-accent'
                                 : 'bg-white dark:bg-slate-900 hover:bg-gray-50/50 dark:hover:bg-slate-800/50'
@@ -687,7 +695,11 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                               </p>
                             </div>
 
-                            <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                            <div
+                              className="flex items-center gap-3"
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                            >
                               <span className="text-xs text-text-tertiary font-bold">
                                 المخزون: <b className="text-text-primary dark:text-slate-200">{variant.current_stock}</b>
                               </span>

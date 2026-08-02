@@ -318,7 +318,15 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
         return (
           <div
             onClick={() => setSelectedDetailsCustomer(row)}
-            className="flex items-center gap-3 cursor-pointer group/name"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setSelectedDetailsCustomer(row)
+              }
+            }}
+            tabIndex={0}
+            role="button"
+            className="flex items-center gap-3 cursor-pointer group/name outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-xl p-1"
             title={t('انقر لفتح الملف الشخصي الكامل للزبون')}
           >
             <div className="w-10 h-10 rounded-full bg-accent/10 group-hover/name:bg-accent group-hover/name:text-white transition-colors text-accent font-black text-sm flex items-center justify-center border border-accent/20 shadow-sm">
