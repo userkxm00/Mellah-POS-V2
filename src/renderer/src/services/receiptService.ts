@@ -386,10 +386,18 @@ export interface CustomerCardData {
 
 export function buildCustomerCardHtml(
   data: CustomerCardData,
-  storeSettings?: { store_name?: string; loyalty_enabled?: boolean }
+  storeSettings?: { store_name?: string; loyalty_enabled?: boolean; barcode_label_size?: string }
 ): string {
   const storeName = storeSettings?.store_name || 'بوتيك الملاح للملابس'
   const isLoyaltyEnabled = storeSettings?.loyalty_enabled ?? false
+  const labelSize = storeSettings?.barcode_label_size || '50x25'
+  const dims =
+    labelSize === '50x25'
+      ? { page: '50mm 25mm', width: '50mm', height: '25mm' }
+      : labelSize === '38x25'
+        ? { page: '38mm 25mm', width: '38mm', height: '25mm' }
+        : { page: '40mm 30mm', width: '40mm', height: '30mm' }
+
   const barcodeSvg = generateBarcodeSvg(data.barcode)
 
   return `
@@ -400,7 +408,7 @@ export function buildCustomerCardHtml(
       <title>كارت الزبون - ${data.customerName}</title>
       <style>
         @page {
-          size: 40mm 30mm;
+          size: ${dims.page};
           margin: 0;
         }
         @media print {
@@ -411,8 +419,8 @@ export function buildCustomerCardHtml(
           }
         }
         body {
-          width: 40mm;
-          height: 30mm;
+          width: ${dims.width};
+          height: ${dims.height};
           margin: 0 auto;
           padding: 1mm;
           box-sizing: border-box;

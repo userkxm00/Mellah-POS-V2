@@ -46,6 +46,9 @@ export function SettingsPage({ onBack }: { readonly onBack: () => void }): React
   const [labelLanguage, setLabelLanguage] = useState<'ar' | 'fr' | 'en'>(
     storeSettingsObj.barcode_label_language || 'ar'
   )
+  const [labelSize, setLabelSize] = useState<'40x30' | '50x25' | '38x25'>(
+    storeSettingsObj.barcode_label_size || '50x25'
+  )
   const [paperWidth, setPaperWidth] = useState<'80mm' | '58mm'>(
     (localStorage.getItem('mellah_paper_width') as '80mm' | '58mm') ?? '80mm'
   )
@@ -59,7 +62,6 @@ export function SettingsPage({ onBack }: { readonly onBack: () => void }): React
   // Preview Modals State
   const [isReceiptPreviewOpen, setIsReceiptPreviewOpen] = useState<boolean>(false)
   const [isBarcodePreviewOpen, setIsBarcodePreviewOpen] = useState<boolean>(false)
-  const [labelSize, setLabelSize] = useState<'40x30' | '50x25'>('40x30')
 
   const [isSaving, setIsSaving] = useState<boolean>(false)
   const [isExporting, setIsExporting] = useState<boolean>(false)
@@ -226,9 +228,9 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
            branch_id, store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes,
            telegram_bot_token, telegram_chat_ids, telegram_notify_app_launch, telegram_notify_sale, telegram_notify_shift,
            loyalty_enabled, loyalty_spend_per_point_dzd, loyalty_point_value_dzd, loyalty_expiry_months,
-           receipt_printer_name, label_printer_name, barcode_label_language, updated_at
+           receipt_printer_name, label_printer_name, barcode_label_language, barcode_label_size, updated_at
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(branch_id) DO UPDATE SET
            store_name=excluded.store_name,
            store_address=excluded.store_address,
@@ -248,6 +250,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
            receipt_printer_name=excluded.receipt_printer_name,
            label_printer_name=excluded.label_printer_name,
            barcode_label_language=excluded.barcode_label_language,
+           barcode_label_size=excluded.barcode_label_size,
            updated_at=excluded.updated_at`,
         [
           DEFAULT_BRANCH_ID,
@@ -269,6 +272,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
           selectedPrinter.trim(),
           selectedLabelPrinter.trim(),
           labelLanguage,
+          labelSize,
           now
         ]
       )
@@ -1141,6 +1145,20 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                   <option value="ar">العربية (Arabic)</option>
                   <option value="fr">Français (French)</option>
                   <option value="en">English (English)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5 col-span-1 sm:col-span-3">
+                <label htmlFor="label-size-select" className="text-xs font-bold text-text-primary dark:text-slate-200">حجم ملصقات الباركود للملابس والزبائن (Barcode Label Size)</label>
+                <select
+                  id="label-size-select"
+                  value={labelSize}
+                  onChange={(e) => setLabelSize(e.target.value as '40x30' | '50x25' | '38x25')}
+                  className="w-full px-4 py-2.5 rounded-2xl text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-[#1C2B3A] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
+                >
+                  <option value="50x25">50 مم × 25 مم (50mm × 25mm - عريض / الملابس والزبائن)</option>
+                  <option value="40x30">40 مم × 30 مم (40mm × 30mm - قياسي)</option>
+                  <option value="38x25">38 مم × 25 مم (38mm × 25mm - مدمج)</option>
                 </select>
               </div>
             </div>

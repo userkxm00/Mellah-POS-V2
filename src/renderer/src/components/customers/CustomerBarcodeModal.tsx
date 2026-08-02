@@ -68,11 +68,26 @@ export const CustomerBarcodeModal: React.FC<CustomerBarcodeModalProps> = ({
     }
   }
 
+  const labelSize = storeSettings.barcode_label_size || '50x25'
+  const frameClass =
+    labelSize === '50x25'
+      ? 'w-[220px] h-[110px]'
+      : labelSize === '38x25'
+        ? 'w-[170px] h-[110px]'
+        : 'w-[180px] h-[135px]'
+
+  const labelSizeText =
+    labelSize === '50x25'
+      ? '50mm × 25mm'
+      : labelSize === '38x25'
+        ? '38mm × 25mm'
+        : '40mm × 30mm'
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={t('معاينة وطباعة ملصق الباركود للزبون (40mm × 30mm)')}
+      title={`${t('معاينة وطباعة ملصق الباركود للزبون')} (${labelSizeText})`}
       size="md"
     >
       <div className="space-y-6 py-2">
@@ -80,11 +95,11 @@ export const CustomerBarcodeModal: React.FC<CustomerBarcodeModalProps> = ({
         <div className="flex flex-col items-center justify-center p-6 bg-gray-100 dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800">
           <div className="text-xs font-bold text-text-tertiary mb-2 flex items-center gap-1.5">
             <Eye className="w-4 h-4 text-accent" />
-            <span>{t('معاينة حية على حجم الملصق الحراري (40mm × 30mm)')}</span>
+            <span>{t('معاينة حية على حجم الملصق الحراري المحدد')} ({labelSizeText})</span>
           </div>
 
-          {/* 40mm x 30mm Compact Simulated Label Frame */}
-          <div className="w-[180px] h-[135px] bg-white text-black p-2 rounded border-2 border-dashed border-gray-300 shadow-md flex flex-col justify-between items-center text-center select-none font-sans overflow-hidden">
+          {/* Dynamic Compact Simulated Label Frame */}
+          <div className={`${frameClass} bg-white text-black p-2 rounded border-2 border-dashed border-gray-300 shadow-md flex flex-col justify-between items-center text-center select-none font-sans overflow-hidden transition-all`}>
             <div className="w-full text-[9.5px] font-black border-b border-black pb-0.5 tracking-tight truncate">
               {storeSettings.store_name}
             </div>
