@@ -733,7 +733,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                   <input
                     type="number"
                     min={0.01}
-                    step={0.1}
+                    step="any"
                     value={loyaltyPointValue || ''}
                     onChange={(e) => setLoyaltyPointValue(Math.max(0.01, Number.parseFloat(e.target.value) || 1))}
                     className="w-full px-3 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-accent"
