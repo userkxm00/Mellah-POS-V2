@@ -6,15 +6,18 @@ import {
   Tag,
   Search,
   Layers,
-  Sparkles,
-  Award
+  Award,
+  Eye,
+  CheckCircle2
 } from 'lucide-react'
-import { Card, Input } from '@/components/ui'
+import { Card, Input, Button } from '@/components/ui'
 import { formatCurrency } from '@/lib/format'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
-import { printCustomerCardLabel } from '@/services/receiptService'
+import { generateBarcodeSvg, printCustomerCardLabel } from '@/services/receiptService'
+import { CustomerBarcodeModal } from '@/components/customers/CustomerBarcodeModal'
+import { generateCustomerBarcode } from '@/lib/customerUtils'
 
 interface ProductVariantItem {
   id: string
@@ -53,6 +56,8 @@ interface CustomerPrintItem {
 export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
   useLanguageStore((s) => s.version)
+  const storeSettings = useStoreSettingsStore((s) => s.settings)
+
   const [printTab, setPrintTab] = useState<'products' | 'customers'>('products')
   const [customers, setCustomers] = useState<CustomerPrintItem[]>([])
   const [products, setProducts] = useState<ProductGroup[]>([])
@@ -60,10 +65,19 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
-  
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
+
+  // Customer barcode modal preview state
+  const [selectedCustomerForModal, setSelectedCustomerForModal] = useState<CustomerPrintItem | null>(null)
+
   // Map of variant_id -> print_quantity
   const [printQuantities, setPrintQuantities] = useState<Record<string, number>>({})
   const [isLoading, setIsLoading] = useState<boolean>(true)
+
+  // Label dimensions state (presets: 50x25mm, 40x30mm, 38x25mm)
+  const [labelSize, setLabelSize] = useState<'50x25' | '40x30' | '38x25'>(
+    storeSettings.barcode_label_size || '50x25'
+  )
 
   const addToast = useToastStore((s) => s.addToast)
 
@@ -118,6 +132,9 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
 
       if (groupedList.length > 0) {
         setSelectedProductId(groupedList[0].product_id)
+        if (groupedList[0].variants.length > 0) {
+          setSelectedVariantId(groupedList[0].variants[0].id)
+        }
       }
 
       // 3. Fetch customers with barcodes for customer card printing
@@ -127,8 +144,10 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
         )
         .catch(() => [])
       setCustomers(custRows)
-    } catch (err) {// eslint-disable-next-line no-console
-      console.error("[LabelPrinterPage]", err); addToast({ message: t('فشل تحميل المنتجات للطباعة'), variant: 'error' })
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[LabelPrinterPage]', err)
+      addToast({ message: t('فشل تحميل المنتجات للطباعة'), variant: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -138,7 +157,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
     try {
       let custBarcode = customer.barcode
       if (!custBarcode) {
-        custBarcode = `CUST-${customer.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
+        custBarcode = generateCustomerBarcode(customer.id)
         const now = new Date().toISOString()
         await window.electron.db.execute(
           'UPDATE customers SET barcode = ?, updated_at = ? WHERE id = ?',
@@ -147,7 +166,6 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
         customer.barcode = custBarcode
       }
 
-      const storeSettings = useStoreSettingsStore.getState().settings
       const printed = await printCustomerCardLabel(
         {
           customerName: customer.full_name,
@@ -155,11 +173,14 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
           barcode: custBarcode,
           loyaltyPoints: customer.loyalty_points,
         },
-        storeSettings
+        storeSettings,
+        storeSettings.label_printer_name || undefined
       )
 
       if (printed) {
         addToast({ message: `${t('تم إرسال بطاقة الزبون')} (${customer.full_name}) ${t('إلى الطابعة بنجاح!')}`, variant: 'success' })
+      } else {
+        addToast({ message: t('تعذر إرسال بطاقة الزبون إلى طابعة الملصقات'), variant: 'warning' })
       }
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -191,6 +212,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
   })
 
   const selectedProduct = products.find((p) => p.product_id === selectedProductId)
+  const activePreviewVariant = selectedProduct?.variants.find((v) => v.id === selectedVariantId) || selectedProduct?.variants[0]
 
   const handleUpdateQuantity = (variantId: string, qty: number): void => {
     setPrintQuantities((prev) => ({
@@ -198,9 +220,6 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
       [variantId]: Math.max(0, qty),
     }))
   }
-
-  // Label dimensions state (presets: 40x30mm, 50x25mm, 58x40mm)
-  const [labelSize, setLabelSize] = useState<'40x30' | '50x25' | '58x40'>('40x30')
 
   // Print all tags for the selected product sequentially
   const handlePrintProductLabels = (): void => {
@@ -223,11 +242,11 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
     }
 
     const sizeDimensions: Record<string, { page: string; width: string; height: string }> = {
-      '40x30': { page: '40mm 30mm', width: '36mm', height: '26mm' },
       '50x25': { page: '50mm 25mm', width: '46mm', height: '21mm' },
-      '58x40': { page: '58mm 40mm', width: '54mm', height: '36mm' },
+      '40x30': { page: '40mm 30mm', width: '36mm', height: '26mm' },
+      '38x25': { page: '38mm 25mm', width: '34mm', height: '21mm' },
     }
-    const dim = sizeDimensions[labelSize] || sizeDimensions['40x30']
+    const dim = sizeDimensions[labelSize] || sizeDimensions['50x25']
 
     // Build thermal label HTML string with JsBarcode script included
     const labelHtml = `
@@ -256,6 +275,16 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
             justify-content: space-between;
             align-items: center;
             height: 100%;
+          }
+          .store-name {
+            font-size: 7.5px;
+            font-weight: 900;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-bottom: 0.5pt solid #000;
+            width: 100%;
+            padding-bottom: 1px;
           }
           .title { 
             font-size: 8.5px; 
@@ -290,6 +319,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
               .map(
                 (_, cIdx) => `
               <div class="label-container">
+                <div class="store-name">${storeSettings.store_name}</div>
                 <div class="title">${selectedProduct.product_name}</div>
                 <div class="details">
                   ${variant.size ? `المقاس: ${variant.size}` : ''} 
@@ -353,6 +383,18 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
 
   const isSecondaryWindow = typeof window !== 'undefined' && window.location.search.includes('module=')
 
+  // Live thermal label preview SVG barcode
+  const previewBarcodeSvg = activePreviewVariant
+    ? generateBarcodeSvg(activePreviewVariant.barcode || activePreviewVariant.sku || '123456789')
+    : ''
+
+  const previewFrameClass =
+    labelSize === '50x25'
+      ? 'w-[220px] h-[110px]'
+      : labelSize === '38x25'
+        ? 'w-[170px] h-[110px]'
+        : 'w-[180px] h-[135px]'
+
   return (
     <div className="min-h-screen p-6 md:p-8 w-full max-w-none space-y-6 pb-12 select-none dark:bg-slate-950">
       {/* Top Header */}
@@ -385,7 +427,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
             )}
           </div>
           <h1 className="text-2xl font-black text-text-primary dark:text-slate-100">
-            {t('طباعة بطاقات الأسعار والباركود للملابس (Price Tags)')}
+            {t('طباعة بطاقات الأسعار والباركود للملابس والزبائن')}
           </h1>
         </div>
 
@@ -461,9 +503,9 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Products Sidebar List */}
-            <Card padding="compact" className="overflow-hidden border border-gray-200/80 dark:border-slate-800 md:col-span-1 h-[calc(100vh-250px)] flex flex-col">
+            <Card padding="compact" className="overflow-hidden border border-gray-200/80 dark:border-slate-800 lg:col-span-1 h-[calc(100vh-250px)] flex flex-col">
               <div className="p-3.5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 flex items-center justify-between">
                 <span className="text-xs font-black text-text-primary dark:text-slate-100 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-accent" />
@@ -485,7 +527,12 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                     return (
                       <button
                         key={prod.product_id}
-                        onClick={() => setSelectedProductId(prod.product_id)}
+                        onClick={() => {
+                          setSelectedProductId(prod.product_id)
+                          if (prod.variants.length > 0) {
+                            setSelectedVariantId(prod.variants[0].id)
+                          }
+                        }}
                         className={`w-full text-right p-3.5 transition-all flex items-center justify-between group cursor-pointer ${
                           isSelected
                             ? 'bg-accent/10 dark:bg-accent/20 font-black border-r-4 border-accent text-accent'
@@ -518,7 +565,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
             </Card>
 
             {/* Selected Product Variants & Print Settings (Right Column) */}
-            <div className="md:col-span-2 space-y-4">
+            <div className="lg:col-span-2 space-y-4">
               {selectedProduct ? (
                 <Card className="p-6 space-y-5 border border-gray-200/80 dark:border-slate-800 animate-scale-in">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-slate-800">
@@ -537,34 +584,73 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                     <button
                       onClick={handlePrintProductLabels}
                       disabled={currentTotalLabels === 0}
-                      className="px-5 py-2.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-extrabold shadow-hero-glow transition-all btn-press flex items-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-5 py-2.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-extrabold shadow-hero-glow transition-all btn-press flex items-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       <Printer className="w-4 h-4" />
                       <span>طباعة تيكيتات الباركود ({currentTotalLabels})</span>
                     </button>
                   </div>
 
-                  {/* Label Size Preset Picker */}
-                  <div className="flex items-center justify-between gap-4 p-3 rounded-2xl bg-gray-50/80 dark:bg-slate-800/80 border border-gray-200/80 dark:border-slate-700">
-                    <span className="text-xs font-bold text-text-secondary dark:text-slate-300 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-accent" />
-                      <span>مقاس الورق الحراري (Label Preset):</span>
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {(['40x30', '50x25', '58x40'] as const).map((sz) => (
-                        <button
-                          key={sz}
-                          type="button"
-                          onClick={() => setLabelSize(sz)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all btn-press ${
-                            labelSize === sz
-                              ? 'bg-accent text-white shadow-layered-sm'
-                              : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-text-secondary hover:text-text-primary'
-                          }`}
-                        >
-                          {sz === '40x30' ? '40mm × 30mm (قياسي)' : sz === '50x25' ? '50mm × 25mm' : '58mm × 40mm'}
-                        </button>
-                      ))}
+                  {/* Live Simulated Thermal Label Preview Box */}
+                  <div className="p-5 rounded-2xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="space-y-2 text-right flex-1">
+                      <div className="text-xs font-black text-text-primary dark:text-slate-100 flex items-center gap-1.5">
+                        <Eye className="w-4 h-4 text-accent" />
+                        <span>معاينة حية تفاعلية للملصق الحراري المطبوع (Live Preview)</span>
+                      </div>
+                      <p className="text-[11px] text-text-secondary dark:text-slate-400 leading-relaxed">
+                        هذا هو الشكل النهائي الدقيق للملصق كما يخرج من طابعة الباركود الحرارية. اختر الحجم المناسب لرول ملصقات المحل:
+                      </p>
+
+                      {/* Size Preset Selector */}
+                      <div className="flex items-center gap-2 pt-2">
+                        {(['50x25', '40x30', '38x25'] as const).map((sz) => (
+                          <button
+                            key={sz}
+                            type="button"
+                            onClick={() => setLabelSize(sz)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                              labelSize === sz
+                                ? 'bg-accent text-white shadow-layered-sm'
+                                : 'bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-text-secondary hover:text-text-primary'
+                            }`}
+                          >
+                            {sz === '50x25' ? '50mm × 25mm (عريض)' : sz === '40x30' ? '40mm × 30mm (قياسي)' : '38mm × 25mm'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Simulated Thermal Label Card */}
+                    <div className="shrink-0 flex flex-col items-center">
+                      <div className={`${previewFrameClass} bg-white text-black p-2 rounded border-2 border-dashed border-gray-300 shadow-md flex flex-col justify-between items-center text-center select-none font-sans overflow-hidden transition-all`}>
+                        <div className="w-full text-[9px] font-black border-b border-black pb-0.5 tracking-tight truncate">
+                          {storeSettings.store_name}
+                        </div>
+
+                        <div className="w-full my-0.5">
+                          <div className="text-[10.5px] font-black leading-tight truncate">{selectedProduct.product_name}</div>
+                          {activePreviewVariant && (
+                            <div className="text-[8px] font-bold text-gray-700">
+                              {activePreviewVariant.size ? `المقاس: ${activePreviewVariant.size}` : ''}
+                              {activePreviewVariant.color ? ` | اللون: ${activePreviewVariant.color}` : ''}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* High-Density Barcode SVG */}
+                        <div
+                          className="w-full flex items-center justify-center my-0.5"
+                          dangerouslySetInnerHTML={{ __html: previewBarcodeSvg }}
+                        />
+
+                        {activePreviewVariant && (
+                          <div className="text-[10px] font-black text-black">
+                            {formatCurrency(activePreviewVariant.price_dzd)}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-bold text-text-tertiary mt-1.5">معاينة الحجم ({labelSize})</span>
                     </div>
                   </div>
 
@@ -574,10 +660,17 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                     <div className="divide-y divide-gray-100 dark:divide-slate-800 border border-gray-100 dark:border-slate-800 rounded-2xl overflow-hidden">
                       {selectedProduct.variants.map((variant) => {
                         const qty = printQuantities[variant.id] ?? 0
+                        const isPreviewActive = variant.id === activePreviewVariant?.id
+
                         return (
                           <div
                             key={variant.id}
-                            className="p-3.5 flex items-center justify-between bg-white dark:bg-slate-900 hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors"
+                            onClick={() => setSelectedVariantId(variant.id)}
+                            className={`p-3.5 flex items-center justify-between cursor-pointer transition-colors ${
+                              isPreviewActive
+                                ? 'bg-accent/5 dark:bg-accent/15 border-r-4 border-accent'
+                                : 'bg-white dark:bg-slate-900 hover:bg-gray-50/50 dark:hover:bg-slate-800/50'
+                            }`}
                           >
                             <div className="space-y-0.5">
                               <p className="text-xs font-black text-text-primary dark:text-slate-100 flex items-center gap-2">
@@ -590,7 +683,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                               </p>
                             </div>
 
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                               <span className="text-xs text-text-tertiary font-bold">
                                 المخزون: <b className="text-text-primary dark:text-slate-200">{variant.current_stock}</b>
                               </span>
@@ -598,7 +691,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateQuantity(variant.id, qty - 1)}
-                                  className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-xs font-black shadow-sm flex items-center justify-center transition-colors"
+                                  className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-xs font-black shadow-sm flex items-center justify-center transition-colors cursor-pointer"
                                 >
                                   -
                                 </button>
@@ -612,7 +705,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateQuantity(variant.id, qty + 1)}
-                                  className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-xs font-black shadow-sm flex items-center justify-center transition-colors"
+                                  className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-xs font-black shadow-sm flex items-center justify-center transition-colors cursor-pointer"
                                 >
                                   +
                                 </button>
@@ -636,22 +729,24 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
 
       {/* Customers Cards Tab View */}
       {printTab === 'customers' && (
-        <Card className="p-6 space-y-5 border border-gray-200/80 dark:border-slate-800">
-          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
+        <Card className="p-6 space-y-6 border border-gray-200/80 dark:border-slate-800">
+          <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-slate-800">
             <div className="space-y-1">
-              <h2 className="text-sm font-black text-text-primary dark:text-slate-100 flex items-center gap-2">
-                <Award className="w-4 h-4 text-accent" />
+              <h2 className="text-base font-black text-text-primary dark:text-slate-100 flex items-center gap-2">
+                <Award className="w-5 h-5 text-accent" />
                 <span>{t('طباعة بطاقات الزبائن والولاء الحرارية (Customer Cards)')}</span>
               </h2>
               <p className="text-xs text-text-secondary dark:text-slate-400">
-                {t('طباعة ملصقات 40mm × 30mm الحاوية على باركود الزبون الفريد CUST- والمعلومات.')}
+                {t('طباعة ملصقات الباركود الحاوية على معرف الزبون الفريد 99XXXXXXXX للصقها على كروت المحل البلاستيكية.')}
               </p>
             </div>
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-accent/10 text-accent border border-accent/20">
-              {customers.length} {t('زبون مسجل')}
+            <span className="text-xs font-extrabold px-3.5 py-1.5 rounded-full bg-accent/10 text-accent border border-accent/20 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-accent" />
+              <span>{customers.length} {t('زبون مسجل')}</span>
             </span>
           </div>
 
+          {/* Search Filter */}
           <div className="relative w-full">
             <Search className="w-4 h-4 text-text-tertiary absolute right-3.5 top-1/2 -translate-y-1/2" />
             <Input
@@ -662,7 +757,8 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {/* Ultra-Premium Digital Customer Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {customers
               .filter(
                 (c) =>
@@ -670,33 +766,78 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                   c.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                   (c.phone && c.phone.includes(searchQuery))
               )
-              .map((cust) => (
-                <div
-                  key={cust.id}
-                  className="p-4 rounded-2xl bg-gray-50/80 dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 flex items-center justify-between gap-3 hover:border-accent/40 transition-all shadow-layered-sm"
-                >
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <p className="text-xs font-black text-text-primary dark:text-slate-100 truncate">{cust.full_name}</p>
-                    <p className="text-[11px] font-bold text-text-secondary dark:text-slate-400 font-mono truncate">
-                      {cust.phone || t('بدون هاتف')}
-                    </p>
-                    <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900">
-                      {cust.loyalty_points} {t('نقطة')}
-                    </span>
-                  </div>
+              .map((cust) => {
+                const barcodeCode = cust.barcode || generateCustomerBarcode(cust.id)
+                const svgString = generateBarcodeSvg(barcodeCode)
 
-                  <button
-                    type="button"
-                    onClick={() => handlePrintCustomerCard(cust)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-bold shadow-ambient transition-all btn-press shrink-0"
+                return (
+                  <div
+                    key={cust.id}
+                    className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-layered-sm flex flex-col justify-between gap-4 hover:border-accent/50 transition-all hover:shadow-ambient group"
                   >
-                    <Printer className="w-3.5 h-3.5" />
-                    <span>{t('طباعة')}</span>
-                  </button>
-                </div>
-              ))}
+                    {/* Card Top Branding Header */}
+                    <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2.5">
+                      <span className="text-[11px] font-black text-accent tracking-tight">
+                        {storeSettings.store_name}
+                      </span>
+                      {storeSettings.loyalty_enabled && (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900">
+                          {cust.loyalty_points} نقطة
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Customer Info */}
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-black text-text-primary dark:text-slate-100 truncate">
+                        {cust.full_name}
+                      </h3>
+                      <p className="text-xs font-bold font-mono text-text-secondary dark:text-slate-400">
+                        {cust.phone || t('بدون رقم هاتف')}
+                      </p>
+                    </div>
+
+                    {/* Live SVG Barcode Preview */}
+                    <div className="p-2 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 flex items-center justify-center">
+                      <div
+                        className="w-full max-w-[180px] h-[36px]"
+                        dangerouslySetInnerHTML={{ __html: svgString }}
+                      />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button
+                        variant="secondary"
+                        onClick={() => setSelectedCustomerForModal(cust)}
+                        className="flex-1 text-xs py-2 h-auto cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5 ml-1" />
+                        <span>{t('معاينة')}</span>
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={() => handlePrintCustomerCard(cust)}
+                        className="flex-1 text-xs py-2 h-auto bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5 ml-1" />
+                        <span>{t('طباعة')}</span>
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
           </div>
         </Card>
+      )}
+
+      {/* Customer Barcode Modal */}
+      {selectedCustomerForModal && (
+        <CustomerBarcodeModal
+          isOpen={!!selectedCustomerForModal}
+          onClose={() => setSelectedCustomerForModal(null)}
+          customer={selectedCustomerForModal}
+        />
       )}
     </div>
   )
