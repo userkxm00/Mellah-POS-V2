@@ -3,11 +3,12 @@ import { ArrowRight, ExternalLink, Plus, Search, Award, Phone, Trash2, History, 
 import { Card, Input, Modal, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
-import { DEFAULT_BRANCH_ID, useShiftStore } from '@/stores/shiftStore'
+import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
 import { printCustomerCardLabel } from '@/services/receiptService'
+import { resolveActiveShiftId } from '@/lib/shiftUtils'
 
 interface CustomerItem {
   id: string
@@ -69,7 +70,6 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
   const [editPhone, setEditPhone] = useState<string>('')
   const [isEditSaving, setIsEditSaving] = useState<boolean>(false)
 
-  const activeShift = useShiftStore((s) => s.activeShift)
   const addToast = useToastStore((s) => s.addToast)
 
   const loadCustomers = useCallback(async () => {
@@ -229,6 +229,16 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
       return
     }
 
+    const resolvedShiftId = await resolveActiveShiftId(DEFAULT_BRANCH_ID)
+    if (!resolvedShiftId) {
+      addToast({
+        message: t('لا توجد وردية مفتوحة حالياً! يرجى فتح وردية في الصندوق أولاً قبل تسديد الديون.'),
+        variant: 'error',
+        duration: 4000,
+      })
+      return
+    }
+
     setIsRepaying(true)
     try {
       const paymentId = generateUUID()
@@ -237,7 +247,7 @@ export function CustomersPage({ onBack }: { readonly onBack?: () => void }): Rea
       await window.electron.db.execute(
         `INSERT INTO customer_payments (id, branch_id, shift_id, customer_id, amount_dzd, payment_method, notes, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [paymentId, DEFAULT_BRANCH_ID, activeShift?.id || null, payingDebtCustomer.id, amount, repayMethod, repayNotes.trim() || null, now]
+        [paymentId, DEFAULT_BRANCH_ID, resolvedShiftId, payingDebtCustomer.id, amount, repayMethod, repayNotes.trim() || null, now]
       )
 
       addToast({ message: `${t('تم تسديد مبلغ')} ${amount.toLocaleString('ar-DZ')} ${t('دج لـ')} ${payingDebtCustomer.full_name}`, variant: 'success' })
