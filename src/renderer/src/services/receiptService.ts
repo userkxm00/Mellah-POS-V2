@@ -1,3 +1,4 @@
+import { generateCode128Svg } from '@/lib/code128'
 
 export interface ReceiptItem {
   product_name: string
@@ -116,37 +117,19 @@ export const RECEIPT_TRANSLATIONS: Record<ReceiptLanguage, {
   },
 }
 
+/**
+ * Generates a real, scannable Code128 barcode SVG.
+ * Previously used decorative static SVG rectangles that were NOT scannable.
+ * Now delegates to generateCode128Svg() which encodes the data correctly.
+ */
 export function generateBarcodeSvg(barcodeText: string): string {
-  const safeText = (barcodeText || '').replace(/[^a-zA-Z0-9_-]/g, '')
-  return `<svg viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 40px;">
-    <rect width="200" height="60" fill="#ffffff" />
-    <g fill="#000000">
-      <rect x="10" y="5" width="4" height="40" />
-      <rect x="18" y="5" width="2" height="40" />
-      <rect x="24" y="5" width="6" height="40" />
-      <rect x="34" y="5" width="2" height="40" />
-      <rect x="40" y="5" width="4" height="40" />
-      <rect x="48" y="5" width="8" height="40" />
-      <rect x="60" y="5" width="2" height="40" />
-      <rect x="66" y="5" width="4" height="40" />
-      <rect x="74" y="5" width="6" height="40" />
-      <rect x="84" y="5" width="2" height="40" />
-      <rect x="90" y="5" width="4" height="40" />
-      <rect x="98" y="5" width="2" height="40" />
-      <rect x="104" y="5" width="6" height="40" />
-      <rect x="114" y="5" width="4" height="40" />
-      <rect x="122" y="5" width="2" height="40" />
-      <rect x="128" y="5" width="8" height="40" />
-      <rect x="140" y="5" width="2" height="40" />
-      <rect x="146" y="5" width="6" height="40" />
-      <rect x="156" y="5" width="4" height="40" />
-      <rect x="164" y="5" width="2" height="40" />
-      <rect x="170" y="5" width="6" height="40" />
-      <rect x="180" y="5" width="4" height="40" />
-      <rect x="188" y="5" width="2" height="40" />
-    </g>
-    <text x="100" y="55" font-size="9" text-anchor="middle" font-family="monospace" fill="#000000">${safeText}</text>
-  </svg>`
+  try {
+    return generateCode128Svg(barcodeText || '0000000000')
+  } catch {
+    // Fallback: display text only if encoding fails (invalid characters)
+    const safe = (barcodeText || '').slice(0, 20)
+    return `<svg viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:30px;"><rect width="200" height="30" fill="white"/><text x="100" y="20" font-size="10" text-anchor="middle" font-family="monospace" fill="black">${safe}</text></svg>`
+  }
 }
 
 export function buildReceiptHtml(

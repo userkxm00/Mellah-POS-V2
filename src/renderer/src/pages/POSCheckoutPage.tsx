@@ -139,7 +139,7 @@ async function fetchPOSBranchData(branchId: string): Promise<{
     `SELECT 
        c.id, c.full_name, c.phone, c.barcode, c.loyalty_points, 
        COALESCE(c.store_credit_balance, 0) as store_credit_balance,
-       COALESCE((
+       MAX(0, COALESCE((
          SELECT SUM(s.total_dzd - COALESCE(s.paid_amount_dzd, 0))
          FROM sales s
          WHERE s.customer_id = c.id AND s.deleted_at IS NULL
@@ -147,7 +147,7 @@ async function fetchPOSBranchData(branchId: string): Promise<{
          SELECT SUM(cp.amount_dzd)
          FROM customer_payments cp
          WHERE cp.customer_id = c.id
-       ), 0) as total_debt_dzd
+       ), 0)) as total_debt_dzd
      FROM customers c 
      WHERE c.branch_id = ? AND c.deleted_at IS NULL 
      ORDER BY c.full_name`,
@@ -555,7 +555,7 @@ export function POSCheckoutPage({
   const [isLocked, setIsLocked] = useState<boolean>(false)
   const [isQuickAddCustomerOpen, setIsQuickAddCustomerOpen] = useState<boolean>(false)
   const [isPOSDebtModalOpen, setIsPOSDebtModalOpen] = useState<boolean>(false)
-  const [selectedPosBarcodeCustomer, setSelectedPosBarcodeCustomer] = useState<{ full_name: string; phone?: string | null; barcode?: string | null; loyalty_points?: number } | null>(null)
+  const [selectedPosBarcodeCustomer, setSelectedPosBarcodeCustomer] = useState<{ id: string; full_name: string; phone?: string | null; barcode?: string | null; loyalty_points?: number } | null>(null)
   const [isProcessingSale, setIsProcessingSale] = useState<boolean>(false)
   const [showConfetti, setShowConfetti] = useState<boolean>(false)
   const [isReceiptFlying, setIsReceiptFlying] = useState<boolean>(false)
@@ -844,12 +844,10 @@ export function POSCheckoutPage({
         cardAmountDzd,
         discountDzd,
         creditDepositVal,
-        appliedDiscountSource === 'loyalty' ? redeemedPoints : 0
+        appliedDiscountSource === 'loyalty' ? redeemedPoints : 0,
+        // Store credit deduction now atomic inside processSale (fixes race condition - Bug #4)
+        appliedDiscountSource === 'store_credit' ? discountDzd : null
       )
-
-      if (appliedDiscountSource === 'store_credit' && custObj?.id && custObj?.store_credit_balance) {
-        await updateCustomerStoreCredit(custObj.id, discountDzd, custObj.store_credit_balance)
-      }
 
       const loyaltyMsg = custObj ? ` • تم منح نقاط الولاء للزبون (${custObj.full_name})` : ''
       soundService.playSuccess()

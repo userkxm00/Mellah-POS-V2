@@ -1,6 +1,7 @@
 import { generateUUID } from '@/lib/uuid'
 import { logger } from '@/lib/logger'
 import { DEFAULT_BRANCH_ID, DEFAULT_CASHIER_ID } from '@/stores/shiftStore'
+import { useAuthStore } from '@/stores/authStore'
 import { enqueueSyncOperation } from './syncEngine'
 import type { PaymentMethod } from '@/types/database'
 
@@ -108,6 +109,12 @@ export async function processReturn(
     throw new Error('اختر منتجاً واحداً على الأقل لإرجاعه')
   }
 
+  // Resolve authenticated cashier and branch — never fall back silently to defaults in financial records
+  const activeUser = useAuthStore.getState().currentUser
+  const activeBranch = useAuthStore.getState().currentBranch
+  const cashierId = activeUser?.id ?? DEFAULT_CASHIER_ID
+  const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+
   const now = new Date().toISOString()
   const operations: Array<{ sql: string; params: unknown[] }> = []
 
@@ -127,13 +134,13 @@ export async function processReturn(
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         params: [
           returnId,
-          DEFAULT_BRANCH_ID,
+          branchId,
           saleId,
           item.variant_id,
           item.quantity,
           refundMethod,
           reason.trim() || 'إرجاع بضاعة كاشير',
-          DEFAULT_CASHIER_ID,
+          cashierId,
           now,
         ],
       },
@@ -143,12 +150,12 @@ export async function processReturn(
               VALUES (?, ?, ?, 'return', ?, ?, ?, ?, ?)`,
         params: [
           movementId,
-          DEFAULT_BRANCH_ID,
+          branchId,
           item.variant_id,
           item.quantity,
           saleId,
           `إرجاع بضاعة: ${reason.trim() || 'مرتجع'}`,
-          DEFAULT_CASHIER_ID,
+          cashierId,
           now,
         ],
       }

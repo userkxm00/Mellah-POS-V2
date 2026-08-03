@@ -48,7 +48,8 @@ export async function processSale(
   mixedCardDzd?: number | null,
   discountDzd?: number,
   creditDepositDzd?: number | null,
-  redeemedPointsDzd?: number
+  redeemedPointsDzd?: number,
+  storeCreditUsedDzd?: number | null
 ): Promise<CreateSaleResult> {
   if (items.length === 0) {
     throw new Error('السلة فارغة')
@@ -196,6 +197,21 @@ export async function processSale(
           cashierId,
           now,
         ],
+      })
+    }
+  }
+
+  // 3. Store Credit Deduction — included in the same atomic transaction
+  //    This prevents the race condition where the sale succeeds but credit deduction fails separately.
+  if (customerId && storeCreditUsedDzd && storeCreditUsedDzd > 0) {
+    const usedCredit = Math.min(storeCreditUsedDzd, discountVal)
+    if (usedCredit > 0) {
+      operations.push({
+        sql: `UPDATE customers 
+              SET store_credit_balance = MAX(0, COALESCE(store_credit_balance, 0) - ?), 
+                  updated_at = ? 
+              WHERE id = ?`,
+        params: [usedCredit, now, customerId],
       })
     }
   }

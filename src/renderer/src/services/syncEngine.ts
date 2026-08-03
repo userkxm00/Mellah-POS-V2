@@ -153,10 +153,16 @@ async function processSingleSyncEntry(
     return true
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'فشل المزامنة'
+    // Increment the existing `attempts` column (defined in 0001_init.sql migration).
     await window.electron.db.execute(
-      `UPDATE sync_queue SET retry_count = retry_count + 1, last_error = ? WHERE id = ?`,
-      [errorMsg, entry.id]
-    )
+      `UPDATE sync_queue SET attempts = attempts + 1 WHERE id = ?`,
+      [entry.id]
+    ).catch(() => {})
+    // Persist last error message defensively (column added by migration 0009).
+    await window.electron.db.execute(
+      `UPDATE sync_queue SET last_error = ? WHERE id = ?`,
+      [errorMsg.slice(0, 500), entry.id]
+    ).catch(() => {}) // .catch() — column may not exist on older installs before 0009
     return false
   }
 }

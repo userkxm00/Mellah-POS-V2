@@ -5,11 +5,13 @@ import { useLanguageStore } from '@/stores/languageStore'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
 import { useToastStore } from '@/stores/toastStore'
 import { generateBarcodeSvg, printCustomerCardLabel } from '@/services/receiptService'
+import { ensureCustomerBarcode } from '@/lib/customerUtils'
 
 interface CustomerBarcodeModalProps {
   isOpen: boolean
   onClose: () => void
   customer: {
+    id: string
     full_name: string
     phone?: string | null
     barcode?: string | null
@@ -26,20 +28,26 @@ export const CustomerBarcodeModal: React.FC<CustomerBarcodeModalProps> = ({
   const storeSettings = useStoreSettingsStore((s) => s.settings)
   const addToast = useToastStore((s) => s.addToast)
   const [isPrinting, setIsPrinting] = React.useState<boolean>(false)
+  // Resolved barcode — may be fetched/generated from DB if customer.barcode is null
+  const [resolvedBarcode, setResolvedBarcode] = React.useState<string>('9900000001')
 
-  if (!customer) return null
-
-  const customerBarcode = customer.barcode || '9900000001'
-  const barcodeSvg = generateBarcodeSvg(customerBarcode)
+  React.useEffect(() => {
+    if (!customer) return
+    // ensureCustomerBarcode generates + persists a unique barcode if missing
+    ensureCustomerBarcode(customer).then((b) => setResolvedBarcode(b)).catch(() => {
+      setResolvedBarcode(customer.barcode || '9900000001')
+    })
+  }, [customer])
 
   const handlePrint = async (): Promise<void> => {
+    if (!customer) return
     setIsPrinting(true)
     try {
       const success = await printCustomerCardLabel(
         {
           customerName: customer.full_name,
           customerPhone: customer.phone,
-          barcode: customerBarcode,
+          barcode: resolvedBarcode,
           loyaltyPoints: customer.loyalty_points,
         },
         storeSettings,
@@ -67,6 +75,10 @@ export const CustomerBarcodeModal: React.FC<CustomerBarcodeModalProps> = ({
       setIsPrinting(false)
     }
   }
+
+  if (!customer) return null
+
+  const barcodeSvg = generateBarcodeSvg(resolvedBarcode)
 
   const labelSize = storeSettings.barcode_label_size || '50x25'
   const frameClass =
