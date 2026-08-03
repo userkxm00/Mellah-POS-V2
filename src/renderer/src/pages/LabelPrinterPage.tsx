@@ -17,7 +17,7 @@ import { useLanguageStore } from '@/stores/languageStore'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
 import { generateBarcodeSvg, printCustomerCardLabel } from '@/services/receiptService'
 import { CustomerBarcodeModal } from '@/components/customers/CustomerBarcodeModal'
-import { generateCustomerBarcode } from '@/lib/customerUtils'
+import { generateCustomerBarcode, ensureCustomerBarcode } from '@/lib/customerUtils'
 
 interface ProductVariantItem {
   id: string
@@ -155,16 +155,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
 
   const handlePrintCustomerCard = async (customer: CustomerPrintItem): Promise<void> => {
     try {
-      let custBarcode = customer.barcode
-      if (!custBarcode) {
-        custBarcode = generateCustomerBarcode(customer.id)
-        const now = new Date().toISOString()
-        await window.electron.db.execute(
-          'UPDATE customers SET barcode = ?, updated_at = ? WHERE id = ?',
-          [custBarcode, now, customer.id]
-        )
-        customer.barcode = custBarcode
-      }
+      const custBarcode = await ensureCustomerBarcode(customer)
 
       const printed = await printCustomerCardLabel(
         {
@@ -783,7 +774,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                   (c.phone && c.phone.includes(searchQuery))
               )
               .map((cust) => {
-                const barcodeCode = cust.barcode || generateCustomerBarcode(cust.id)
+                const barcodeCode = cust.barcode || generateCustomerBarcode(Date.now())
                 const svgString = generateBarcodeSvg(barcodeCode)
 
                 return (

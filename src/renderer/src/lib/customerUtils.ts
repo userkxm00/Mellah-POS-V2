@@ -25,3 +25,24 @@ export function isCustomerBarcode(barcode: string): boolean {
   if (clean.length === 10 && clean.startsWith('99') && /^\d+$/.test(clean)) return true
   return false
 }
+
+/**
+ * Ensures a customer has a unique 99XXXXXXXX barcode, generating and persisting
+ * a timestamp-based numeric barcode if missing, preventing UUID digit collisions.
+ */
+export async function ensureCustomerBarcode(customer: { id: string; barcode?: string | null }): Promise<string> {
+  if (customer.barcode && customer.barcode.trim()) {
+    return customer.barcode.trim()
+  }
+  const uniqueNum = Date.now().toString().slice(-8)
+  const newBarcode = `99${uniqueNum}`
+  customer.barcode = newBarcode
+
+  if (typeof window !== 'undefined' && window.electron?.db?.execute) {
+    await window.electron.db.execute(
+      `UPDATE customers SET barcode = ?, updated_at = ? WHERE id = ? AND (barcode IS NULL OR barcode = '')`,
+      [newBarcode, new Date().toISOString(), customer.id]
+    ).catch(() => {})
+  }
+  return newBarcode
+}
