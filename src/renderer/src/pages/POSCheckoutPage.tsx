@@ -194,19 +194,6 @@ async function verifyManagerPinHash(pinInput: string): Promise<boolean> {
   return false
 }
 
-async function updateCustomerStoreCredit(
-  customerId: string,
-  discountDzd: number,
-  currentCredit: number
-): Promise<void> {
-  if (!currentCredit || discountDzd <= 0) return
-  const usedCredit = Math.min(currentCredit, discountDzd)
-  await window.electron.db.execute(
-    `UPDATE customers SET store_credit_balance = store_credit_balance - ?, updated_at = ? WHERE id = ?`,
-    [usedCredit, new Date().toISOString(), customerId]
-  )
-}
-
 function buildReceiptPayload(
   saleId: string,
   cartItems: Array<{
