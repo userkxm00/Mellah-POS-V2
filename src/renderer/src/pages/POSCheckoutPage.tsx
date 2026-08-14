@@ -18,8 +18,10 @@ import {
   CreditCard,
   Shuffle,
   BookOpen,
-  Package
+  Package,
+  AlertTriangle
 } from 'lucide-react'
+import { fetchLowStockVariants } from '@/services/productService'
 import { Card, Input, Modal, Button, ToastContainer } from '@/components/ui'
 import { CountUpNumber } from '@/components/ui/CountUpNumber'
 import { AnimatedBrandLogo } from '@/components/brand/AnimatedBrandLogo'
@@ -494,8 +496,10 @@ async function dispatchSaleNotifications(
 
 export function POSCheckoutPage({
   onNavigateToHome,
+  onNavigateToProducts,
 }: {
   readonly onNavigateToHome?: () => void
+  readonly onNavigateToProducts?: () => void
 }): React.JSX.Element {
   const {
     items: cartItems,
@@ -536,6 +540,7 @@ export function POSCheckoutPage({
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [isLoadingVariants, setIsLoadingVariants] = useState<boolean>(true)
+  const [lowStockCount, setLowStockCount] = useState<number>(0)
 
   // Modals & UI States
   const [isCloseShiftOpen, setIsCloseShiftOpen] = useState<boolean>(false)
@@ -621,6 +626,8 @@ export function POSCheckoutPage({
       setCategories(data.categories)
       setCustomers(data.customers)
       setVariants(data.variants)
+      const lowStockRows = await fetchLowStockVariants().catch(() => [])
+      setLowStockCount(lowStockRows.length)
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[POSCheckoutPage]', err)
@@ -1033,6 +1040,27 @@ export function POSCheckoutPage({
           </button>
         </div>
       </header>
+
+      {/* Proactive Low Stock Alert Banner */}
+      {lowStockCount > 0 && (
+        <div className="bg-amber-500/15 dark:bg-amber-950/40 border-b border-amber-500/30 px-6 py-2 flex items-center justify-between z-10 animate-fade-in">
+          <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 text-xs font-bold">
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>
+              {t('تنبيه المخزون:')} {lowStockCount} {t('منتج وصل الحد الأدنى أو على وشك النفاد!')}
+            </span>
+          </div>
+          {onNavigateToProducts && (
+            <button
+              onClick={onNavigateToProducts}
+              className="flex items-center gap-1.5 px-3.5 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-sm transition-all btn-press cursor-pointer"
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>{t('طلب تزود سريع (PO)')}</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Main Body (Catalog Right, Cart Left) */}
       <div className="flex flex-1 overflow-hidden p-5 gap-5">

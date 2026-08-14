@@ -337,7 +337,12 @@ export function App(): React.JSX.Element {
     <div className="relative h-screen w-screen overflow-hidden flex flex-col bg-[#F4F5F9] dark:bg-[#0F172A]">
       <main className="flex-1 overflow-auto page-enter">
         <Suspense fallback={<div className="h-full w-full flex items-center justify-center p-12 text-xs font-bold text-text-tertiary">جاري التحميل...</div>}>
-          {currentPage === 'pos' && <POSCheckoutPage onNavigateToHome={goHome} />}
+          {currentPage === 'pos' && (
+            <POSCheckoutPage
+              onNavigateToHome={goHome}
+              onNavigateToProducts={() => setCurrentPage('products')}
+            />
+          )}
           {currentPage === 'history' && <SalesHistoryPage onBack={goHome} />}
           {currentPage === 'returns' && <ReturnsPage onBack={goHome} />}
           {currentPage === 'customers' && <CustomersPage onBack={goHome} />}
