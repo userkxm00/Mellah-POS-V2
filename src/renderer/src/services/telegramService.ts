@@ -103,8 +103,9 @@ async function fetchDbTelegramSettings(): Promise<{
 export async function getTelegramCredentials(): Promise<TelegramCredentials> {
   const dbSettings = await fetchDbTelegramSettings()
 
-  let botToken = dbSettings.botToken || localStorage.getItem('mellah_telegram_bot_token') || import.meta.env.VITE_TELEGRAM_BOT_TOKEN || ''
-  const rawChatIds = dbSettings.rawChatIds || localStorage.getItem('mellah_telegram_chat_ids') || localStorage.getItem('mellah_telegram_chat_id') || import.meta.env.VITE_TELEGRAM_CHAT_ID || ''
+  const metaEnv = (import.meta as unknown as { env?: Record<string, string> }).env || {}
+  let botToken = dbSettings.botToken || localStorage.getItem('mellah_telegram_bot_token') || metaEnv.VITE_TELEGRAM_BOT_TOKEN || ''
+  const rawChatIds = dbSettings.rawChatIds || localStorage.getItem('mellah_telegram_chat_ids') || localStorage.getItem('mellah_telegram_chat_id') || metaEnv.VITE_TELEGRAM_CHAT_ID || ''
   const notifyAppLaunch = dbSettings.notifyAppLaunch ?? (localStorage.getItem('mellah_telegram_notify_app_launch') !== 'false')
   const notifySale = dbSettings.notifySale ?? (localStorage.getItem('mellah_telegram_notify_sale') !== 'false')
   const notifyShift = dbSettings.notifyShift ?? (localStorage.getItem('mellah_telegram_notify_shift') !== 'false')
