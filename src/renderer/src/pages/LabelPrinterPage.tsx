@@ -57,6 +57,13 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
   const storeSettings = useStoreSettingsStore((s) => s.settings)
 
   const [printTab, setPrintTab] = useState<'products' | 'customers'>('products')
+
+  // Label Field Customization Toggles
+  const [showStoreName, setShowStoreName] = useState<boolean>(true)
+  const [showProductName, setShowProductName] = useState<boolean>(true)
+  const [showSizeColor, setShowSizeColor] = useState<boolean>(true)
+  const [showPrice, setShowPrice] = useState<boolean>(true)
+  const [showBarcode, setShowBarcode] = useState<boolean>(true)
   const [customers, setCustomers] = useState<CustomerPrintItem[]>([])
   const [products, setProducts] = useState<ProductGroup[]>([])
   const [categories, setCategories] = useState<CategoryItem[]>([])
@@ -266,7 +273,7 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
             height: 100%;
           }
           .store-name {
-            font-size: 7.5px;
+            font-size: ${labelSize === '40x30' ? '8.5px' : labelSize === '38x25' ? '7px' : '7.5px'};
             font-weight: 900;
             white-space: nowrap;
             overflow: hidden;
@@ -274,33 +281,43 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
             border-bottom: 0.5pt solid #000;
             width: 100%;
             padding-bottom: 1px;
+            display: ${showStoreName ? 'block' : 'none'};
           }
           .title { 
-            font-size: 8.5px; 
+            font-size: ${labelSize === '40x30' ? '9.5px' : labelSize === '38x25' ? '7.5px' : '8.5px'}; 
             font-weight: 800; 
             white-space: nowrap; 
             overflow: hidden; 
             text-overflow: ellipsis;
             line-height: 1.1;
             width: 100%;
+            display: ${showProductName ? 'block' : 'none'};
           }
           .details { 
-            font-size: 7.5px; 
+            font-size: ${labelSize === '38x25' ? '6.5px' : '7.5px'}; 
             font-weight: bold;
             color: #222;
             margin: 1px 0;
+            display: ${showSizeColor ? 'block' : 'none'};
+          }
+          .barcode-container {
+            display: ${showBarcode ? 'flex' : 'none'};
+            justify-content: center;
+            align-items: center;
+            width: 100%;
           }
           .barcode-svg {
             max-width: 100%;
-            height: 14mm;
+            height: ${labelSize === '40x30' ? '16mm' : labelSize === '38x25' ? '12mm' : '14mm'};
           }
           .price { 
-            font-size: 13.5px; 
+            font-size: ${labelSize === '40x30' ? '14.5px' : labelSize === '38x25' ? '12px' : '13.5px'}; 
             font-weight: 900; 
             font-family: 'Segoe UI', system-ui, sans-serif;
             letter-spacing: -0.2px;
             margin-top: 1px;
             color: #000;
+            display: ${showPrice ? 'block' : 'none'};
           }
           .page-break { page-break-after: always; }
         </style>
@@ -312,14 +329,15 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
               .map(
                 (_, cIdx) => `
               <div class="label-container">
-                <div class="store-name">${storeSettings.store_name}</div>
-                <div class="title">${selectedProduct.product_name}</div>
-                <div class="details">
-                  ${variant.size ? `المقاس: ${variant.size}` : ''} 
-                  ${variant.color ? ` | اللون: ${variant.color}` : ''}
-                </div>
-                <svg id="barcode-${idx}-${cIdx}" class="barcode-svg"></svg>
-                <div class="price">${formatCurrency(variant.price_dzd)}</div>
+                ${showStoreName ? `<div class="store-name">${storeSettings.store_name}</div>` : ''}
+                ${showProductName ? `<div class="title">${selectedProduct.product_name}</div>` : ''}
+                ${
+                  showSizeColor
+                    ? `<div class="details">${variant.size ? `المقاس: ${variant.size}` : ''} ${variant.color ? ` | اللون: ${variant.color}` : ''}</div>`
+                    : ''
+                }
+                ${showBarcode ? `<div class="barcode-container"><svg id="barcode-${idx}-${cIdx}" class="barcode-svg"></svg></div>` : ''}
+                ${showPrice ? `<div class="price">${formatCurrency(variant.price_dzd)}</div>` : ''}
               </div>
               <div class="page-break"></div>
             `
@@ -566,35 +584,92 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                         هذا هو الشكل النهائي الدقيق للملصق كما يخرج من طابعة الباركود الحرارية. اختر الحجم المناسب لرول ملصقات المحل:
                       </p>
 
-                      {/* Size Preset Selector */}
-                      <div className="flex items-center gap-2 pt-2">
-                        {(['50x25', '40x30', '38x25'] as const).map((sz) => (
+                      {/* Size Preset & Content Customization Toggles */}
+                      <div className="space-y-3 pt-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-text-tertiary">{t('الحجم:')}</span>
+                          {(['50x25', '40x30', '38x25'] as const).map((sz) => (
+                            <button
+                              key={sz}
+                              type="button"
+                              onClick={() => setLabelSize(sz)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                labelSize === sz
+                                  ? 'bg-accent text-white shadow-layered-sm'
+                                  : 'bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-text-secondary hover:text-text-primary'
+                              }`}
+                            >
+                              {sz === '50x25' ? '50mm × 25mm (عريض)' : sz === '40x30' ? '40mm × 30mm (قياسي)' : '38mm × 25mm'}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Field Visibility Toggles */}
+                        <div className="flex items-center gap-2 flex-wrap pt-1">
+                          <span className="text-xs font-bold text-text-tertiary">{t('الحقول الظاهرة:')}</span>
                           <button
-                            key={sz}
                             type="button"
-                            onClick={() => setLabelSize(sz)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                              labelSize === sz
-                                ? 'bg-accent text-white shadow-layered-sm'
-                                : 'bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-text-secondary hover:text-text-primary'
+                            onClick={() => setShowStoreName(!showStoreName)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                              showStoreName ? 'bg-accent/15 text-accent border-accent/30' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 border-gray-200 dark:border-slate-700 line-through opacity-70'
                             }`}
                           >
-                            {sz === '50x25' ? '50mm × 25mm (عريض)' : sz === '40x30' ? '40mm × 30mm (قياسي)' : '38mm × 25mm'}
+                            {t('المتجر')}
                           </button>
-                        ))}
+                          <button
+                            type="button"
+                            onClick={() => setShowProductName(!showProductName)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                              showProductName ? 'bg-accent/15 text-accent border-accent/30' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 border-gray-200 dark:border-slate-700 line-through opacity-70'
+                            }`}
+                          >
+                            {t('اسم المنتج')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowSizeColor(!showSizeColor)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                              showSizeColor ? 'bg-accent/15 text-accent border-accent/30' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 border-gray-200 dark:border-slate-700 line-through opacity-70'
+                            }`}
+                          >
+                            {t('المقاس واللون')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowPrice(!showPrice)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                              showPrice ? 'bg-accent/15 text-accent border-accent/30' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 border-gray-200 dark:border-slate-700 line-through opacity-70'
+                            }`}
+                          >
+                            {t('السعر')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowBarcode(!showBarcode)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                              showBarcode ? 'bg-accent/15 text-accent border-accent/30' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 border-gray-200 dark:border-slate-700 line-through opacity-70'
+                            }`}
+                          >
+                            {t('الباركود')}
+                          </button>
+                        </div>
                       </div>
                     </div>
 
                     {/* Simulated Thermal Label Card */}
                     <div className="shrink-0 flex flex-col items-center">
                       <div className={`${previewFrameClass} bg-white text-black p-2 rounded border-2 border-dashed border-gray-300 shadow-md flex flex-col justify-between items-center text-center select-none font-sans overflow-hidden transition-all`}>
-                        <div className="w-full text-[9px] font-black border-b border-black pb-0.5 tracking-tight truncate">
-                          {storeSettings.store_name}
-                        </div>
+                        {showStoreName && (
+                          <div className="w-full text-[9px] font-black border-b border-black pb-0.5 tracking-tight truncate">
+                            {storeSettings.store_name}
+                          </div>
+                        )}
 
                         <div className="w-full my-0.5">
-                          <div className="text-[10.5px] font-black leading-tight truncate">{selectedProduct.product_name}</div>
-                          {activePreviewVariant && (
+                          {showProductName && (
+                            <div className="text-[10.5px] font-black leading-tight truncate">{selectedProduct.product_name}</div>
+                          )}
+                          {showSizeColor && activePreviewVariant && (
                             <div className="text-[8px] font-bold text-gray-700">
                               {activePreviewVariant.size ? `المقاس: ${activePreviewVariant.size}` : ''}
                               {activePreviewVariant.color ? ` | اللون: ${activePreviewVariant.color}` : ''}
@@ -603,12 +678,14 @@ export function LabelPrinterPage({ onBack }: { onBack?: () => void }): React.JSX
                         </div>
 
                         {/* High-Density Barcode SVG */}
-                        <div
-                          className="w-full flex items-center justify-center my-0.5"
-                          dangerouslySetInnerHTML={{ __html: previewBarcodeSvg }}
-                        />
+                        {showBarcode && (
+                          <div
+                            className="w-full flex items-center justify-center my-0.5"
+                            dangerouslySetInnerHTML={{ __html: previewBarcodeSvg }}
+                          />
+                        )}
 
-                        {activePreviewVariant && (
+                        {showPrice && activePreviewVariant && (
                           <div className="text-[13px] font-black text-black tracking-tight leading-none">
                             {formatCurrency(activePreviewVariant.price_dzd)}
                           </div>
