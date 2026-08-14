@@ -22,7 +22,7 @@ overrides:
   http-proxy: ^1.18.1
   esbuild: ^0.25.0
   qs: ^6.14.1
-  uuid: ^11.1.1
+  uuid: ^14.0.0
   request: npm:@cypress/request@^3.0.0
 
 importers:
@@ -78,8 +78,8 @@ importers:
         specifier: ^1.14.2
         version: 1.14.2
       uuid:
-        specifier: ^11.1.1
-        version: 11.1.1
+        specifier: ^14.0.0
+        version: 14.0.0
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -1752,10 +1752,6 @@ packages:
     resolution: {integrity: sha512-11Ndz7Nv+mvAC1j0ktTa7fAb0vLyGGX+rMHNBYQviQDGU0Hw7lhctJANqbPhu9nV9/izT/IntTgZ7Im/9LJs9g==}
     engines: {'0': node >=0.6.0}
 
-  extsprintf@1.4.1:
-    resolution: {integrity: sha512-Wrk35e8ydCKDj/ArClo1VrPVmN8zph5V4AtHwIuHhvMXsKf73UT3BOD+azBIW+3wOJ4FhEH7zyaJCFvChjYvMA==}
-    engines: {'0': node >=0.6.0}
-
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
 
@@ -2392,6 +2388,10 @@ packages:
   mkdirp@0.5.1:
     resolution: {integrity: sha512-SknJC52obPfGQPnjIkXbmA6+5H15E+fR+E4iR2oQ3zzCLbd7/ONua69R/Gw7AgkTLsRG+r5fzksYwWe1AgTyWA==}
     deprecated: Legacy versions of mkdirp are no longer supported. Please update to mkdirp 1.x. (Note that the API surface has changed to use Promises in 1.x.)
+    hasBin: true
+
+  mkdirp@0.5.6:
+    resolution: {integrity: sha512-FP+p8RB8OWpF3YZBCrP5gtADmtXApB5AMLn+vdyA+PyxCjrCs00mjyUozssO33cwDeT3wNGdLxJ5M//YqtHAJw==}
     hasBin: true
 
   ms@2.1.3:
@@ -3181,8 +3181,8 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  uuid@11.1.1:
-    resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
+  uuid@14.0.0:
+    resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
     hasBin: true
 
   verror@1.10.0:
@@ -3508,7 +3508,7 @@ snapshots:
       safe-buffer: 5.2.1
       tough-cookie: 4.1.4
       tunnel-agent: 0.6.0
-      uuid: 11.1.1
+      uuid: 14.0.0
 
   '@electron-toolkit/preload@3.0.2(electron@39.8.10)':
     dependencies:
@@ -5037,8 +5037,6 @@ snapshots:
 
   extsprintf@1.3.0: {}
 
-  extsprintf@1.4.1: {}
-
   fast-deep-equal@3.1.3: {}
 
   fast-glob@3.3.3:
@@ -5640,6 +5638,10 @@ snapshots:
       minipass: 7.1.3
 
   mkdirp@0.5.1:
+    dependencies:
+      minimist: 1.2.8
+
+  mkdirp@0.5.6:
     dependencies:
       minimist: 1.2.8
 
@@ -6293,7 +6295,7 @@ snapshots:
 
   temp@0.9.4:
     dependencies:
-      mkdirp: 0.5.1
+      mkdirp: 0.5.6
       rimraf: 2.6.3
 
   text-table@0.2.0: {}
@@ -6436,13 +6438,13 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  uuid@11.1.1: {}
+  uuid@14.0.0: {}
 
   verror@1.10.0:
     dependencies:
       assert-plus: 1.0.0
       core-util-is: 1.0.2
-      extsprintf: 1.4.1
+      extsprintf: 1.3.0
 
   victory-vendor@37.3.6:
     dependencies:
