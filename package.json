@@ -35,7 +35,7 @@
     "react-hook-form": "^7.85.0",
     "recharts": "^3.10.1",
     "sql.js": "^1.14.2",
-    "uuid": "^10.0.0",
+    "uuid": "^11.1.1",
     "zod": "^3.25.76",
     "zustand": "^4.5.7"
   },
@@ -78,7 +78,7 @@
       "tar": "^7.5.21",
       "node-tar": "^7.5.21",
       "extract-zip": "^2.0.1",
-      "builder-util-runtime": "^9.2.9",
+      "builder-util-runtime": "^9.3.0",
       "app-builder-lib": "^25.1.8",
       "postcss": "^8.5.3",
       "decompress": "^4.2.1",
@@ -87,7 +87,8 @@
       "http-proxy": "^1.18.1",
       "esbuild": "^0.25.0",
       "qs": "^6.14.1",
-      "uuid": "^11.1.0"
+      "uuid": "^11.1.1",
+      "request": "npm:@cypress/request@^3.0.0"
     }
   },
   "build": {

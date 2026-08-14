@@ -1615,8 +1615,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                 } else {
                   const pWin = window.open('', '_blank')
                   if (pWin) {
-                    pWin.document.open()
-                    pWin.document.write(html)
+                    pWin.document.documentElement.innerHTML = html
                     pWin.document.close()
                   }
                 }
@@ -1744,7 +1743,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                 } else {
                   const pWin = window.open('', '_blank')
                   if (pWin) {
-                    pWin.document.write(stickerHtml)
+                    pWin.document.documentElement.innerHTML = stickerHtml
                     pWin.document.close()
                   }
                 }

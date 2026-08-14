@@ -272,7 +272,7 @@ export async function printThermalReceipt(
   // Web fallback window print
   const printWindow = window.open('', '_blank', 'width=400,height=600')
   if (printWindow) {
-    printWindow.document.write(receiptHtml)
+    printWindow.document.documentElement.innerHTML = receiptHtml
     printWindow.document.close()
     return true
   }
