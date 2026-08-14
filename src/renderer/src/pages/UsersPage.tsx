@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { ArrowRight, ExternalLink, Plus, Trash2, Crown, Briefcase, UserCheck, Edit3, KeyRound } from 'lucide-react'
-import { Card, Input, Modal, Table } from '@/components/ui'
+import { Plus, Trash2, Crown, Briefcase, UserCheck, Edit3, KeyRound } from 'lucide-react'
+import { Card, Input, Modal, Table, PageHeader } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
@@ -261,49 +261,21 @@ export function UsersPage({ onBack }: { readonly onBack?: () => void }): React.J
     },
   ]
 
-  const isSecondaryWindow = typeof window !== 'undefined' && window.location.search.includes('module=')
-
   return (
     <div className="p-6 md:p-8 w-full max-w-none space-y-6 pb-12 select-none">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3.5">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
-              title={isSecondaryWindow ? t('إغلاق النافذة') : t('العودة')}
-            >
-              <ArrowRight className={`w-4 h-4 transform transition-transform ${document.documentElement.dir === 'rtl' ? '' : 'rotate-180'}`} />
-            </button>
-
-            {!isSecondaryWindow && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.electron?.openModuleWindow) {
-                    window.electron.openModuleWindow('users')
-                    if (onBack) onBack()
-                  }
-                }}
-                className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
-                title={t('فتح في نافذة خارجية جديدة')}
-              >
-                <ExternalLink className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          <h1 className="text-2xl font-black text-text-primary dark:text-slate-100">{t('إدارة المستخدمين والأدوار')}</h1>
-        </div>
-
+      <PageHeader
+        title={t('إدارة المستخدمين والأدوار')}
+        onBack={onBack}
+        moduleId="users"
+      >
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-bold shadow-ambient transition-all btn-press"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-bold shadow-ambient transition-all btn-press cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>{t('إضافة مستخدم جديد')}</span>
         </button>
-      </div>
+      </PageHeader>
 
       <Card padding="compact" className="overflow-hidden border border-gray-200/80 dark:border-slate-800">
         <Table
