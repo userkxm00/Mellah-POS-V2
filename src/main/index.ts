@@ -204,7 +204,7 @@ function registerIpcHandlers(): void {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (!win) return []
       const list = await win.webContents.getPrintersAsync().catch(() => [])
-      return list.map((p) => ({ name: p.name, isDefault: p.isDefault }))
+      return list.map((p) => ({ name: p.name, isDefault: Boolean((p as { isDefault?: boolean }).isDefault) }))
     } catch {
       // سكوت — Print Spooler service unavailable (native Chromium RPC error)
       return []
