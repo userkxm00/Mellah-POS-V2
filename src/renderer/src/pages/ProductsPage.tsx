@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
-  ArrowRight,
-  ExternalLink,
   Plus,
   FolderEdit,
   Search,
@@ -12,7 +10,7 @@ import {
   AlertTriangle,
   ShoppingCart
 } from 'lucide-react'
-import { Card, Button, Input, Table, Modal } from '@/components/ui'
+import { Card, Button, Input, Table, Modal, PageHeader } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { formatCurrency } from '@/lib/format'
 import { exportInventoryToCSV } from '@/services/exportService'
@@ -331,8 +329,6 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
     },
   ]
 
-  const isSecondaryWindow = typeof window !== 'undefined' && window.location.search.includes('module=')
-
   return (
     <div className="p-6 md:p-8 w-full max-w-none space-y-6 pb-12 select-none">
       {/* Hidden CSV File Input */}
@@ -345,128 +341,94 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
       />
 
       {/* Top Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3.5">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (onNavigateToPos) {
-                  onNavigateToPos()
-                } else {
-                  window.close()
-                }
-              }}
-              className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
-              title={isSecondaryWindow ? t('إغلاق النافذة') : t('العودة')}
-            >
-              <ArrowRight className={`w-4 h-4 transform transition-transform ${document.documentElement.dir === 'rtl' ? '' : 'rotate-180'}`} />
-            </button>
+      <PageHeader
+        title={t('إدارة المنتجات والمخزون')}
+        onNavigateToPos={onNavigateToPos}
+        moduleId="products"
+      >
+        <Button
+          variant="secondary"
+          onClick={() => csvImportInputRef.current?.click()}
+          className="flex items-center gap-1.5 h-10 px-3.5 rounded-2xl text-xs font-bold shadow-ambient-sm"
+        >
+          <FileText className="w-4 h-4 text-accent" />
+          <span>{t('استيراد CSV')}</span>
+        </Button>
 
-            {!isSecondaryWindow && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.electron?.openModuleWindow) {
-                    window.electron.openModuleWindow('products')
-                    if (onNavigateToPos) onNavigateToPos()
-                  }
-                }}
-                className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
-                title={t('فتح في نافذة خارجية جديدة')}
-              >
-                <ExternalLink className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          <h1 className="text-2xl font-black text-text-primary dark:text-slate-100">{t('إدارة المنتجات والمخزون')}</h1>
-        </div>
+        <Button
+          variant="secondary"
+          onClick={() => setIsBulkPriceModalOpen(true)}
+          className="flex items-center gap-1.5 h-10 px-3.5 rounded-2xl text-xs font-bold shadow-ambient-sm"
+        >
+          <SlidersHorizontal className="w-4 h-4 text-accent" />
+          <span>{t('تعديل الأسعار جماعياً')}</span>
+        </Button>
 
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant="secondary"
-            onClick={() => csvImportInputRef.current?.click()}
-            className="flex items-center gap-1.5 h-10 px-3.5 rounded-2xl text-xs font-bold shadow-ambient-sm"
-          >
-            <FileText className="w-4 h-4 text-accent" />
-            <span>{t('استيراد CSV')}</span>
-          </Button>
-
-          <Button
-            variant="secondary"
-            onClick={() => setIsBulkPriceModalOpen(true)}
-            className="flex items-center gap-1.5 h-10 px-3.5 rounded-2xl text-xs font-bold shadow-ambient-sm"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-accent" />
-            <span>{t('تعديل الأسعار جماعياً')}</span>
-          </Button>
-
-          <Button
-            variant="secondary"
-            onClick={async () => {
-              try {
-                const variantsRows = await window.electron.db.query<{
-                  barcode: string | null
-                  product_name: string
-                  category_name: string | null
-                  size: string | null
-                  color: string | null
-                  price_dzd: number
-                  current_stock: number
-                }>(`
-                  SELECT 
-                    v.barcode, p.name as product_name, c.name as category_name,
-                    v.size, v.color, COALESCE(v.price_dzd, p.price_dzd) as price_dzd,
-                    COALESCE(SUM(sm.quantity_change), 0) as current_stock
-                  FROM product_variants v
-                  JOIN products p ON p.id = v.product_id
-                  LEFT JOIN categories c ON c.id = p.category_id
-                  LEFT JOIN stock_movements sm ON sm.variant_id = v.id
-                  WHERE p.deleted_at IS NULL AND v.deleted_at IS NULL
-                  GROUP BY v.id
-                `)
-                if (variantsRows.length === 0) {
-                  addToast({ message: t('لا يوجد مخزون للتصدير حالياً'), variant: 'warning' })
-                  return
-                }
-                exportInventoryToCSV(variantsRows)
-                addToast({ message: t('تم تصدير تقرير المخزون لملف CSV بنجاح!'), variant: 'success' })
-              } catch (err) {// eslint-disable-next-line no-console
-      console.error("[ProductsPage]", err); addToast({ message: t('فشل تصدير بيانات المخزون'), variant: 'error' })
+        <Button
+          variant="secondary"
+          onClick={async () => {
+            try {
+              const variantsRows = await window.electron.db.query<{
+                barcode: string | null
+                product_name: string
+                category_name: string | null
+                size: string | null
+                color: string | null
+                price_dzd: number
+                current_stock: number
+              }>(`
+                SELECT 
+                  v.barcode, p.name as product_name, c.name as category_name,
+                  v.size, v.color, COALESCE(v.price_dzd, p.price_dzd) as price_dzd,
+                  COALESCE(SUM(sm.quantity_change), 0) as current_stock
+                FROM product_variants v
+                JOIN products p ON p.id = v.product_id
+                LEFT JOIN categories c ON c.id = p.category_id
+                LEFT JOIN stock_movements sm ON sm.variant_id = v.id
+                WHERE p.deleted_at IS NULL AND v.deleted_at IS NULL
+                GROUP BY v.id
+              `)
+              if (variantsRows.length === 0) {
+                addToast({ message: t('لا يوجد مخزون للتصدير حالياً'), variant: 'warning' })
+                return
               }
-            }}
-            className="flex items-center gap-1.5 h-10 px-3.5 rounded-2xl text-xs font-bold shadow-ambient-sm"
-          >
-            <FileText className="w-4 h-4" />
-            <span>{t('تصدير CSV')}</span>
-          </Button>
+              exportInventoryToCSV(variantsRows)
+              addToast({ message: t('تم تصدير تقرير المخزون لملف CSV بنجاح!'), variant: 'success' })
+            } catch (err) {// eslint-disable-next-line no-console
+    console.error("[ProductsPage]", err); addToast({ message: t('فشل تصدير بيانات المخزون'), variant: 'error' })
+            }
+          }}
+          className="flex items-center gap-1.5 h-10 px-3.5 rounded-2xl text-xs font-bold shadow-ambient-sm"
+        >
+          <FileText className="w-4 h-4" />
+          <span>{t('تصدير CSV')}</span>
+        </Button>
 
-          <Button
-            variant="secondary"
-            onClick={handleOpenAutoReorder}
-            className="flex items-center gap-1.5 h-10 px-3.5 rounded-2xl text-xs font-bold border-warning/30 bg-warning/5 text-warning shadow-ambient-sm hover:bg-warning/10"
-          >
-            <ShoppingCart className="w-4 h-4 text-warning" />
-            <span>{t('طلب تزود (PO)')}</span>
-          </Button>
+        <Button
+          variant="secondary"
+          onClick={handleOpenAutoReorder}
+          className="flex items-center gap-1.5 h-10 px-3.5 rounded-2xl text-xs font-bold border-warning/30 bg-warning/5 text-warning shadow-ambient-sm hover:bg-warning/10"
+        >
+          <ShoppingCart className="w-4 h-4 text-warning" />
+          <span>{t('طلب تزود (PO)')}</span>
+        </Button>
 
-          <button
-            onClick={() => setIsCategoriesModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200/80 text-text-primary text-xs font-bold shadow-ambient-sm hover:bg-gray-100 transition-all btn-press"
-          >
-            <FolderEdit className="w-4 h-4 text-text-secondary" />
-            <span>{t('الفئات')}</span>
-          </button>
+        <button
+          onClick={() => setIsCategoriesModalOpen(true)}
+          className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200/80 text-text-primary text-xs font-bold shadow-ambient-sm hover:bg-gray-100 transition-all btn-press"
+        >
+          <FolderEdit className="w-4 h-4 text-text-secondary" />
+          <span>{t('الفئات')}</span>
+        </button>
 
-          <button
-            onClick={() => setView('add')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-bold shadow-ambient transition-all btn-press"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t('إضافة منتج جديد')}</span>
-          </button>
-        </div>
-      </div>
+        <button
+          onClick={() => setView('add')}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-xs font-bold shadow-ambient transition-all btn-press"
+        >
+          <Plus className="w-4 h-4" />
+          <span>{t('إضافة منتج جديد')}</span>
+        </button>
+      </PageHeader>
 
       {/* Catalog Filters & Search */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
