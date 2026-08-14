@@ -11,4 +11,4 @@ export { KeyboardShortcutsModal } from './KeyboardShortcutsModal'
 export { CountUpNumber } from './CountUpNumber'
 export { EmptyState } from './EmptyState'
 export { ConfettiBurst } from './ConfettiBurst'
-
+export { PageHeader } from './PageHeader'
