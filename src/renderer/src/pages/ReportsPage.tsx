@@ -55,19 +55,28 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
   const [cloudBranchData, setCloudBranchData] = useState<CloudBranchRevenueRow[]>([])
   const [dailyChartData, setDailyChartData] = useState<DailyChartPoint[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [period, setPeriod] = useState<'all' | '7d' | '30d' | '90d'>('all')
+  const [period, setPeriod] = useState<'today' | '7d' | '30d' | '90d' | 'custom' | 'all'>('all')
+  const [customStartDate, setCustomStartDate] = useState<string>(() => new Date().toISOString().split('T')[0])
+  const [customEndDate, setCustomEndDate] = useState<string>(() => new Date().toISOString().split('T')[0])
 
   const addToast = useToastStore((s) => s.addToast)
 
   const getPeriodDates = useCallback((): { start?: string; end?: string } => {
     if (period === 'all') return {}
     const end = new Date().toISOString().split('T')[0]
+    if (period === 'today') return { start: end, end }
+    if (period === 'custom') {
+      if (customStartDate && customEndDate) {
+        return { start: customStartDate, end: customEndDate }
+      }
+      return {}
+    }
     const startDateObj = new Date()
     if (period === '7d') startDateObj.setDate(startDateObj.getDate() - 7)
     if (period === '30d') startDateObj.setDate(startDateObj.getDate() - 30)
     if (period === '90d') startDateObj.setDate(startDateObj.getDate() - 90)
     return { start: startDateObj.toISOString().split('T')[0], end }
-  }, [period])
+  }, [period, customStartDate, customEndDate])
 
   const loadReports = useCallback(async () => {
     setIsLoading(true)
@@ -227,39 +236,76 @@ export function ReportsPage({ onBack }: { onBack?: () => void }): React.JSX.Elem
         onBack={onBack}
         moduleId="reports"
       >
-        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold">
-          <button
-            onClick={() => setPeriod('all')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              period === 'all' ? 'bg-white text-accent shadow-sm font-black' : 'text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            كل الوقت
-          </button>
-          <button
-            onClick={() => setPeriod('7d')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              period === '7d' ? 'bg-white text-accent shadow-sm font-black' : 'text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            آخر 7 أيام
-          </button>
-          <button
-            onClick={() => setPeriod('30d')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              period === '30d' ? 'bg-white text-accent shadow-sm font-black' : 'text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            آخر 30 يوم
-          </button>
-          <button
-            onClick={() => setPeriod('90d')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              period === '90d' ? 'bg-white text-accent shadow-sm font-black' : 'text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            آخر 90 يوم
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-900 p-1 rounded-xl text-xs font-bold border border-gray-200/80 dark:border-slate-800">
+            <button
+              onClick={() => setPeriod('all')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                period === 'all' ? 'bg-white dark:bg-slate-800 text-accent shadow-sm font-black' : 'text-text-secondary dark:text-slate-400 hover:text-text-primary'
+              }`}
+            >
+              {t('كل الوقت')}
+            </button>
+            <button
+              onClick={() => setPeriod('today')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                period === 'today' ? 'bg-white dark:bg-slate-800 text-accent shadow-sm font-black' : 'text-text-secondary dark:text-slate-400 hover:text-text-primary'
+              }`}
+            >
+              {t('اليوم')}
+            </button>
+            <button
+              onClick={() => setPeriod('7d')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                period === '7d' ? 'bg-white dark:bg-slate-800 text-accent shadow-sm font-black' : 'text-text-secondary dark:text-slate-400 hover:text-text-primary'
+              }`}
+            >
+              {t('آخر 7 أيام')}
+            </button>
+            <button
+              onClick={() => setPeriod('30d')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                period === '30d' ? 'bg-white dark:bg-slate-800 text-accent shadow-sm font-black' : 'text-text-secondary dark:text-slate-400 hover:text-text-primary'
+              }`}
+            >
+              {t('آخر 30 يوم')}
+            </button>
+            <button
+              onClick={() => setPeriod('90d')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                period === '90d' ? 'bg-white dark:bg-slate-800 text-accent shadow-sm font-black' : 'text-text-secondary dark:text-slate-400 hover:text-text-primary'
+              }`}
+            >
+              {t('آخر 90 يوم')}
+            </button>
+            <button
+              onClick={() => setPeriod('custom')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                period === 'custom' ? 'bg-white dark:bg-slate-800 text-accent shadow-sm font-black' : 'text-text-secondary dark:text-slate-400 hover:text-text-primary'
+              }`}
+            >
+              {t('📅 تاريخ مخصص')}
+            </button>
+          </div>
+
+          {period === 'custom' && (
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1 rounded-xl border border-accent/40 shadow-sm animate-fade-in">
+              <span className="text-xs font-bold text-text-tertiary">{t('من:')}</span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="bg-transparent text-xs font-bold text-text-primary dark:text-slate-100 outline-none cursor-pointer"
+              />
+              <span className="text-xs font-bold text-text-tertiary">{t('إلى:')}</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="bg-transparent text-xs font-bold text-text-primary dark:text-slate-100 outline-none cursor-pointer"
+              />
+            </div>
+          )}
         </div>
 
         <button
