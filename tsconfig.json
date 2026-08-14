@@ -20,7 +20,7 @@
       "@main/*": ["src/main/*"],
       "@preload/*": ["src/preload/*"]
     },
-    "types": ["node", "vite/client"]
+    "types": ["node"]
   },
   "include": [
     "src/**/*.ts",
