@@ -19,53 +19,58 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@fontsource/inter": "^5.0.0",
-    "@hookform/resolvers": "^3.9.0",
+    "@fontsource/inter": "^5.3.0",
+    "@hookform/resolvers": "^3.10.0",
     "@supabase/server": "^1.4.1",
-    "@supabase/supabase-js": "^2.110.8",
+    "@supabase/supabase-js": "^2.112.3",
     "@types/jsbarcode": "^3.11.4",
     "bcryptjs": "^3.0.3",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.8.9",
     "fs-extra": "^11.4.0",
     "jsbarcode": "^3.12.3",
-    "lucide-react": "^1.26.0",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
-    "react-hook-form": "^7.53.0",
-    "recharts": "^3.10.0",
-    "sql.js": "^1.14.1",
+    "lucide-react": "^1.31.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.85.0",
+    "recharts": "^3.10.1",
+    "sql.js": "^1.14.2",
     "uuid": "^10.0.0",
-    "zod": "^3.23.0",
-    "zustand": "^4.5.0"
+    "zod": "^3.25.76",
+    "zustand": "^4.5.7"
   },
   "devDependencies": {
-    "@electron-toolkit/preload": "^3.0.0",
+    "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^3.0.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/bcryptjs": "^3.0.0",
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^26.1.1",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
+    "@types/node": "^26.2.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
     "@types/sql.js": "^1.4.11",
     "@types/uuid": "^10.0.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "@vitejs/plugin-react": "^4.3.0",
-    "autoprefixer": "^10.4.0",
-    "electron": "^39.0.0",
-    "electron-builder": "^24.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.5.4",
+    "electron": "^39.8.10",
+    "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
-    "eslint": "^8.57.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.0",
-    "postcss": "^8.4.0",
-    "tailwindcss": "^3.4.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^3.4.19",
     "to-ico": "^1.1.5",
-    "typescript": "^5.5.0",
-    "vite": "^5.4.21",
-    "vitest": "^3.0.0"
+    "typescript": "^5.9.3",
+    "vite": "^6.2.0",
+    "vitest": "^3.2.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   },
   "build": {
     "appId": "com.mellah.pos",
@@ -104,10 +109,5 @@
       "uninstallerSidebar": "build/installer_sidebar.bmp"
     }
   },
-  "packageManager": "pnpm@10.32.0",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  }
+  "packageManager": "pnpm@10.32.0"
 }
