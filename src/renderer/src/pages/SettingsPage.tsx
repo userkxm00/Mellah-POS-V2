@@ -1613,10 +1613,11 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                 if (window.electron?.printHtml) {
                   window.electron.printHtml(html, selectedPrinter)
                 } else {
-                  const pWin = window.open('', '_blank')
+                  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+                  const blobUrl = URL.createObjectURL(blob)
+                  const pWin = window.open(blobUrl, '_blank')
                   if (pWin) {
-                    pWin.document.documentElement.innerHTML = html
-                    pWin.document.close()
+                    pWin.onload = () => URL.revokeObjectURL(blobUrl)
                   }
                 }
               }}
@@ -1741,10 +1742,11 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
                 if (window.electron?.printHtml) {
                   window.electron.printHtml(stickerHtml, selectedPrinter)
                 } else {
-                  const pWin = window.open('', '_blank')
+                  const blob = new Blob([stickerHtml], { type: 'text/html;charset=utf-8' })
+                  const blobUrl = URL.createObjectURL(blob)
+                  const pWin = window.open(blobUrl, '_blank')
                   if (pWin) {
-                    pWin.document.documentElement.innerHTML = stickerHtml
-                    pWin.document.close()
+                    pWin.onload = () => URL.revokeObjectURL(blobUrl)
                   }
                 }
               }}

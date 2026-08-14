@@ -270,10 +270,13 @@ export async function printThermalReceipt(
   }
 
   // Web fallback window print
-  const printWindow = window.open('', '_blank', 'width=400,height=600')
+  const blob = new Blob([receiptHtml], { type: 'text/html;charset=utf-8' })
+  const blobUrl = URL.createObjectURL(blob)
+  const printWindow = window.open(blobUrl, '_blank', 'width=400,height=600')
   if (printWindow) {
-    printWindow.document.documentElement.innerHTML = receiptHtml
-    printWindow.document.close()
+    printWindow.onload = () => {
+      URL.revokeObjectURL(blobUrl)
+    }
     return true
   }
   return false

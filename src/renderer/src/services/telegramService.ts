@@ -131,7 +131,7 @@ export async function getTelegramCredentials(): Promise<TelegramCredentials> {
  */
 export function escapeMarkdown(text: string | null | undefined): string {
   if (!text) return ''
-  return text.replace(/([\\_*[\]()~`>#+=\-|{}.!])/g, '\\$1')
+  return text.replace(/[\\_*[\]()~`>#+\-=|{}.!]/g, '\\$&')
 }
 
 /**
