@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import {
-  ArrowRight,
-  ExternalLink,
   Wrench,
   Database,
   HardDrive,
@@ -16,7 +14,7 @@ import {
   Zap,
   Activity,
 } from 'lucide-react'
-import { Card } from '@/components/ui'
+import { Card, PageHeader } from '@/components/ui'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useToastStore } from '@/stores/toastStore'
 
@@ -192,49 +190,14 @@ export function MaintenancePage({ onBack }: { onBack?: () => void }): React.JSX.
     }
   }
 
-  const isSecondaryWindow = typeof window !== 'undefined' && window.location.search.includes('module=')
-
   return (
     <div className="min-h-screen p-6 md:p-8 w-full max-w-none space-y-6 pb-12 select-none dark:bg-slate-950">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3.5">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (onBack) onBack()
-                else window.close()
-              }}
-              className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
-              title={isSecondaryWindow ? t('إغلاق النافذة') : t('العودة')}
-            >
-              <ArrowRight className={`w-4 h-4 transform transition-transform ${document.documentElement.dir === 'rtl' ? '' : 'rotate-180'}`} />
-            </button>
-
-            {!isSecondaryWindow && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.electron?.openModuleWindow) {
-                    window.electron.openModuleWindow('maintenance')
-                    if (onBack) onBack()
-                  }
-                }}
-                className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
-                title={t('فتح في نافذة خارجية جديدة')}
-              >
-                <ExternalLink className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-text-primary dark:text-slate-100">{t('الصيانة والتحديثات')}</h1>
-            <p className="text-sm text-text-tertiary mt-0.5">
-              {t('أدوات الفحص والإصلاح وتحديث النظام')}
-            </p>
-          </div>
-        </div>
+      <PageHeader
+        title={t('الصيانة والتحديثات')}
+        onBack={onBack}
+        moduleId="maintenance"
+      >
 
         <button
           onClick={runFullMaintenance}
@@ -248,7 +211,7 @@ export function MaintenancePage({ onBack }: { onBack?: () => void }): React.JSX.
           )}
           <span>{isRunningFull ? t('جاري الصيانة الشاملة...') : t('صيانة شاملة')}</span>
         </button>
-      </div>
+      </PageHeader>
 
       {/* System Info Cards */}
       <div className="grid grid-cols-3 gap-4">
