@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { ArrowRight, ExternalLink, Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode, FolderOpen, RefreshCw, HardDrive, Moon, Sun, Volume2, VolumeX, Send, Bell, Sparkles, Award } from 'lucide-react'
-import { Card, Input, Modal, Button } from '@/components/ui'
+import { Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode, FolderOpen, RefreshCw, HardDrive, Moon, Sun, Volume2, VolumeX, Send, Bell, Sparkles, Award } from 'lucide-react'
+import { Card, Input, Modal, Button, PageHeader } from '@/components/ui'
 import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { exportDatabaseBackup, importDatabaseBackup } from '@/services/backupService'
 import { useToastStore } from '@/stores/toastStore'
@@ -440,41 +440,13 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
     },
   ]
 
-  const isSecondaryWindow = typeof window !== 'undefined' && window.location.search.includes('module=')
-
   return (
     <div className="p-6 md:p-8 w-full max-w-none space-y-6 pb-12 select-none">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3.5">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
-              title={isSecondaryWindow ? t('إغلاق النافذة') : t('العودة')}
-            >
-              <ArrowRight className={`w-4 h-4 transform transition-transform ${document.documentElement.dir === 'rtl' ? '' : 'rotate-180'}`} />
-            </button>
-
-            {!isSecondaryWindow && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.electron?.openModuleWindow) {
-                    window.electron.openModuleWindow('settings')
-                    if (onBack) onBack()
-                  }
-                }}
-                className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 text-text-secondary dark:text-slate-300 hover:text-accent hover:border-accent/40 shadow-layered-sm transition-all duration-200 btn-press cursor-pointer shrink-0"
-                title={t('فتح في نافذة خارجية جديدة')}
-              >
-                <ExternalLink className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          <h1 className="text-2xl font-black text-text-primary dark:text-slate-100">{t('إعدادات المتجر وطابعة الفواتير واللغة والنسخ الاحتياطي')}</h1>
-        </div>
-      </div>
+      <PageHeader
+        title={t('إعدادات المتجر وطابعة الفواتير واللغة والنسخ الاحتياطي')}
+        onBack={onBack}
+        moduleId="settings"
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Sleek Translucent Glass Sidebar (macOS Style) */}
