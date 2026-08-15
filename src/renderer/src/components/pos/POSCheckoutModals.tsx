@@ -239,6 +239,13 @@ export function POSCheckoutModals({
               onClick={() => {
                 const cash = Number.parseFloat(mixedCashInput) || 0
                 const card = Number.parseFloat(mixedCardInput) || 0
+                if (cash <= 0 || card <= 0 || Math.abs(cash + card - cartTotal) > 0.01) {
+                  addToast({
+                    message: t('مجموع الدفع النقدي والبطاقة يجب أن يساوي إجمالي الفاتورة وأن يكون كلاهما أكبر من الصفر'),
+                    variant: 'error',
+                  })
+                  return
+                }
                 setMixedAmounts(cash, card)
                 setIsMixedModalOpen(false)
                 addToast({ message: t('تم حفظ تقسيم الدفع المختلط بنجاح!'), variant: 'success' })

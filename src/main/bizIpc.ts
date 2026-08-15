@@ -93,8 +93,34 @@ export function registerBizIpcHandlers(): void {
         throw new Error('السلة فارغة')
       }
 
-      if (payload.paymentMethod === 'credit' && !payload.customerId) {
-        throw new Error('يجب تحديد الزبون عند البيع بالتقسيط / الكريدي')
+      if (!payload.shiftId) {
+        throw new Error('يجب تحديد وردية العمل')
+      }
+
+      // Verify Shift Existence, Assignment & Open Status
+      const shiftRows = await db.query<{ id: string; cashier_id: string; branch_id: string; status: string }>(
+        'SELECT id, cashier_id, branch_id, status FROM shifts WHERE id = ?',
+        [payload.shiftId]
+      )
+      if (shiftRows.length === 0) {
+        throw new Error('الوردية المحددة غير موجودة')
+      }
+      const targetShift = shiftRows[0]
+      if (targetShift.branch_id !== branchId || targetShift.cashier_id !== cashierId) {
+        throw new Error('الوردية المحددة لا تنتمي للمستخدم أو الفرع الحالي')
+      }
+      if (targetShift.status !== 'open') {
+        throw new Error('الوردية مغلقة ولا يمكن إجراء مبيعات عليها')
+      }
+
+      // Validate Items & Quantities
+      for (const item of payload.items) {
+        if (!item.quantity || !Number.isInteger(item.quantity) || item.quantity <= 0) {
+          throw new Error(`كمية المنتج "${item.product_name || item.variant_id}" غير صالحة`)
+        }
+        if (typeof item.unit_price_dzd !== 'number' || Number.isNaN(item.unit_price_dzd) || item.unit_price_dzd < 0) {
+          throw new Error(`سعر المنتج "${item.product_name || item.variant_id}" غير صالح`)
+        }
       }
 
       // Deterministic error handling: ensure generic product & variant exist without silent .catch swallowing
@@ -123,6 +149,21 @@ export function registerBizIpcHandlers(): void {
       // Stock Check for non-custom items
       for (const item of payload.items) {
         if (item.variant_id.startsWith('v-custom-')) continue
+
+        const varRows = await db.query<{ id: string; branch_id: string; product_deleted: string | null; variant_deleted: string | null }>(
+          `SELECT v.id, v.branch_id, p.deleted_at as product_deleted, v.deleted_at as variant_deleted
+           FROM product_variants v
+           JOIN products p ON p.id = v.product_id
+           WHERE v.id = ?`,
+          [item.variant_id]
+        )
+        if (varRows.length === 0 || varRows[0].variant_deleted || varRows[0].product_deleted) {
+          throw new Error(`المنتج "${item.product_name}" محذوف أو غير موجود في القاعدة`)
+        }
+        if (varRows[0].branch_id !== branchId) {
+          throw new Error(`المنتج "${item.product_name}" لا ينتمي لفرع المستخدم الحالي`)
+        }
+
         const stockRows = await db.query<{ current_stock: number }>(
           `SELECT COALESCE(SUM(quantity_change), 0) as current_stock FROM stock_movements WHERE variant_id = ? AND branch_id = ?`,
           [item.variant_id, branchId]
@@ -146,15 +187,26 @@ export function registerBizIpcHandlers(): void {
 
       if (payload.paymentMethod === 'cash') {
         cashPaid = totalDzd
+        cardPaid = 0
       } else if (payload.paymentMethod === 'card') {
+        cashPaid = 0
         cardPaid = totalDzd
       } else if (payload.paymentMethod === 'mixed') {
-        cashPaid = payload.mixedCashDzd ?? totalDzd / 2
-        cardPaid = payload.mixedCardDzd ?? totalDzd / 2
+        const mixedCash = payload.mixedCashDzd ?? 0
+        const mixedCard = payload.mixedCardDzd ?? 0
+        if (mixedCash <= 0 || mixedCard <= 0 || Math.abs(mixedCash + mixedCard - totalDzd) > 0.01) {
+          throw new Error('في حالة الدفع المختلط، يجب أن تكون مبالغ النقدي والبطاقة أكبر من الصفر ومجموعهما يساوي إجمالي الفاتورة بالضبط')
+        }
+        cashPaid = mixedCash
+        cardPaid = mixedCard
       } else if (payload.paymentMethod === 'credit') {
+        if (!payload.customerId) {
+          throw new Error('يجب تحديد الزبون عند البيع بالتقسيط / الكريدي')
+        }
         paidAmountDzd = Math.min(totalDzd, Math.max(0, payload.creditDepositDzd ?? 0))
         remainingDebtDzd = totalDzd - paidAmountDzd
         cashPaid = paidAmountDzd
+        cardPaid = 0
       }
 
       const operations: Array<{ sql: string; params: unknown[] }> = []
@@ -217,7 +269,7 @@ export function registerBizIpcHandlers(): void {
         params: [generateUUID(), cashierId, saleId, `إتمام عملية بيع بمبلغ ${totalDzd} دج (${payload.paymentMethod})`, now],
       })
 
-      // Sync Queue Enqueue inside transaction
+      // Sync Queue Enqueue inside transaction (includes split cash_amount_dzd and card_amount_dzd)
       operations.push({
         sql: `INSERT INTO sync_queue (id, table_name, operation, payload, created_at, attempts) VALUES (?, 'sales', 'insert', ?, ?, 0)`,
         params: [
@@ -230,6 +282,8 @@ export function registerBizIpcHandlers(): void {
             total_dzd: totalDzd,
             subtotal_dzd: subtotalDzd,
             discount_dzd: discountVal,
+            cash_amount_dzd: cashPaid,
+            card_amount_dzd: cardPaid,
             payment_method: payload.paymentMethod,
             status: 'completed',
             created_at: now,
@@ -247,6 +301,7 @@ export function registerBizIpcHandlers(): void {
       return { saleId, totalDzd, itemCount: payload.items.length }
     }
   )
+
 
   // ── Void Sale (Derives branch_id from Original Sale) ──
   ipcMain.handle('biz:sales:void', async (_event, saleId: string, reason: string, items: Array<{ variant_id: string; quantity: number }>) => {
@@ -453,6 +508,14 @@ export function registerBizIpcHandlers(): void {
     const branchId = validateBranchAccess(session, targetBranchId)
     const db = await whenDatabaseReady()
 
+    const existingOpen = await db.query<{ id: string }>(
+      `SELECT id FROM shifts WHERE branch_id = ? AND cashier_id = ? AND status = 'open'`,
+      [branchId, session.userId]
+    )
+    if (existingOpen.length > 0) {
+      throw new Error('يوجد وردية مفتوحة بالفعل لهذا الكاشير في هذا الفرع')
+    }
+
     const shiftId = generateUUID()
     const now = new Date().toISOString()
 
@@ -486,7 +549,7 @@ export function registerBizIpcHandlers(): void {
 
     const openingCash = targetShift.opening_cash_dzd
     const salesRows = await db.query<{ total_cash_sales: number | null }>(
-      `SELECT SUM(cash_amount_dzd) as total_cash_sales FROM sales WHERE shift_id = ? AND status = 'completed'`,
+      `SELECT SUM(cash_amount_dzd) as total_cash_sales FROM sales WHERE shift_id = ? AND status != 'voided'`,
       [shiftId]
     )
     const totalCashSales = salesRows[0]?.total_cash_sales ?? 0
@@ -497,7 +560,17 @@ export function registerBizIpcHandlers(): void {
     )
     const totalRepayments = repaymentRows[0]?.total_repayments ?? 0
 
-    const expectedCash = openingCash + totalCashSales + totalRepayments
+    const returnRows = await db.query<{ total_cash_refunds: number | null }>(
+      `SELECT SUM(r.quantity * si.unit_price_dzd) as total_cash_refunds 
+       FROM returns r 
+       JOIN sale_items si ON si.sale_id = r.original_sale_id AND si.variant_id = r.variant_id 
+       JOIN sales s ON s.id = r.original_sale_id 
+       WHERE s.shift_id = ? AND r.refund_method = 'cash'`,
+      [shiftId]
+    )
+    const totalCashRefunds = returnRows[0]?.total_cash_refunds ?? 0
+
+    const expectedCash = openingCash + totalCashSales + totalRepayments - totalCashRefunds
     const difference = closingCashDzd - expectedCash
     const now = new Date().toISOString()
 

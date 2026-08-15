@@ -16,6 +16,7 @@ export function useBarcodeScanner({
   debounceMs = 300,
 }: BarcodeScannerOptions): void {
   const bufferRef = useRef<string>('')
+  const bufferStartTimeRef = useRef<number>(0)
   const lastKeyTimeRef = useRef<number>(0)
   const lastScannedBarcodeRef = useRef<string>('')
   const lastScanTimeRef = useRef<number>(0)
@@ -25,7 +26,6 @@ export function useBarcodeScanner({
       // Ignore modifier keys
       if (e.ctrlKey || e.altKey || e.metaKey) return
 
-      // Ignore input elements if human is typing inside text inputs, EXCEPT if it's barcode scanning
       const target = e.target as HTMLElement | null
       const isInput =
         target &&
@@ -36,7 +36,7 @@ export function useBarcodeScanner({
       const currentTime = Date.now()
       const timeDiff = currentTime - lastKeyTimeRef.current
 
-      // If key press interval is greater than threshold, reset buffer (human typing)
+      // If key press interval is greater than threshold, reset buffer (human typing delay)
       if (timeDiff > thresholdMs && bufferRef.current.length > 0) {
         bufferRef.current = ''
       }
@@ -45,7 +45,14 @@ export function useBarcodeScanner({
 
       if (e.key === 'Enter') {
         const barcode = bufferRef.current.trim()
+        const totalDuration = currentTime - bufferStartTimeRef.current
+        const avgKeyTime = barcode.length > 0 ? totalDuration / barcode.length : 999
         bufferRef.current = ''
+
+        // Human typing in input field should NOT trigger barcode scan
+        if (isInput && avgKeyTime > thresholdMs) {
+          return
+        }
 
         if (barcode.length >= 3) {
           // Prevent rapid duplicate scans within debounce window
@@ -61,13 +68,15 @@ export function useBarcodeScanner({
           lastScanTimeRef.current = currentTime
 
           if (isInput) {
-            // Prevent submitting forms
             e.preventDefault()
           }
 
           onScan(barcode)
         }
       } else if (e.key.length === 1) {
+        if (bufferRef.current.length === 0) {
+          bufferStartTimeRef.current = currentTime
+        }
         bufferRef.current += e.key
       }
     }
