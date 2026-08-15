@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { useAuthStore } from './authStore'
-import { DEFAULT_BRANCH_ID } from './shiftStore'
 
 export interface StoreSettings {
   store_name: string
@@ -84,7 +83,7 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
                 COALESCE(barcode_label_language, 'ar') as barcode_label_language,
                 COALESCE(barcode_label_size, '50x25') as barcode_label_size
          FROM store_settings WHERE branch_id = ?`,
-        [activeBranch?.id ?? DEFAULT_BRANCH_ID]
+        [activeBranch.id]
       )
       if (rows.length > 0) {
         set({

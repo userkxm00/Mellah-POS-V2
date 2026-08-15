@@ -107,7 +107,7 @@ export const useShiftStore = create<ShiftState>((set) => ({
       }
 
       sendShiftOpenedTelegramNotification({
-        cashierName: useAuthStore.getState().currentUser?.fullName || 'الكاشير',
+        cashierName: useAuthStore.getState().currentUser?.full_name || 'الكاشير',
         openingCashDzd,
         branchName: useAuthStore.getState().currentBranch?.name || 'الفرع الرئيسي',
         openedAt: now,

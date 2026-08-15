@@ -1,14 +1,16 @@
 import { generateUUID } from '@/lib/uuid'
 import { logger } from '@/lib/logger'
 import { useAuthStore } from '@/stores/authStore'
-import { DEFAULT_BRANCH_ID, DEFAULT_CASHIER_ID } from '@/stores/shiftStore'
 
 function getActiveUserAndBranch(): { cashierId: string; branchId: string } {
   const user = useAuthStore.getState().currentUser
   const branch = useAuthStore.getState().currentBranch
+  if (!user || !branch) {
+    throw new Error('لا توجد جلسة مستخدم أو فرع نشط. يرجى تسجيل الدخول أولاً')
+  }
   return {
-    cashierId: user?.id ?? DEFAULT_CASHIER_ID,
-    branchId: branch?.id ?? DEFAULT_BRANCH_ID,
+    cashierId: user.id,
+    branchId: branch.id,
   }
 }
 

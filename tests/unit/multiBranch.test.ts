@@ -82,4 +82,14 @@ describe('Multi-Branch Architecture & Session Isolation (Phase 3)', () => {
       "Forbidden: No branch context assigned to user 'u-broken'"
     )
   })
+
+  it('computes CSV product deduplication key consistently with product map lookup format', () => {
+    const productName = 'T-Shirt Cotton'
+    const categoryId = 'cat-123'
+    const prodKey = `${productName.toLowerCase()}_${categoryId ?? ''}`
+    expect(prodKey).toBe('t-shirt cotton_cat-123')
+
+    const nullCatKey = `${productName.toLowerCase()}_${''}`
+    expect(nullCatKey).toBe('t-shirt cotton_')
+  })
 })

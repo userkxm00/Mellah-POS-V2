@@ -85,7 +85,7 @@ export async function processCSVProductRow(
     }
   }
 
-  const prodKey = productName.toLowerCase()
+  const prodKey = `${productName.toLowerCase()}_${categoryId ?? ''}`
   let productId: string
   const now = new Date().toISOString()
 
