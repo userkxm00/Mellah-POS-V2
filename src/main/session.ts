@@ -32,19 +32,20 @@ export function requireRole(session: MainSession, allowedRoles: UserRole[]): voi
 }
 
 export function validateBranchAccess(session: MainSession, requestedBranchId?: string): string {
+  if (!session.branchId && !requestedBranchId) {
+    throw new Error(`Forbidden: No branch context assigned to user '${session.userId}'`)
+  }
+
   if (session.role === 'cashier') {
     return session.branchId
   }
 
-  if (!requestedBranchId) {
-    return session.branchId
-  }
-
-  if (!session.allowedBranchIds.includes(requestedBranchId)) {
+  const targetBranch = requestedBranchId || session.branchId
+  if (!session.allowedBranchIds.includes(targetBranch)) {
     throw new Error(
-      `Forbidden: User '${session.userId}' is not authorized for branch '${requestedBranchId}'`
+      `Forbidden: User '${session.userId}' is not authorized for branch '${targetBranch}'`
     )
   }
 
-  return requestedBranchId
+  return targetBranch
 }

@@ -7,7 +7,6 @@ import { StockAdjustmentModal } from '@/components/products/StockAdjustmentModal
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useAuthStore } from '@/stores/authStore'
-import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 import { generateUUID } from '@/lib/uuid'
 import { recordAuditLog } from '@/services/auditLogService'
 import type { ProductVariantWithStock } from '@/types/database'
@@ -98,7 +97,8 @@ export function ProductDetailPage({
     setIsLoading(true)
     try {
       const activeBranch = useAuthStore.getState().currentBranch
-      const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+      if (!activeBranch) return
+      const branchId = activeBranch.id
 
       const prods = await window.electron.db.query<{
         id: string
@@ -146,7 +146,8 @@ export function ProductDetailPage({
   const loadCategories = useCallback(async () => {
     try {
       const activeBranch = useAuthStore.getState().currentBranch
-      const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+      if (!activeBranch) return
+      const branchId = activeBranch.id
 
       const rows = await window.electron.db.query<CategoryOption>(
         `SELECT id, name FROM categories WHERE branch_id = ? AND deleted_at IS NULL ORDER BY name`,
@@ -234,7 +235,9 @@ export function ProductDetailPage({
     try {
       const variantId = generateUUID()
       const now = new Date().toISOString()
-      const branchId = useAuthStore.getState().currentBranch?.id ?? DEFAULT_BRANCH_ID
+      const activeBranch = useAuthStore.getState().currentBranch
+      if (!activeBranch) throw new Error('لا توجد جلسة فرع نشطة')
+      const branchId = activeBranch.id
 
       await window.electron.db.execute(
         `INSERT INTO product_variants (id, product_id, branch_id, size, color, barcode, price_dzd, created_at, updated_at)

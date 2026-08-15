@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useAuthStore } from './authStore'
 import { DEFAULT_BRANCH_ID } from './shiftStore'
 
 export interface StoreSettings {
@@ -49,6 +50,8 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
 
   loadSettings: async () => {
     try {
+      const activeBranch = useAuthStore.getState().currentBranch
+      if (!activeBranch) return
 
       const rows = await window.electron.db.query<{
         store_name: string
@@ -81,7 +84,7 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
                 COALESCE(barcode_label_language, 'ar') as barcode_label_language,
                 COALESCE(barcode_label_size, '50x25') as barcode_label_size
          FROM store_settings WHERE branch_id = ?`,
-        [DEFAULT_BRANCH_ID]
+        [activeBranch?.id ?? DEFAULT_BRANCH_ID]
       )
       if (rows.length > 0) {
         set({

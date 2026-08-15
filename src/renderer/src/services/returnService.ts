@@ -1,6 +1,5 @@
 import { generateUUID } from '@/lib/uuid'
 import { logger } from '@/lib/logger'
-import { DEFAULT_BRANCH_ID, DEFAULT_CASHIER_ID } from '@/stores/shiftStore'
 import { useAuthStore } from '@/stores/authStore'
 import { enqueueSyncOperation } from './syncEngine'
 import type { PaymentMethod } from '@/types/database'
@@ -126,8 +125,11 @@ export async function processReturn(
   // Resolve authenticated cashier and branch — never fall back silently to defaults in financial records
   const activeUser = useAuthStore.getState().currentUser
   const activeBranch = useAuthStore.getState().currentBranch
-  const cashierId = activeUser?.id ?? DEFAULT_CASHIER_ID
-  const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+  const cashierId = activeUser?.id
+  const branchId = activeBranch?.id
+  if (!cashierId || !branchId) {
+    throw new Error('لا توجد جلسة مستخدم أو فرع نشط. يرجى تسجيل الدخول أولاً')
+  }
 
   const now = new Date().toISOString()
   const operations: Array<{ sql: string; params: unknown[] }> = []

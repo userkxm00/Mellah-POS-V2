@@ -1,6 +1,7 @@
 import { generateUUID } from '@/lib/uuid'
 import { logger } from '@/lib/logger'
 import { useSyncStore } from '@/stores/syncStore'
+import { useAuthStore } from '@/stores/authStore'
 import { supabase } from '@/lib/supabase'
 import type { SyncQueueEntry, SyncOperation } from '@/types/database'
 
@@ -72,21 +73,14 @@ export async function checkRealConnectivity(): Promise<boolean> {
 
     useSyncStore.getState().setOnlineStatus(true)
     return true
-  } catch (err) {// eslint-disable-next-line no-console
-      console.error("[syncEngine]", err); // If ping fails (e.g. offline local network), use navigator.onLine fallback
+  } catch (err) {
+    // If ping fails (e.g. offline local network), use navigator.onLine fallback
     const online = typeof navigator !== 'undefined' ? navigator.onLine : false
     useSyncStore.getState().setOnlineStatus(online)
     return online
   }
 }
 
-import { useAuthStore } from '@/stores/authStore'
-import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
-
-/**
- * Ensures the Electron app establishes an authenticated Supabase session.
- * Uses Supabase Anonymous Auth with branch_id in user_metadata so RLS policies pass with role = 'authenticated'.
- */
 export async function ensureSupabaseAuth(): Promise<boolean> {
   const hasRealSupabase =
     import.meta.env.VITE_SUPABASE_URL &&
@@ -99,7 +93,7 @@ export async function ensureSupabaseAuth(): Promise<boolean> {
     if (session) return true
 
     const activeBranch = useAuthStore.getState().currentBranch
-    const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+    const branchId = activeBranch?.id ?? ''
 
     const { data, error } = await supabase.auth.signInAnonymously({
       options: {

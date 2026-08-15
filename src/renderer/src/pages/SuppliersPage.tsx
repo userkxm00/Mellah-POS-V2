@@ -3,7 +3,7 @@ import { Plus, Search, Phone, History, Truck } from 'lucide-react'
 import { Card, Input, Modal, Table, PageHeader } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
-import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
 
@@ -78,6 +78,9 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
   const loadSuppliers = useCallback(async () => {
     setIsLoading(true)
     try {
+      const activeBranch = useAuthStore.getState().currentBranch
+      if (!activeBranch) return
+
       const rows = await window.electron.db.query<SupplierItem>(`
         SELECT 
           s.id, s.name, s.phone, s.company_name, s.address, 
@@ -89,7 +92,7 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
         FROM suppliers s
         WHERE s.branch_id = ?
         ORDER BY total_debt_dzd DESC, s.name ASC
-      `, [DEFAULT_BRANCH_ID])
+      `, [activeBranch.id])
       setSuppliers(rows)
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -115,10 +118,13 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
     try {
       const id = generateUUID()
       const now = new Date().toISOString()
+      const activeBranch = useAuthStore.getState().currentBranch
+      if (!activeBranch) throw new Error('لا توجد جلسة فرع نشطة')
+
       await window.electron.db.execute(
         `INSERT INTO suppliers (id, branch_id, name, phone, company_name, address, total_debt_dzd, notes, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
-        [id, DEFAULT_BRANCH_ID, name.trim(), phone.trim() || null, companyName.trim() || null, address.trim() || null, notes.trim() || null, now, now]
+        [id, activeBranch.id, name.trim(), phone.trim() || null, companyName.trim() || null, address.trim() || null, notes.trim() || null, now, now]
       )
 
       addToast({ message: t('تم إضافة المورد بنجاح!'), variant: 'success' })
@@ -152,10 +158,13 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       const purchaseId = generateUUID()
       const now = new Date().toISOString()
 
+      const activeBranch = useAuthStore.getState().currentBranch
+      if (!activeBranch) throw new Error('لا توجد جلسة فرع نشطة')
+
       await window.electron.db.execute(
         `INSERT INTO supplier_purchases (id, branch_id, supplier_id, invoice_number, total_amount_dzd, paid_amount_dzd, remaining_debt_dzd, notes, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [purchaseId, DEFAULT_BRANCH_ID, purchasingSupplier.id, invoiceNo.trim() || null, total, paid, remainingDebt, purchaseNotes.trim() || null, now]
+        [purchaseId, activeBranch.id, purchasingSupplier.id, invoiceNo.trim() || null, total, paid, remainingDebt, purchaseNotes.trim() || null, now]
       )
 
       addToast({ message: `${t('تم تسجيل فاتورة الشراء وتحديث ديون المورد')} ${purchasingSupplier.name}!`, variant: 'success' })
@@ -186,10 +195,13 @@ export function SuppliersPage({ onBack }: { onBack?: () => void }): React.JSX.El
       const paymentId = generateUUID()
       const now = new Date().toISOString()
 
+      const activeBranch = useAuthStore.getState().currentBranch
+      if (!activeBranch) throw new Error('لا توجد جلسة فرع نشطة')
+
       await window.electron.db.execute(
         `INSERT INTO supplier_payments (id, branch_id, supplier_id, amount_dzd, payment_method, notes, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [paymentId, DEFAULT_BRANCH_ID, repayingSupplier.id, amount, repayMethod, repayNotes.trim() || null, now]
+        [paymentId, activeBranch.id, repayingSupplier.id, amount, repayMethod, repayNotes.trim() || null, now]
       )
 
       addToast({ message: `${t('تم تسجيل تسديد مستحقات المورد')} ${repayingSupplier.name} ${t('بمبلغ')} ${amount.toLocaleString('ar-DZ')} ${t('دج!')}`, variant: 'success' })

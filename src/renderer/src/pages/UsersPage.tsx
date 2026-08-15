@@ -3,7 +3,7 @@ import { Plus, Trash2, Crown, Briefcase, UserCheck, Edit3, KeyRound } from 'luci
 import { Card, Input, Modal, Table, PageHeader } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
-import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { recordAuditLog } from '@/services/auditLogService'
@@ -78,9 +78,12 @@ export function UsersPage({ onBack }: { readonly onBack?: () => void }): React.J
       const now = new Date().toISOString()
       const hashedPin = await window.electron.hashPin(pin)
 
+      const activeBranch = useAuthStore.getState().currentBranch
+      if (!activeBranch) throw new Error('لا توجد جلسة فرع نشطة')
+
       await window.electron.db.execute(
         `INSERT INTO users (id, branch_id, full_name, role, pin_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [userId, DEFAULT_BRANCH_ID, fullName.trim(), role, hashedPin, now, now]
+        [userId, activeBranch.id, fullName.trim(), role, hashedPin, now, now]
       )
 
       addToast({ message: `${t('تم إضافة')} ${fullName.trim()} ${t('بنجاح')}`, variant: 'success' })

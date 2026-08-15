@@ -21,7 +21,6 @@ import { CategoriesModal } from '@/components/products/CategoriesModal'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useAuthStore } from '@/stores/authStore'
-import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
 
 interface ProductRow {
   id: string
@@ -157,7 +156,8 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
     setIsLoading(true)
     try {
       const activeBranch = useAuthStore.getState().currentBranch
-      const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+      if (!activeBranch) return
+      const branchId = activeBranch.id
 
       const catRows = await window.electron.db.query<CategoryItem>(
         'SELECT id, name FROM categories WHERE branch_id = ? AND deleted_at IS NULL ORDER BY name',

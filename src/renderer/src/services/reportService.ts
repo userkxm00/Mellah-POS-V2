@@ -1,5 +1,13 @@
-import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+import { useAuthStore } from '@/stores/authStore'
 import { supabase } from '@/lib/supabase'
+
+function getActiveBranchId(): string {
+  const branch = useAuthStore.getState().currentBranch
+  if (!branch) {
+    throw new Error('لا توجد جلسة فرع نشطة. يرجى تسجيل الدخول أولاً')
+  }
+  return branch.id
+}
 
 export interface SalesAnalyticsSummary {
   totalRevenueDzd: number
@@ -40,8 +48,9 @@ export interface ShiftAuditRow {
 }
 
 export async function fetchSalesAnalytics(startDate?: string, endDate?: string): Promise<SalesAnalyticsSummary> {
+  const branchId = getActiveBranchId()
   let dateClause = ''
-  const params: unknown[] = [DEFAULT_BRANCH_ID]
+  const params: unknown[] = [branchId]
 
   if (startDate && endDate) {
     dateClause = ' AND DATE(created_at) >= ? AND DATE(created_at) <= ?'
@@ -77,7 +86,7 @@ export async function fetchSalesAnalytics(startDate?: string, endDate?: string):
   }
 
   // 2. Net Profit Calculation (Sales Revenue - Item Costs)
-  const profitParams: unknown[] = [DEFAULT_BRANCH_ID]
+  const profitParams: unknown[] = [branchId]
   let profitDateClause = ''
   if (startDate && endDate) {
     profitDateClause = ' AND DATE(s.created_at) >= ? AND DATE(s.created_at) <= ?'
@@ -110,8 +119,9 @@ export async function fetchSalesAnalytics(startDate?: string, endDate?: string):
 }
 
 export async function fetchTopSellingProducts(limit = 10, startDate?: string, endDate?: string): Promise<TopProductRow[]> {
+  const branchId = getActiveBranchId()
   let dateClause = ''
-  const params: unknown[] = [DEFAULT_BRANCH_ID]
+  const params: unknown[] = [branchId]
 
   if (startDate && endDate) {
     dateClause = ' AND DATE(s.created_at) >= ? AND DATE(s.created_at) <= ?'
@@ -174,6 +184,7 @@ export async function fetchInventoryValuation(): Promise<InventoryValuationSumma
 }
 
 export async function fetchShiftAuditLogs(): Promise<ShiftAuditRow[]> {
+  const branchId = getActiveBranchId()
   return window.electron.db.query<ShiftAuditRow>(
     `SELECT 
        sh.id, sh.opening_cash_dzd, sh.expected_cash_dzd, sh.closing_cash_dzd,
@@ -183,7 +194,7 @@ export async function fetchShiftAuditLogs(): Promise<ShiftAuditRow[]> {
      LEFT JOIN users u ON u.id = sh.cashier_id
      WHERE sh.branch_id = ?
      ORDER BY sh.opened_at DESC`,
-    [DEFAULT_BRANCH_ID]
+    [branchId]
   )
 }
 
