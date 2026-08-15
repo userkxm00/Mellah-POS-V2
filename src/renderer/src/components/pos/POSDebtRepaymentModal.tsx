@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Wallet, CreditCard, CheckCircle2 } from 'lucide-react'
 import { Modal, Input } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
-import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { resolveActiveShiftId } from '@/lib/shiftUtils'
@@ -57,7 +57,10 @@ export function POSDebtRepaymentModal({
       return
     }
 
-    const shiftId = await resolveActiveShiftId(DEFAULT_BRANCH_ID)
+    const activeBranch = useAuthStore.getState().currentBranch
+    if (!activeBranch) throw new Error('لا توجد جلسة فرع نشطة')
+
+    const shiftId = await resolveActiveShiftId(activeBranch.id)
     if (!shiftId) {
       addToast({
         message: t('لا توجد وردية مفتوحة حالياً! يرجى فتح وردية في الصندوق أولاً قبل تسديد الديون.'),
@@ -86,7 +89,7 @@ export function POSDebtRepaymentModal({
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             paymentId,
-            DEFAULT_BRANCH_ID,
+            activeBranch.id,
             shiftId,
             customer.id,
             amount,

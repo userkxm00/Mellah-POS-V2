@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Edit2, Trash2 } from 'lucide-react'
 import { Modal, Button, Input } from '@/components/ui'
 import { generateUUID } from '@/lib/uuid'
-import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 
 interface CategoryRow {
@@ -55,9 +55,12 @@ export function CategoriesModal({
     try {
       const id = generateUUID()
       const now = new Date().toISOString()
+      const activeBranch = useAuthStore.getState().currentBranch
+      if (!activeBranch) throw new Error('لا توجد جلسة فرع نشطة')
+
       await window.electron.db.execute(
         'INSERT INTO categories (id, branch_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-        [id, DEFAULT_BRANCH_ID, name, now, now]
+        [id, activeBranch.id, name, now, now]
       )
       addToast({ message: 'تم إضافة الفئة بنجاح', variant: 'success' })
       setNewCatName('')

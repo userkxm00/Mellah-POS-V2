@@ -41,7 +41,7 @@ import { useHeldCartStore } from '@/stores/heldCartStore'
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
 import { processSale } from '@/services/saleService'
 import { printThermalReceipt } from '@/services/receiptService'
-import { useShiftStore, DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+import { useShiftStore, type ShiftState } from '@/stores/shiftStore'
 import { generateUUID } from '@/lib/uuid'
 import { POSCheckoutModals } from '@/components/pos/POSCheckoutModals'
 import { POSDebtRepaymentModal } from '@/components/pos/POSDebtRepaymentModal'
@@ -178,9 +178,11 @@ async function quickAddCustomerToDb(name: string, phone: string): Promise<{ id: 
   const id = generateUUID()
   const barcode = generateCustomerBarcode(Date.now())
   const now = new Date().toISOString()
+  const activeBranch = useAuthStore.getState().currentBranch
+  if (!activeBranch) throw new Error('لا توجد جلسة فرع نشطة')
   await window.electron.db.execute(
     'INSERT INTO customers (id, branch_id, full_name, phone, barcode, loyalty_points, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 0, ?, ?)',
-    [id, DEFAULT_BRANCH_ID, name.trim(), phone.trim() || null, barcode, now, now]
+    [id, activeBranch.id, name.trim(), phone.trim() || null, barcode, now, now]
   )
   return { id, barcode }
 }
@@ -384,7 +386,7 @@ function restoreHeldCartItems(
       {
         id: item.variant_id,
         product_id: item.product_id,
-        branch_id: DEFAULT_BRANCH_ID,
+        branch_id: useAuthStore.getState().currentBranch?.id ?? '',
         size: item.variant_size,
         color: item.variant_color,
         barcode: item.barcode ?? '',
@@ -524,9 +526,9 @@ export function POSCheckoutPage({
   const t = useLanguageStore((s) => s.t)
   useLanguageStore((s) => s.version)
 
-  const activeShift = useShiftStore((s) => s.activeShift)
-  const fetchActiveShift = useShiftStore((s) => s.fetchActiveShift)
-  const isShiftLoading = useShiftStore((s) => s.isLoading)
+  const activeShift = useShiftStore((s: ShiftState) => s.activeShift)
+  const fetchActiveShift = useShiftStore((s: ShiftState) => s.fetchActiveShift)
+  const isShiftLoading = useShiftStore((s: ShiftState) => s.isLoading)
 
   const heldCarts = useHeldCartStore((s) => s.heldCarts)
   const holdCart = useHeldCartStore((s) => s.holdCart)
@@ -623,7 +625,8 @@ export function POSCheckoutPage({
     setIsLoadingVariants(true)
     try {
       const activeBranch = useAuthStore.getState().currentBranch
-      const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+      if (!activeBranch) return
+      const branchId = activeBranch.id
       const data = await fetchPOSBranchData(branchId)
       setCategories(data.categories)
       setCustomers(data.customers)
@@ -685,7 +688,8 @@ export function POSCheckoutPage({
     const items = restoreCart(id)
     if (items) {
       const activeBranch = useAuthStore.getState().currentBranch
-      const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+      if (!activeBranch) return
+      const branchId = activeBranch.id
       clearCart()
       for (const item of items) {
         const stockRows = await window.electron.db.query<{ current_stock: number }>(

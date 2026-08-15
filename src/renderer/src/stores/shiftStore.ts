@@ -5,11 +5,10 @@ import { logger } from '@/lib/logger'
 import { useAuthStore } from '@/stores/authStore'
 import { sendShiftOpenedTelegramNotification } from '@/services/telegramService'
 
-// Fallback seed constants if session is empty
 export const DEFAULT_BRANCH_ID = 'b1111111-1111-4111-8111-111111111111'
 export const DEFAULT_CASHIER_ID = 'u2222222-2222-4222-8222-222222222222'
 
-interface ShiftState {
+export interface ShiftState {
   activeShift: Shift | null
   isLoading: boolean
   error: string | null
@@ -22,12 +21,15 @@ interface ShiftState {
   }>
 }
 
-function getActiveUserAndBranch(): { cashierId: string; branchId: string } {
+export function getActiveUserAndBranch(): { cashierId: string; branchId: string } {
   const user = useAuthStore.getState().currentUser
   const branch = useAuthStore.getState().currentBranch
+  if (!user || !branch) {
+    throw new Error('لا توجد جلسة مستخدم أو فرع نشط. يرجى تسجيل الدخول أولاً')
+  }
   return {
-    cashierId: user?.id ?? DEFAULT_CASHIER_ID,
-    branchId: branch?.id ?? DEFAULT_BRANCH_ID,
+    cashierId: user.id,
+    branchId: branch.id,
   }
 }
 
@@ -75,112 +77,111 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
       }
 
       const { cashierId, branchId } = getActiveUserAndBranch()
-      const id = generateUUID()
+      const existing = await window.electron.db.query<Shift>(
+        `SELECT * FROM shifts WHERE branch_id = ? AND cashier_id = ? AND status = 'open'`,
+        [branchId, cashierId]
+      )
+
+      if (existing.length > 0) {
+        set({ activeShift: existing[0], isLoading: false })
+        return existing[0]
+      }
+
+      const shiftId = generateUUID()
       const now = new Date().toISOString()
 
       await window.electron.db.execute(
-        `INSERT INTO shifts 
-         (id, branch_id, cashier_id, opening_cash_dzd, status, opened_at) 
+        `INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status, opened_at)
          VALUES (?, ?, ?, ?, 'open', ?)`,
-        [id, branchId, cashierId, openingCashDzd, now]
+        [shiftId, branchId, cashierId, openingCashDzd, now]
       )
 
       const newShift: Shift = {
-        id,
+        id: shiftId,
         branch_id: branchId,
         cashier_id: cashierId,
         opening_cash_dzd: openingCashDzd,
-        expected_cash_dzd: null,
-        closing_cash_dzd: null,
-        difference_dzd: null,
         status: 'open',
         opened_at: now,
         closed_at: null,
+        expected_cash_dzd: null,
+        closing_cash_dzd: null,
+        difference_dzd: null,
       }
 
-      set({ activeShift: newShift, isLoading: false })
-      logger.info('Shift opened successfully', { id, openingCashDzd })
-
-      // Send Telegram notification to store owner (non-blocking)
       sendShiftOpenedTelegramNotification({
-        branchName: useAuthStore.getState().currentBranch?.name || 'الفرع الرئيسي',
         cashierName: useAuthStore.getState().currentUser?.full_name || 'الكاشير',
-        openingCashDzd: openingCashDzd,
+        openingCashDzd,
+        branchName: useAuthStore.getState().currentBranch?.name || 'الفرع الرئيسي',
         openedAt: now,
-      }).catch(() => {})
+      }).catch((err) => logger.warn('Failed to send shift open telegram notification', err))
 
+      set({ activeShift: newShift, isLoading: false })
+      logger.info('Shift opened', { shiftId, openingCashDzd })
       return newShift
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'فشل في فتح الوردية'
       logger.error('Open shift failed', err)
       set({ error: msg, isLoading: false })
-      throw new Error(msg)
+      throw err
     }
   },
 
   closeShift: async (closingCashDzd: number) => {
-    const currentShift = get().activeShift
-    if (!currentShift) {
-      throw new Error('لا توجد وردية مفتوحة لإغلاقها')
+    set({ isLoading: true, error: null })
+    const activeShift = get().activeShift
+    if (!activeShift) {
+      const msg = 'لا توجد وردية مفتوحة لإغلاقها'
+      set({ error: msg, isLoading: false })
+      throw new Error(msg)
     }
 
-    set({ isLoading: true, error: null })
     try {
       if (window.electron?.biz?.shifts?.close) {
-        const { expectedCash, difference } = await window.electron.biz.shifts.close(currentShift.id, closingCashDzd)
+        const res = await window.electron.biz.shifts.close(activeShift.id, closingCashDzd)
         const closedShift: Shift = {
-          ...currentShift,
-          expected_cash_dzd: expectedCash,
-          closing_cash_dzd: closingCashDzd,
-          difference_dzd: difference,
+          ...activeShift,
           status: 'closed',
+          closing_cash_dzd: closingCashDzd,
+          expected_cash_dzd: res.expectedCash,
+          difference_dzd: res.difference,
           closed_at: new Date().toISOString(),
         }
         set({ activeShift: null, isLoading: false })
-        logger.info('Shift closed successfully via Main process IPC', { id: currentShift.id, expectedCash, difference })
-        return { closedShift, expectedCash, difference }
+        logger.info('Shift closed successfully via Main process IPC', res)
+        return { closedShift, expectedCash: res.expectedCash, difference: res.difference }
       }
 
-      // Execute shift close calculation queries
       const salesRows = await window.electron.db.query<{ total_cash_sales: number | null }>(
-        `SELECT SUM(
-           CASE 
-             WHEN payment_method = 'cash' THEN total_dzd 
-             WHEN payment_method IN ('mixed', 'credit') THEN COALESCE(cash_amount_dzd, paid_amount_dzd, 0) 
-             ELSE 0 
-           END
-         ) as total_cash_sales 
+        `SELECT SUM(cash_amount_dzd) as total_cash_sales 
          FROM sales 
-         WHERE shift_id = ? AND status = 'completed' AND deleted_at IS NULL`,
-        [currentShift.id]
+         WHERE shift_id = ? AND status = 'completed'`,
+        [activeShift.id]
       )
 
-      const cashSalesTotal = salesRows[0]?.total_cash_sales ?? 0
-
       const repaymentRows = await window.electron.db.query<{ total_repayments: number | null }>(
-        `SELECT SUM(amount_dzd) as total_repayments 
-         FROM customer_payments 
+        `SELECT SUM(amount_dzd) as total_repayments
+         FROM customer_payments
          WHERE shift_id = ? AND payment_method = 'cash'`,
-        [currentShift.id]
-      ).catch(() => [{ total_repayments: 0 }])
+        [activeShift.id]
+      )
 
-      const cashRepaymentsTotal = repaymentRows[0]?.total_repayments ?? 0
-      const expectedCash = currentShift.opening_cash_dzd + cashSalesTotal + cashRepaymentsTotal
+      const totalCashSales = salesRows[0]?.total_cash_sales ?? 0
+      const totalRepayments = repaymentRows[0]?.total_repayments ?? 0
+      const expectedCash = activeShift.opening_cash_dzd + totalCashSales + totalRepayments
       const difference = closingCashDzd - expectedCash
+
       const now = new Date().toISOString()
 
-      // Atomic Update in DB transaction
-      await window.electron.db.transaction([
-        {
-          sql: `UPDATE shifts 
-                SET expected_cash_dzd = ?, closing_cash_dzd = ?, difference_dzd = ?, status = 'closed', closed_at = ? 
-                WHERE id = ?`,
-          params: [expectedCash, closingCashDzd, difference, now, currentShift.id],
-        },
-      ])
+      await window.electron.db.execute(
+        `UPDATE shifts 
+         SET expected_cash_dzd = ?, closing_cash_dzd = ?, difference_dzd = ?, status = 'closed', closed_at = ? 
+         WHERE id = ?`,
+        [expectedCash, closingCashDzd, difference, now, activeShift.id]
+      )
 
       const closedShift: Shift = {
-        ...currentShift,
+        ...activeShift,
         expected_cash_dzd: expectedCash,
         closing_cash_dzd: closingCashDzd,
         difference_dzd: difference,
@@ -189,14 +190,13 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
       }
 
       set({ activeShift: null, isLoading: false })
-      logger.info('Shift closed successfully', { id: currentShift.id, expectedCash, closingCashDzd, difference })
-
+      logger.info('Shift closed', { shiftId: activeShift.id, expectedCash, closingCashDzd, difference })
       return { closedShift, expectedCash, difference }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'فشل في إغلاق الوردية'
       logger.error('Close shift failed', err)
       set({ error: msg, isLoading: false })
-      throw new Error(msg)
+      throw err
     }
   },
 }))

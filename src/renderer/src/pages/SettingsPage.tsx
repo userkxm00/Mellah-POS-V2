@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Save, Database, Store, Printer, Upload, AlertTriangle, Globe, Clock, FileText, Eye, Barcode, FolderOpen, RefreshCw, HardDrive, Moon, Sun, Volume2, VolumeX, Send, Bell, Sparkles, Award } from 'lucide-react'
 import { Card, Input, Modal, Button, PageHeader } from '@/components/ui'
-import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+import { useAuthStore } from '@/stores/authStore'
 import { exportDatabaseBackup, importDatabaseBackup } from '@/services/backupService'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore, type Language } from '@/stores/languageStore'
@@ -123,13 +123,15 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
         const defaultP = printerList.find((p) => p.isDefault) ?? printerList[0]
         setSelectedPrinter(defaultP.name)
       }
+      const activeBranch = useAuthStore.getState().currentBranch
+      if (!activeBranch) return
 
       const rows = await window.electron.db.query<{
-        store_name: string
+        store_name: string | null
         store_address: string | null
         store_phone: string | null
-        receipt_footer_text: string
-        default_language: string
+        receipt_footer_text: string | null
+        default_language: string | null
         session_timeout_minutes: number | null
         telegram_bot_token: string | null
         telegram_chat_ids: string | null
@@ -142,7 +144,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
         loyalty_expiry_months: number | null
       }>(
         'SELECT store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes, telegram_bot_token, telegram_chat_ids, telegram_notify_app_launch, telegram_notify_sale, telegram_notify_shift, loyalty_enabled, loyalty_spend_per_point_dzd, loyalty_point_value_dzd, loyalty_expiry_months FROM store_settings WHERE branch_id = ?',
-        [DEFAULT_BRANCH_ID]
+        [activeBranch.id]
       )
 
       if (rows.length > 0) {
@@ -223,6 +225,9 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
         }
       }
 
+      const activeBranch = useAuthStore.getState().currentBranch
+      if (!activeBranch) throw new Error('لا توجد جلسة فرع نشطة')
+
       await window.electron.db.execute(
         `INSERT INTO store_settings (
            branch_id, store_name, store_address, store_phone, receipt_footer_text, default_language, session_timeout_minutes,
@@ -253,7 +258,7 @@ async function fetchSystemPrinters(): Promise<PrinterInfo[]> {
            barcode_label_size=excluded.barcode_label_size,
            updated_at=excluded.updated_at`,
         [
-          DEFAULT_BRANCH_ID,
+          activeBranch.id,
           storeName.trim(),
           storeAddress.trim() || null,
           storePhone.trim() || null,

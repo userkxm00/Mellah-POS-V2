@@ -1,6 +1,18 @@
 import { generateUUID } from '@/lib/uuid'
 import { logger } from '@/lib/logger'
-import { DEFAULT_BRANCH_ID, DEFAULT_CASHIER_ID } from '@/stores/shiftStore'
+import { useAuthStore } from '@/stores/authStore'
+
+function getActiveUserAndBranch(): { cashierId: string; branchId: string } {
+  const user = useAuthStore.getState().currentUser
+  const branch = useAuthStore.getState().currentBranch
+  if (!user || !branch) {
+    throw new Error('لا توجد جلسة مستخدم أو فرع نشط. يرجى تسجيل الدخول أولاً')
+  }
+  return {
+    cashierId: user.id,
+    branchId: branch.id,
+  }
+}
 
 export interface VariantInput {
   size: string | null
@@ -47,6 +59,7 @@ export async function createProductWithVariants(
   input: CreateProductInput
 ): Promise<string> {
   validateCreateProductInput(input)
+  const { cashierId, branchId } = getActiveUserAndBranch()
 
   const productId = generateUUID()
   const now = new Date().toISOString()
@@ -59,7 +72,7 @@ export async function createProductWithVariants(
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     params: [
       productId,
-      DEFAULT_BRANCH_ID,
+      branchId,
       input.category_id,
       input.name.trim(),
       input.description ? input.description.trim() : null,
@@ -83,7 +96,7 @@ export async function createProductWithVariants(
       params: [
         variantId,
         productId,
-        DEFAULT_BRANCH_ID,
+        branchId,
         v.size ? v.size.trim() : null,
         v.color ? v.color.trim() : null,
         v.barcode.trim(),
@@ -102,10 +115,10 @@ export async function createProductWithVariants(
               VALUES (?, ?, ?, 'restock', ?, 'مخزون أولي عند إضافة المنتج', ?, ?)`,
         params: [
           movementId,
-          DEFAULT_BRANCH_ID,
+          branchId,
           variantId,
           v.initial_stock,
-          DEFAULT_CASHIER_ID,
+          cashierId,
           now,
         ],
       })
@@ -133,6 +146,7 @@ export async function addStockMovement(
     throw new Error('يرجى تحديد كمية التعديل')
   }
 
+  const { cashierId, branchId } = getActiveUserAndBranch()
   const id = generateUUID()
   const now = new Date().toISOString()
 
@@ -143,12 +157,12 @@ export async function addStockMovement(
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        DEFAULT_BRANCH_ID,
+        branchId,
         variantId,
         type,
         quantityChange,
         note.trim() || 'تعديل مخزون يدوياً',
-        DEFAULT_CASHIER_ID,
+        cashierId,
         now,
       ]
     )

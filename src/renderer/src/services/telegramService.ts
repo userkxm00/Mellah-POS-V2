@@ -1,4 +1,4 @@
-import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+import { useAuthStore } from '@/stores/authStore'
 
 export interface TelegramCredentials {
   botToken: string
@@ -72,6 +72,9 @@ async function fetchDbTelegramSettings(): Promise<{
 }> {
   try {
     if (typeof window === 'undefined' || !window.electron?.db) return {}
+    const activeBranch = useAuthStore.getState().currentBranch
+    if (!activeBranch) return {}
+
     const rows = await window.electron.db.query<{
       telegram_bot_token: string | null
       telegram_chat_ids: string | null
@@ -80,7 +83,7 @@ async function fetchDbTelegramSettings(): Promise<{
       telegram_notify_shift: number | null
     }>(
       `SELECT telegram_bot_token, telegram_chat_ids, telegram_notify_app_launch, telegram_notify_sale, telegram_notify_shift FROM store_settings WHERE branch_id = ?`,
-      [DEFAULT_BRANCH_ID]
+      [activeBranch.id]
     )
 
     if (rows.length === 0) return {}

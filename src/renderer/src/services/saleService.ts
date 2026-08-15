@@ -2,7 +2,6 @@ import type { CartItem } from '@/stores/cartStore'
 import type { PaymentMethod } from '@/types/database'
 import { generateUUID } from '@/lib/uuid'
 import { logger } from '@/lib/logger'
-import { DEFAULT_BRANCH_ID, DEFAULT_CASHIER_ID } from '@/stores/shiftStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
 import { enqueueSyncOperation } from './syncEngine'
@@ -13,6 +12,8 @@ export const CUSTOM_GENERIC_VARIANT_ID = 'v-custom-generic-0000'
 
 export async function ensureCustomGenericVariantExists(): Promise<void> {
   try {
+    const activeBranch = useAuthStore.getState().currentBranch
+    if (!activeBranch) return
     const rows = await window.electron.db.query<{ id: string }>(
       'SELECT id FROM product_variants WHERE id = ?',
       [CUSTOM_GENERIC_VARIANT_ID]
@@ -25,7 +26,7 @@ export async function ensureCustomGenericVariantExists(): Promise<void> {
       )
       await window.electron.db.execute(
         `INSERT INTO product_variants (id, product_id, branch_id, price_dzd, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)`,
-        [CUSTOM_GENERIC_VARIANT_ID, CUSTOM_GENERIC_PRODUCT_ID, DEFAULT_BRANCH_ID, now, now]
+        [CUSTOM_GENERIC_VARIANT_ID, CUSTOM_GENERIC_PRODUCT_ID, activeBranch.id, now, now]
       )
     }
   } catch {
@@ -75,11 +76,13 @@ export async function processSale(
   }
 
   // Fallback for non-IPC test environment
-  // Resolve dynamic cashier and branch IDs
   const activeUser = useAuthStore.getState().currentUser
   const activeBranch = useAuthStore.getState().currentBranch
-  const cashierId = activeUser?.id ?? DEFAULT_CASHIER_ID
-  const branchId = activeBranch?.id ?? DEFAULT_BRANCH_ID
+  const cashierId = activeUser?.id
+  const branchId = activeBranch?.id
+  if (!cashierId || !branchId) {
+    throw new Error('لا توجد جلسة مستخدم أو فرع نشط. يرجى تسجيل الدخول أولاً')
+  }
 
   // DB-Level Stock Verification (prevent negative overselling in DB)
   for (const item of items) {

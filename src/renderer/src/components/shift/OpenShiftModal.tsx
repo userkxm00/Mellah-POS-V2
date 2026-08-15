@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Banknote, CheckCircle2 } from 'lucide-react'
 import { Modal, Input } from '@/components/ui'
-import { useShiftStore } from '@/stores/shiftStore'
+import { useShiftStore, type ShiftState } from '@/stores/shiftStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
 
@@ -13,8 +13,8 @@ interface OpenShiftModalProps {
 export function OpenShiftModal({ isOpen }: OpenShiftModalProps): React.JSX.Element | null {
   const t = useLanguageStore((s) => s.t)
   const [openingCash, setOpeningCash] = useState<string>('5000')
-  const openShift = useShiftStore((s) => s.openShift)
-  const isLoading = useShiftStore((s) => s.isLoading)
+  const openShift = useShiftStore((s: ShiftState) => s.openShift)
+  const isLoading = useShiftStore((s: ShiftState) => s.isLoading)
   const addToast = useToastStore((s) => s.addToast)
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {

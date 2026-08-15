@@ -1,5 +1,5 @@
 import { generateUUID } from '@/lib/uuid'
-import { DEFAULT_BRANCH_ID } from '@/stores/shiftStore'
+import { useAuthStore } from '@/stores/authStore'
 import { recordAuditLog } from '@/services/auditLogService'
 import { logger } from '@/lib/logger'
 
@@ -11,7 +11,7 @@ export interface CSVProductRow {
   size?: string
   color?: string
   barcode?: string
-  initial_stock?: number
+  stock?: number
 }
 
 interface CSVHeaderIndices {
@@ -44,63 +44,72 @@ function parseCSVHeader(headerLine: string): CSVHeaderIndices {
   }
 }
 
-function processCSVLine(
-  cols: string[],
-  indices: CSVHeaderIndices,
-  categoryMap: Map<string, string>,
-  productMap: Map<string, string>,
-  now: string,
-  operations: Array<{ sql: string; params: unknown[] }>
-): boolean {
-  const productName = cols[indices.nameIdx]?.trim()
-  const priceDzd = Number.parseFloat(cols[indices.priceIdx]) || 0
-  if (!productName || priceDzd <= 0) return false
+function getActiveBranchId(): string {
+  const branch = useAuthStore.getState().currentBranch
+  if (!branch) {
+    throw new Error('لا يمكن الاستيراد بدون جلسة فرع نشطة. يرجى تسجيل الدخول أولاً')
+  }
+  return branch.id
+}
 
-  const categoryName = indices.categoryIdx !== -1 ? cols[indices.categoryIdx]?.trim() : ''
-  const costDzd = indices.costIdx !== -1 ? Number.parseFloat(cols[indices.costIdx]) || 0 : 0
-  const size = indices.sizeIdx !== -1 ? cols[indices.sizeIdx]?.trim() : null
-  const color = indices.colorIdx !== -1 ? cols[indices.colorIdx]?.trim() : null
-  const barcode = indices.barcodeIdx !== -1 ? cols[indices.barcodeIdx]?.trim() || null : null
-  const stock = indices.stockIdx !== -1 ? Number.parseInt(cols[indices.stockIdx], 10) || 0 : 0
+export async function processCSVProductRow(
+  row: CSVProductRow,
+  categoriesMap: Map<string, string>,
+  existingProductsMap: Map<string, string>,
+  operations: Array<{ sql: string; params: unknown[] }>
+): Promise<boolean> {
+  const branchId = getActiveBranchId()
+  const productName = row.product_name?.trim()
+  if (!productName) return false
+
+  const priceDzd = Number(row.price_dzd) || 0
+  const costDzd = Number(row.cost_dzd) || 0
+  const size = row.size?.trim() || null
+  const color = row.color?.trim() || null
+  const barcode = row.barcode?.trim() || null
+  const stock = Number(row.stock) || 0
 
   let categoryId: string | null = null
-  if (categoryName) {
-    const catKey = categoryName.toLowerCase()
-    if (categoryMap.has(catKey)) {
-      categoryId = categoryMap.get(catKey)!
+  if (row.category_name?.trim()) {
+    const catNameLower = row.category_name.trim().toLowerCase()
+    if (categoriesMap.has(catNameLower)) {
+      categoryId = categoriesMap.get(catNameLower)!
     } else {
       categoryId = generateUUID()
-      categoryMap.set(catKey, categoryId)
+      const now = new Date().toISOString()
       operations.push({
-        sql: 'INSERT INTO categories (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
-        params: [categoryId, categoryName, now, now],
+        sql: `INSERT INTO categories (id, branch_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+        params: [categoryId, branchId, row.category_name.trim(), now, now],
       })
+      categoriesMap.set(catNameLower, categoryId)
     }
   }
 
   const prodKey = `${productName.toLowerCase()}_${categoryId ?? ''}`
   let productId: string
-  if (productMap.has(prodKey)) {
-    productId = productMap.get(prodKey)!
+  const now = new Date().toISOString()
+
+  if (existingProductsMap.has(prodKey)) {
+    productId = existingProductsMap.get(prodKey)!
   } else {
     productId = generateUUID()
-    productMap.set(prodKey, productId)
+    existingProductsMap.set(prodKey, productId)
     operations.push({
-      sql: `INSERT INTO products (id, category_id, name, price_dzd, cost_dzd, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      params: [productId, categoryId, productName, priceDzd, costDzd, now, now],
+      sql: `INSERT INTO products (id, branch_id, category_id, name, price_dzd, cost_dzd, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      params: [productId, branchId, categoryId, productName, priceDzd, costDzd, now, now],
     })
   }
 
   const variantId = generateUUID()
   operations.push({
     sql: `INSERT INTO product_variants (id, product_id, branch_id, size, color, barcode, price_dzd, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    params: [variantId, productId, DEFAULT_BRANCH_ID, size || null, color || null, barcode || null, priceDzd, now, now],
+    params: [variantId, productId, branchId, size || null, color || null, barcode || null, priceDzd, now, now],
   })
 
   if (stock > 0) {
     operations.push({
       sql: `INSERT INTO stock_movements (id, branch_id, variant_id, type, quantity_change, note, created_at) VALUES (?, ?, ?, 'restock', ?, ?, ?)`,
-      params: [generateUUID(), DEFAULT_BRANCH_ID, variantId, stock, 'استيراد أولي من ملف CSV', now],
+      params: [generateUUID(), branchId, variantId, stock, 'استيراد أولي من ملف CSV', now],
     })
   }
 
@@ -108,43 +117,65 @@ function processCSVLine(
 }
 
 export async function importProductsFromCSV(csvContent: string): Promise<number> {
-  const lines = csvContent.split(/\r?\n/).filter((l) => l.trim().length > 0)
+  const branchId = getActiveBranchId()
+  const lines = csvContent.split('\n').filter((l) => l.trim())
   if (lines.length <= 1) {
-    throw new Error('ملف CSV فارغ أو لا يحتوي على صفوف بيانات')
+    throw new Error('ملف CSV فارغ أو لا يحتوي على بيانات')
   }
 
   const indices = parseCSVHeader(lines[0])
   const now = new Date().toISOString()
   const operations: Array<{ sql: string; params: unknown[] }> = []
 
-  // Pre-fetch categories
-  const categories = await window.electron.db.query<{ id: string; name: string }>(
-    'SELECT id, name FROM categories WHERE deleted_at IS NULL'
+  const catRows = await window.electron.db.query<{ id: string; name: string }>(
+    'SELECT id, name FROM categories WHERE branch_id = ? AND deleted_at IS NULL',
+    [branchId]
   )
   const categoryMap = new Map<string, string>()
-  categories.forEach((c) => categoryMap.set(c.name.trim().toLowerCase(), c.id))
+  for (const c of catRows) {
+    categoryMap.set(c.name.toLowerCase(), c.id)
+  }
 
-  // Track created products to group variants
+  const prodRows = await window.electron.db.query<{ id: string; name: string; category_id: string | null }>(
+    'SELECT id, name, category_id FROM products WHERE branch_id = ? AND deleted_at IS NULL',
+    [branchId]
+  )
   const productMap = new Map<string, string>()
+  for (const p of prodRows) {
+    productMap.set(`${p.name.toLowerCase()}_${p.category_id ?? ''}`, p.id)
+  }
+
   let importedCount = 0
 
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',').map((c) => c.trim().replace(/^"|"$/g, ''))
-    const imported = processCSVLine(cols, indices, categoryMap, productMap, now, operations)
-    if (imported) importedCount++
+    const line = lines[i].trim()
+    if (!line) continue
+
+    const cols = line.split(',').map((c) => c.trim().replace(/^"|"$/g, ''))
+    const productName = cols[indices.nameIdx]?.trim()
+    const priceDzd = Number.parseFloat(cols[indices.priceIdx]) || 0
+    if (!productName || priceDzd <= 0) continue
+
+    const rowInput: CSVProductRow = {
+      product_name: productName,
+      category_name: indices.categoryIdx !== -1 ? cols[indices.categoryIdx]?.trim() : undefined,
+      price_dzd: priceDzd,
+      cost_dzd: indices.costIdx !== -1 ? Number.parseFloat(cols[indices.costIdx]) || 0 : undefined,
+      size: indices.sizeIdx !== -1 ? cols[indices.sizeIdx]?.trim() : undefined,
+      color: indices.colorIdx !== -1 ? cols[indices.colorIdx]?.trim() : undefined,
+      barcode: indices.barcodeIdx !== -1 ? cols[indices.barcodeIdx]?.trim() : undefined,
+      stock: indices.stockIdx !== -1 ? Number.parseInt(cols[indices.stockIdx], 10) || 0 : undefined,
+    }
+
+    const success = await processCSVProductRow(rowInput, categoryMap, productMap, operations)
+    if (success) importedCount++
   }
 
-  if (operations.length === 0) {
-    throw new Error('لم يتم العثور على سلع صالحة للاستيراد في الملف')
-  }
-
-  try {
+  if (operations.length > 0) {
     await window.electron.db.transaction(operations)
-    recordAuditLog('products_imported', 'products', `استيراد ${importedCount} منتج من ملف CSV`).catch(() => {})
-    logger.info('Products imported via CSV', { importedCount })
-    return importedCount
-  } catch (err) {
-    logger.error('Failed to import products from CSV', err)
-    throw new Error('فشل استيراد المنتجات من ملف CSV')
+    recordAuditLog('csv_imported', 'products', `استيراد ${importedCount} منتجات من ملف CSV`, now).catch(() => {})
+    logger.info('CSV import executed successfully', { importedCount, opCount: operations.length })
   }
+
+  return importedCount
 }

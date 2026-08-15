@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { DEFAULT_BRANCH_ID } from './shiftStore'
+import { useAuthStore } from './authStore'
 
 export interface StoreSettings {
   store_name: string
@@ -22,10 +22,11 @@ export interface StoreSettings {
 interface StoreSettingsState {
   settings: StoreSettings
   loaded: boolean
-  loadSettings: () => Promise<void>
+  loadSettings: (targetBranchId?: string) => Promise<void>
+  resetSettings: () => void
 }
 
-const DEFAULT_SETTINGS: StoreSettings = {
+export const DEFAULT_SETTINGS: StoreSettings = {
   store_name: 'بوتيك الملاح للملابس',
   store_address: '',
   store_phone: '',
@@ -47,8 +48,16 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
   settings: { ...DEFAULT_SETTINGS },
   loaded: false,
 
-  loadSettings: async () => {
+  resetSettings: () => set({ settings: { ...DEFAULT_SETTINGS }, loaded: false }),
+
+  loadSettings: async (targetBranchId?: string) => {
     try {
+      const activeBranch = useAuthStore.getState().currentBranch
+      const branchId = targetBranchId || activeBranch?.id
+      if (!branchId) {
+        set({ settings: { ...DEFAULT_SETTINGS }, loaded: false })
+        return
+      }
 
       const rows = await window.electron.db.query<{
         store_name: string
@@ -81,7 +90,7 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
                 COALESCE(barcode_label_language, 'ar') as barcode_label_language,
                 COALESCE(barcode_label_size, '50x25') as barcode_label_size
          FROM store_settings WHERE branch_id = ?`,
-        [DEFAULT_BRANCH_ID]
+        [branchId]
       )
       if (rows.length > 0) {
         set({
@@ -105,10 +114,23 @@ export const useStoreSettingsStore = create<StoreSettingsState>((set) => ({
           loaded: true,
         })
       } else {
-        set({ loaded: true })
+        set({ settings: { ...DEFAULT_SETTINGS }, loaded: true })
       }
-    } catch (err) {// eslint-disable-next-line no-console
-      console.error("[storeSettingsStore]", err); set({ loaded: true })
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[storeSettingsStore]', err)
+      set({ settings: { ...DEFAULT_SETTINGS }, loaded: true })
     }
   },
 }))
+
+// Automatically sync store settings with authStore branch lifecycle
+useAuthStore.subscribe((state, prevState) => {
+  if (state.currentBranch?.id !== prevState?.currentBranch?.id) {
+    if (state.currentBranch?.id) {
+      useStoreSettingsStore.getState().loadSettings(state.currentBranch.id)
+    } else {
+      useStoreSettingsStore.getState().resetSettings()
+    }
+  }
+})
