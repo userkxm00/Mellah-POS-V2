@@ -57,6 +57,7 @@ interface ProductVariantItem {
   sku: string | null
   price_dzd: number | null
   cost_dzd: number | null
+  min_stock_level: number
   created_at: string
   updated_at: string
   deleted_at: string | null
@@ -157,8 +158,8 @@ async function fetchPOSBranchData(branchId: string): Promise<{
   )
   const variantRows = await window.electron.db.query<ProductVariantItem>(
     `SELECT 
-       v.id, v.product_id, v.branch_id, v.size, v.color, v.barcode, v.sku, v.price_dzd, v.created_at, v.updated_at, v.deleted_at,
-       p.name as product_name, p.category_id, p.price_dzd as default_price, p.image_url,
+       v.id, v.product_id, v.branch_id, v.size, v.color, v.barcode, v.sku, v.price_dzd, COALESCE(v.min_stock_level, 5) as min_stock_level, v.created_at, v.updated_at, v.deleted_at,
+       p.name as product_name, p.category_id, p.price_dzd as default_price, p.cost_dzd, p.image_url,
        c.name as category_name,
        COALESCE(SUM(sm.quantity_change), 0) as current_stock
      FROM product_variants v
@@ -390,6 +391,7 @@ function restoreHeldCartItems(
         sku: null,
         price_dzd: item.unit_price_dzd,
         cost_dzd: null,
+        min_stock_level: 5,
         product_name: item.product_name,
         category_id: null,
         default_price: item.unit_price_dzd,

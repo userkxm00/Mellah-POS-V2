@@ -7,7 +7,7 @@
 
 export type UserRole = 'admin' | 'manager' | 'cashier'
 export type PaymentMethod = 'cash' | 'card' | 'mixed' | 'credit'
-export type SaleStatus = 'completed' | 'refunded' | 'partial_refund'
+export type SaleStatus = 'completed' | 'refunded' | 'partial_refund' | 'voided'
 export type ShiftStatus = 'open' | 'closed'
 export type StockMovementType = 'sale' | 'restock' | 'adjustment' | 'return'
 export type RefundMethod = 'cash' | 'store_credit' | 'exchange'
@@ -60,6 +60,7 @@ export interface ProductVariant extends BaseEntity, BranchScoped {
   barcode: string | null
   sku: string | null
   price_dzd: number | null // null = inherit product.price_dzd
+  min_stock_level: number // default 5, added by migration 0002
 }
 
 // Append-only: no updated_at, no deleted_at
@@ -92,15 +93,25 @@ export interface Customer extends BaseEntity, BranchScoped {
   full_name: string
   phone: string | null
   loyalty_points: number
+  store_credit_balance: number // default 0, added by migration 0003
+  barcode: string | null // added by migration 0008
 }
 
 export interface Sale extends BaseEntity, BranchScoped {
   shift_id: string | null
   cashier_id: string
   customer_id: string | null
+  subtotal_dzd: number // added by migration 0003, rebuilt in 0005
+  discount_dzd: number // added by migration 0003, rebuilt in 0005
   total_dzd: number
+  cash_amount_dzd: number // added by migration 0003, rebuilt in 0005
+  card_amount_dzd: number // added by migration 0003, rebuilt in 0005
+  paid_amount_dzd: number // added by migration 0004, rebuilt in 0005
+  remaining_debt_dzd: number // added by migration 0004, rebuilt in 0005
   payment_method: PaymentMethod
   status: SaleStatus
+  voided_at: string | null // added by migration 0003, rebuilt in 0006
+  void_reason: string | null // added by migration 0003, rebuilt in 0006
 }
 
 // Append-only
@@ -133,6 +144,25 @@ export interface StoreSettings {
   receipt_footer_text: string | null
   default_language: SupportedLanguage
   updated_at: string
+  // Added by migration 0003
+  store_address: string | null
+  store_phone: string | null
+  session_timeout_minutes: number // default 5
+  // Added by migration 0007 — Telegram notifications
+  telegram_bot_token: string | null
+  telegram_chat_ids: string | null
+  telegram_notify_app_launch: number // 0 or 1, default 1
+  telegram_notify_sale: number // 0 or 1, default 1
+  telegram_notify_shift: number // 0 or 1, default 1
+  // Added by migration 0008 — Loyalty & printers
+  loyalty_enabled: number // 0 or 1, default 0
+  loyalty_spend_per_point_dzd: number // default 1000
+  loyalty_point_value_dzd: number // default 1
+  loyalty_expiry_months: number // default 0 (never expires)
+  receipt_printer_name: string // default ''
+  label_printer_name: string // default ''
+  barcode_label_language: string // default 'ar'
+  barcode_label_size: string // default '50x25'
 }
 
 export interface SyncQueueEntry {
@@ -143,6 +173,7 @@ export interface SyncQueueEntry {
   created_at: string
   synced_at: string | null
   attempts: number
+  last_error: string | null // added by migration 0009
 }
 
 // ----- Computed / view types (not direct DB tables) -----
@@ -194,6 +225,7 @@ export interface Supplier {
   phone: string | null
   company_name: string | null
   address: string | null
+  total_debt_dzd: number // default 0, added by migration 0004
   notes: string | null
   created_at: string
   updated_at: string
@@ -222,3 +254,13 @@ export interface SupplierPayment {
   created_at: string
 }
 
+// Added by migration 0003 — audit_logs table
+export interface AuditLog {
+  id: string
+  user_id: string
+  action: string
+  entity_name: string
+  entity_id: string | null
+  details: string | null
+  created_at: string
+}
