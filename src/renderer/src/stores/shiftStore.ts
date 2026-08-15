@@ -38,9 +38,14 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
 
   fetchActiveShift: async () => {
     set({ isLoading: true, error: null })
-    const { cashierId, branchId } = getActiveUserAndBranch()
-
     try {
+      if (window.electron?.biz?.shifts?.active) {
+        const shift = (await window.electron.biz.shifts.active()) as Shift | null
+        set({ activeShift: shift, isLoading: false })
+        return shift
+      }
+
+      const { cashierId, branchId } = getActiveUserAndBranch()
       const rows = await window.electron.db.query<Shift>(
         `SELECT * FROM shifts 
          WHERE branch_id = ? AND cashier_id = ? AND status = 'open' 
@@ -61,9 +66,15 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
 
   openShift: async (openingCashDzd: number) => {
     set({ isLoading: true, error: null })
-    const { cashierId, branchId } = getActiveUserAndBranch()
-
     try {
+      if (window.electron?.biz?.shifts?.open) {
+        const newShift = (await window.electron.biz.shifts.open(openingCashDzd)) as Shift
+        set({ activeShift: newShift, isLoading: false })
+        logger.info('Shift opened successfully via Main process IPC', { openingCashDzd })
+        return newShift
+      }
+
+      const { cashierId, branchId } = getActiveUserAndBranch()
       const id = generateUUID()
       const now = new Date().toISOString()
 
@@ -115,6 +126,21 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
 
     set({ isLoading: true, error: null })
     try {
+      if (window.electron?.biz?.shifts?.close) {
+        const { expectedCash, difference } = await window.electron.biz.shifts.close(currentShift.id, closingCashDzd)
+        const closedShift: Shift = {
+          ...currentShift,
+          expected_cash_dzd: expectedCash,
+          closing_cash_dzd: closingCashDzd,
+          difference_dzd: difference,
+          status: 'closed',
+          closed_at: new Date().toISOString(),
+        }
+        set({ activeShift: null, isLoading: false })
+        logger.info('Shift closed successfully via Main process IPC', { id: currentShift.id, expectedCash, difference })
+        return { closedShift, expectedCash, difference }
+      }
+
       // Execute shift close calculation queries
       const salesRows = await window.electron.db.query<{ total_cash_sales: number | null }>(
         `SELECT SUM(

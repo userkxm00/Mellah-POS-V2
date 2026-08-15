@@ -192,37 +192,19 @@ function registerIpcHandlers(): void {
   })
 
   // Session management handlers adhering strictly to IMPORTANT AUTH SESSION RULE:
-  // The renderer CANNOT establish or override session by supplying arbitrary userId.
-  ipcMain.handle('auth:set-session', async (_event, userId: string | null) => {
+  // The renderer CANNOT establish or override MainSession by supplying an arbitrary userId.
+  ipcMain.handle('auth:set-session', (_event, userId: string | null) => {
     if (!userId) {
       setMainSession(null)
       return true
     }
-    // If active session exists for this userId, keep it
+    // ONLY maintain session if activeSession ALREADY exists in Main process memory for this exact userId.
+    // Renderer cannot supply a different userId or create a new session without PIN verification.
     const active = getMainSession()
     if (active && active.userId === userId) {
       return true
     }
-    // Otherwise look up user from DB to verify user exists & populate session safely (never trust renderer for role/branch)
-    const db = await whenDatabaseReady()
-    const rows = await db.query<{ id: string; branch_id: string; full_name: string; role: 'admin' | 'manager' | 'cashier' }>(
-      'SELECT id, branch_id, full_name, role FROM users WHERE id = ? AND deleted_at IS NULL',
-      [userId]
-    )
-    if (rows.length > 0) {
-      const u = rows[0]
-      const allBranches = await db.query<{ id: string }>('SELECT id FROM branches WHERE deleted_at IS NULL')
-      const allowedBranchIds = u.role === 'admin' ? allBranches.map((b) => b.id) : [u.branch_id]
-
-      setMainSession({
-        userId: u.id,
-        role: u.role,
-        branchId: u.branch_id,
-        allowedBranchIds,
-        fullName: u.full_name,
-      })
-      return true
-    }
+    // Reject impersonation attempts and clear session
     setMainSession(null)
     return false
   })

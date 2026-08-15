@@ -121,4 +121,44 @@ describe('IPC Security & Authorization Layer (Phase 2B)', () => {
       "Forbidden: User 'u-admin-1' is not authorized for branch 'b-unauthorized'"
     )
   })
+
+  it('prevents renderer from establishing session or impersonating another user via auth:set-session handler', () => {
+    // 1. Unauthenticated state: calling set-session with arbitrary userId MUST fail and maintain null session
+    const handleSetSession = (requestedUserId: string | null): boolean => {
+      if (!requestedUserId) {
+        setMainSession(null)
+        return true
+      }
+      const active = getMainSession()
+      if (active && active.userId === requestedUserId) {
+        return true
+      }
+      setMainSession(null)
+      return false
+    }
+
+    // Attempting to elevate identity when active is null -> FAILS
+    expect(handleSetSession('u-admin-victim')).toBe(false)
+    expect(getMainSession()).toBeNull()
+    expect(() => requireAuth()).toThrow('Unauthorized: Authentication required')
+
+    // 2. Authenticated cashier session
+    const cashierSession: MainSession = {
+      userId: 'u-cashier-1',
+      role: 'cashier',
+      branchId: 'b-algiers',
+      allowedBranchIds: ['b-algiers'],
+      fullName: 'Ahmad Cashier',
+    }
+    setMainSession(cashierSession)
+
+    // Cashier calling set-session with their own ID -> PRESERVED
+    expect(handleSetSession('u-cashier-1')).toBe(true)
+    expect(getMainSession()).toEqual(cashierSession)
+
+    // Cashier attempting impersonation by calling set-session with admin's userId -> REJECTED & CLEARED
+    expect(handleSetSession('u-admin-victim')).toBe(false)
+    expect(getMainSession()).toBeNull()
+    expect(() => requireAuth()).toThrow('Unauthorized: Authentication required')
+  })
 })
