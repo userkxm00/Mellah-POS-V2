@@ -141,6 +141,31 @@ T-Shirt,Men,1000,600,L,Blue,15`
 
     const count = await importProductsFromCSV(csvData)
     expect(count).toBe(3)
+
+    // Verify transaction operations payload
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const txMock = (globalThis as any).window.electron.db.transaction
+    expect(txMock).toHaveBeenCalledTimes(1)
+    const ops = txMock.mock.calls[0][0] as Array<{ sql: string; params: unknown[] }>
+
+    // Filter INSERT INTO products operations
+    const productInserts = ops.filter((op) => op.sql.includes('INSERT INTO products'))
+    expect(productInserts).toHaveLength(2) // 2 distinct products: T-Shirt/Men and T-Shirt/Women
+
+    const menProdId = productInserts[0].params[0]
+    const womenProdId = productInserts[1].params[0]
+    expect(menProdId).not.toBe(womenProdId)
+
+    // Filter INSERT INTO product_variants operations
+    const variantInserts = ops.filter((op) => op.sql.includes('INSERT INTO product_variants'))
+    expect(variantInserts).toHaveLength(3) // 3 variants created
+
+    // The 1st and 3rd variants belong to T-Shirt/Men product
+    expect(variantInserts[0].params[1]).toBe(menProdId)
+    expect(variantInserts[2].params[1]).toBe(menProdId)
+
+    // The 2nd variant belongs to T-Shirt/Women product
+    expect(variantInserts[1].params[1]).toBe(womenProdId)
   })
 
   it('verifies resolveActiveShiftId returns in-memory shift only if it belongs to target branch', async () => {
