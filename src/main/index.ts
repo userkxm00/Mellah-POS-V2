@@ -5,6 +5,8 @@ import bcrypt from 'bcryptjs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { initDatabase, closeDatabase, whenDatabaseReady, withTransaction } from './database'
 import { initAutoUpdater, stopAutoUpdater } from './autoUpdater'
+import { setMainSession, getMainSession } from './session'
+import { registerBizIpcHandlers } from './bizIpc'
 
 const BCRYPT_ROUNDS = 10
 
@@ -118,16 +120,16 @@ function registerIpcHandlers(): void {
           id: string
           branch_id: string
           full_name: string
-          role: 'admin' | 'cashier'
+          role: 'admin' | 'manager' | 'cashier'
           pin_hash: string
-        }>('SELECT id, branch_id, full_name, role, pin_hash FROM users WHERE id = ?', [userId])
+        }>('SELECT id, branch_id, full_name, role, pin_hash FROM users WHERE id = ? AND deleted_at IS NULL', [userId])
       : await db.query<{
           id: string
           branch_id: string
           full_name: string
-          role: 'admin' | 'cashier'
+          role: 'admin' | 'manager' | 'cashier'
           pin_hash: string
-        }>('SELECT id, branch_id, full_name, role, pin_hash FROM users')
+        }>('SELECT id, branch_id, full_name, role, pin_hash FROM users WHERE deleted_at IS NULL')
 
     for (const user of users) {
       let isMatch = false
@@ -152,11 +154,26 @@ function registerIpcHandlers(): void {
       }
 
       if (isMatch) {
-        // Match found — fetch branch info and return user
+        // Match found — fetch branch info and allowed branches
         const branches = await db.query<{ id: string; name: string; address: string }>(
           'SELECT * FROM branches WHERE id = ?',
           [user.branch_id]
         )
+        const allBranches = await db.query<{ id: string }>('SELECT id FROM branches WHERE deleted_at IS NULL')
+
+        const allowedBranchIds = user.role === 'admin'
+          ? allBranches.map((b) => b.id)
+          : [user.branch_id]
+
+        // Populate canonical MainSession in Main process memory
+        setMainSession({
+          userId: user.id,
+          role: user.role,
+          branchId: user.branch_id,
+          allowedBranchIds,
+          fullName: user.full_name,
+        })
+
         return {
           user: {
             id: user.id,
@@ -174,17 +191,30 @@ function registerIpcHandlers(): void {
     return null
   })
 
-  // In-memory runtime session for active application execution
-  let activeRuntimeUserId: string | null = null
-
+  // Session management handlers adhering strictly to IMPORTANT AUTH SESSION RULE:
+  // The renderer CANNOT establish or override MainSession by supplying an arbitrary userId.
   ipcMain.handle('auth:set-session', (_event, userId: string | null) => {
-    activeRuntimeUserId = userId
-    return true
+    if (!userId) {
+      setMainSession(null)
+      return true
+    }
+    // ONLY maintain session if activeSession ALREADY exists in Main process memory for this exact userId.
+    // Renderer cannot supply a different userId or create a new session without PIN verification.
+    const active = getMainSession()
+    if (active && active.userId === userId) {
+      return true
+    }
+    // Reject impersonation attempts and clear session
+    setMainSession(null)
+    return false
   })
 
   ipcMain.handle('auth:get-session', () => {
-    return activeRuntimeUserId
+    return getMainSession()?.userId ?? null
   })
+
+  // Register business IPC channels
+  registerBizIpcHandlers()
 
   // ── App Relaunch IPC Handler for Language Change ──
   ipcMain.handle('app:relaunch', () => {

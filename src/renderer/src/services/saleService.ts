@@ -59,6 +59,22 @@ export async function processSale(
     throw new Error('يجب تحديد الزبون عند البيع بالتقسيط / الكريدي')
   }
 
+  if (window.electron?.biz?.sales?.process) {
+    return window.electron.biz.sales.process({
+      items,
+      paymentMethod,
+      shiftId,
+      customerId,
+      mixedCashDzd,
+      mixedCardDzd,
+      discountDzd,
+      creditDepositDzd,
+      redeemedPointsDzd,
+      storeCreditUsedDzd,
+    })
+  }
+
+  // Fallback for non-IPC test environment
   // Resolve dynamic cashier and branch IDs
   const activeUser = useAuthStore.getState().currentUser
   const activeBranch = useAuthStore.getState().currentBranch

@@ -101,8 +101,52 @@ export interface SafeStorageApi {
   decrypt: (ciphertext: string) => Promise<string>
 }
 
+export interface BizApi {
+  pos: {
+    loadData: <T = unknown>(targetBranchId?: string) => Promise<T>
+    quickAddCustomer: (name: string, phone: string, targetBranchId?: string) => Promise<{ id: string; barcode: string }>
+  }
+  sales: {
+    process: (payload: unknown) => Promise<{ saleId: string; totalDzd: number; itemCount: number }>
+    void: (saleId: string, reason: string, items: Array<{ variant_id: string; quantity: number }>) => Promise<{ success: boolean }>
+    history: <T = unknown>(targetBranchId?: string) => Promise<T[]>
+  }
+  returns: {
+    process: (payload: unknown) => Promise<{ returnId: string }>
+    search: <T = unknown>(query: string, targetBranchId?: string) => Promise<T[]>
+  }
+  shifts: {
+    active: <T = unknown>(targetBranchId?: string) => Promise<T | null>
+    open: <T = unknown>(openingCashDzd: number, targetBranchId?: string) => Promise<T>
+    close: (shiftId: string, closingCashDzd: number) => Promise<{ expectedCash: number; difference: number }>
+  }
+  customers: {
+    list: <T = unknown>(targetBranchId?: string) => Promise<T[]>
+    create: (data: unknown) => Promise<unknown>
+    update: (id: string, data: unknown) => Promise<unknown>
+    delete: (id: string) => Promise<unknown>
+    recordPayment: (payload: { customerId: string; amountDzd: number; paymentMethod: 'cash' | 'card'; notes?: string; shiftId?: string }) => Promise<{ paymentId: string }>
+  }
+  users: {
+    list: <T = unknown>() => Promise<T[]>
+    create: (data: unknown) => Promise<unknown>
+    update: (id: string, data: unknown) => Promise<unknown>
+    delete: (id: string) => Promise<unknown>
+  }
+  branches: {
+    list: <T = unknown>() => Promise<T[]>
+    create: (data: unknown) => Promise<unknown>
+    update: (id: string, data: unknown) => Promise<unknown>
+  }
+  settings: {
+    load: <T = unknown>() => Promise<T | null>
+    save: (settings: Record<string, unknown>) => Promise<{ success: boolean }>
+  }
+}
+
 export interface ElectronApi {
   db: DbApi
+  biz: BizApi
   openModuleWindow: (moduleName: string) => Promise<void>
   verifyPin: (pin: string, userId?: string) => Promise<AuthResult | null>
   hashPin: (pin: string) => Promise<string>
@@ -132,6 +176,48 @@ const api: ElectronApi = {
       operations: Array<{ sql: string; params: unknown[] }>
     ): Promise<DbRunResult[]> => {
       return ipcRenderer.invoke('db:transaction', operations) as Promise<DbRunResult[]>
+    },
+  },
+  biz: {
+    pos: {
+      loadData: (targetBranchId?: string) => ipcRenderer.invoke('biz:pos:loadData', targetBranchId),
+      quickAddCustomer: (name: string, phone: string, targetBranchId?: string) => ipcRenderer.invoke('biz:pos:quickAddCustomer', name, phone, targetBranchId),
+    },
+    sales: {
+      process: (payload: unknown) => ipcRenderer.invoke('biz:sales:process', payload),
+      void: (saleId: string, reason: string, items: Array<{ variant_id: string; quantity: number }>) => ipcRenderer.invoke('biz:sales:void', saleId, reason, items),
+      history: (targetBranchId?: string) => ipcRenderer.invoke('biz:sales:history', targetBranchId),
+    },
+    returns: {
+      process: (payload: unknown) => ipcRenderer.invoke('biz:returns:process', payload),
+      search: (query: string, targetBranchId?: string) => ipcRenderer.invoke('biz:returns:search', query, targetBranchId),
+    },
+    shifts: {
+      active: (targetBranchId?: string) => ipcRenderer.invoke('biz:shifts:active', targetBranchId),
+      open: (openingCashDzd: number, targetBranchId?: string) => ipcRenderer.invoke('biz:shifts:open', openingCashDzd, targetBranchId),
+      close: (shiftId: string, closingCashDzd: number) => ipcRenderer.invoke('biz:shifts:close', shiftId, closingCashDzd),
+    },
+    customers: {
+      list: (targetBranchId?: string) => ipcRenderer.invoke('biz:customers:list', targetBranchId),
+      create: (data: unknown) => ipcRenderer.invoke('biz:customers:create', data),
+      update: (id: string, data: unknown) => ipcRenderer.invoke('biz:customers:update', id, data),
+      delete: (id: string) => ipcRenderer.invoke('biz:customers:delete', id),
+      recordPayment: (payload: { customerId: string; amountDzd: number; paymentMethod: 'cash' | 'card'; notes?: string; shiftId?: string }) => ipcRenderer.invoke('biz:customers:recordPayment', payload),
+    },
+    users: {
+      list: () => ipcRenderer.invoke('biz:users:list'),
+      create: (data: unknown) => ipcRenderer.invoke('biz:users:create', data),
+      update: (id: string, data: unknown) => ipcRenderer.invoke('biz:users:update', id, data),
+      delete: (id: string) => ipcRenderer.invoke('biz:users:delete', id),
+    },
+    branches: {
+      list: () => ipcRenderer.invoke('biz:branches:list'),
+      create: (data: unknown) => ipcRenderer.invoke('biz:branches:create', data),
+      update: (id: string, data: unknown) => ipcRenderer.invoke('biz:branches:update', id, data),
+    },
+    settings: {
+      load: () => ipcRenderer.invoke('biz:settings:load'),
+      save: (settings: Record<string, unknown>) => ipcRenderer.invoke('biz:settings:save', settings),
     },
   },
   openModuleWindow: (moduleName: string): Promise<void> => {

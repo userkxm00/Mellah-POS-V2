@@ -106,7 +106,21 @@ export async function processReturn(
 ): Promise<string> {
   const activeItems = returnItems.filter((i) => i.quantity > 0)
   if (activeItems.length === 0) {
-    throw new Error('اختر منتجاً واحداً على الأقل لإرجاعه')
+    throw new Error('لم يتم تحديد أي عنصر للإرجاع')
+  }
+
+  if (window.electron?.biz?.returns?.process) {
+    const res = await window.electron.biz.returns.process({
+      originalSaleId: saleId,
+      items: activeItems.map((i) => ({
+        variantId: i.variant_id,
+        quantity: i.quantity,
+      })),
+      refundMethod,
+      reason,
+    })
+    logger.info('Atomic return processed via Main process IPC', { saleId, returnId: (res as { returnId: string })?.returnId })
+    return (res as { returnId: string })?.returnId ?? ''
   }
 
   // Resolve authenticated cashier and branch — never fall back silently to defaults in financial records

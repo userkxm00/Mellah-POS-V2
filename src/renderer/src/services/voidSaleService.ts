@@ -19,6 +19,18 @@ export async function voidSale(
     throw new Error('يرجى اختيار أو كتابة سبب إلغاء الفاتورة')
   }
 
+  if (window.electron?.biz?.sales?.void) {
+    await window.electron.biz.sales.void(saleId, reason.trim(), items)
+    recordAuditLog(
+      'sale_voided',
+      'sales',
+      `إلغاء الفاتورة #${saleId.slice(0, 8)} — السبب: ${reason.trim()}`,
+      saleId
+    ).catch(() => {})
+    logger.info('Sale voided successfully via Main process IPC', { saleId, reason })
+    return
+  }
+
   const activeUser = useAuthStore.getState().currentUser
   const activeBranch = useAuthStore.getState().currentBranch
   const cashierId = activeUser?.id ?? DEFAULT_CASHIER_ID

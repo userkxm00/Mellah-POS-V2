@@ -69,23 +69,33 @@ export function POSDebtRepaymentModal({
 
     setIsSubmitting(true)
     try {
-      const paymentId = generateUUID()
-      const now = new Date().toISOString()
-
-      await window.electron.db.execute(
-        `INSERT INTO customer_payments (id, branch_id, shift_id, customer_id, amount_dzd, payment_method, notes, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          paymentId,
-          DEFAULT_BRANCH_ID,
+      if (window.electron?.biz?.customers?.recordPayment) {
+        await window.electron.biz.customers.recordPayment({
+          customerId: customer.id,
+          amountDzd: amount,
+          paymentMethod: paymentMethod === 'card' ? 'card' : 'cash',
+          notes: notesInput.trim() || undefined,
           shiftId,
-          customer.id,
-          amount,
-          paymentMethod,
-          notesInput.trim() || null,
-          now,
-        ]
-      )
+        })
+      } else {
+        const paymentId = generateUUID()
+        const now = new Date().toISOString()
+
+        await window.electron.db.execute(
+          `INSERT INTO customer_payments (id, branch_id, shift_id, customer_id, amount_dzd, payment_method, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            paymentId,
+            DEFAULT_BRANCH_ID,
+            shiftId,
+            customer.id,
+            amount,
+            paymentMethod,
+            notesInput.trim() || null,
+            now,
+          ]
+        )
+      }
 
       addToast({
         message: `${t('تم تسجيل تسديد مبلغ')} ${amount.toLocaleString('ar-DZ')} ${t('دج للزبون')} "${customer.full_name}" ${t('بنجاح')}`,
