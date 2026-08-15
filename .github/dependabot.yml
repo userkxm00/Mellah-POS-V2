@@ -1,0 +1,25 @@
+version: 2
+
+updates:
+  - package-ecosystem: "pnpm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Africa/Algiers"
+
+    open-pull-requests-limit: 5
+
+    labels:
+      - "dependencies"
+
+    commit-message:
+      prefix: "deps"
+
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+
+      development-dependencies:
+        dependency-type: "development"
