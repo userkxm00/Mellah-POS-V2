@@ -115,7 +115,6 @@ export async function processReturn(
       items: activeItems.map((i) => ({
         variantId: i.variant_id,
         quantity: i.quantity,
-        unitPriceDzd: i.unit_price_dzd,
       })),
       refundMethod,
       reason,

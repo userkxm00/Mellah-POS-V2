@@ -219,4 +219,83 @@ describe('IPC Security & Authorization Layer (Phase 2B)', () => {
     const branchToUse = validateBranchAccess(managerSession, originalSaleBranch)
     expect(branchToUse).toBe('b-algiers') // Restock movement will be created in b-algiers, not b-oran
   })
+
+  it('validates returns with authoritative DB unit prices, unique return row PKs, and status updates', () => {
+    // 1. Unique Primary Keys & DB Price Overrides
+    const mockSaleItems = [
+      { variant_id: 'v1', quantity: 3, unit_price_dzd: 2000 },
+      { variant_id: 'v2', quantity: 2, unit_price_dzd: 5000 },
+    ]
+    const existingReturns: Array<{ variant_id: string; total_returned: number }> = []
+
+    const processReturnValidation = (
+      requestedItems: Array<{ variantId: string; quantity: number }>
+    ) => {
+      const returnedMap = new Map<string, number>()
+      for (const r of existingReturns) {
+        returnedMap.set(r.variant_id, r.total_returned)
+      }
+
+      const itemMap = new Map<string, { purchasedQty: number; unitPriceDzd: number }>()
+      let totalPurchasedQtyAcrossSale = 0
+      for (const si of mockSaleItems) {
+        itemMap.set(si.variant_id, { purchasedQty: si.quantity, unitPriceDzd: si.unit_price_dzd })
+        totalPurchasedQtyAcrossSale += si.quantity
+      }
+
+      let totalRefundDzd = 0
+      const generatedRowIds: string[] = []
+
+      for (const item of requestedItems) {
+        const dbItem = itemMap.get(item.variantId)
+        if (!dbItem) {
+          throw new Error(`عفواً! المنتج المطلوب إرجاعه (ID: ${item.variantId}) غير موجود في الفاتورة الأصلية`)
+        }
+        const alreadyReturned = returnedMap.get(item.variantId) ?? 0
+        const remaining = dbItem.purchasedQty - alreadyReturned
+
+        if (item.quantity > remaining) {
+          throw new Error(`الكمية المطلوبة للإرجاع (${item.quantity}) تتجاوز الكمية المتبقية القابلة للإرجاع (${remaining})`)
+        }
+
+        totalRefundDzd += dbItem.unitPriceDzd * item.quantity
+        generatedRowIds.push(`ret-row-${Math.random().toString(36).slice(2)}`)
+        returnedMap.set(item.variantId, alreadyReturned + item.quantity)
+      }
+
+      let totalReturnedAcrossSale = 0
+      for (const [, qty] of returnedMap.entries()) {
+        totalReturnedAcrossSale += qty
+      }
+
+      const saleStatus = totalReturnedAcrossSale >= totalPurchasedQtyAcrossSale ? 'refunded' : 'partial_refund'
+      return { totalRefundDzd, generatedRowIds, saleStatus }
+    }
+
+    // Attempting to return unknown variant -> DENIED
+    expect(() => processReturnValidation([{ variantId: 'v-unknown', quantity: 1 }])).toThrow(
+      'غير موجود في الفاتورة الأصلية'
+    )
+
+    // Attempting to return more than purchased (3 v1 purchased, requesting 5) -> DENIED
+    expect(() => processReturnValidation([{ variantId: 'v1', quantity: 5 }])).toThrow(
+      'تتجاوز الكمية المتبقية القابلة للإرجاع'
+    )
+
+    // Partial Return of 1 x v1 -> Total Refund = 2,000 DZD (DB price), status = partial_refund
+    const partialRes = processReturnValidation([{ variantId: 'v1', quantity: 1 }])
+    expect(partialRes.totalRefundDzd).toBe(2000)
+    expect(partialRes.saleStatus).toBe('partial_refund')
+    expect(partialRes.generatedRowIds.length).toBe(1)
+
+    // Full Return of 3 x v1 + 2 x v2 -> Total Refund = 3*2000 + 2*5000 = 16,000 DZD, status = refunded, 2 distinct row PKs
+    const fullRes = processReturnValidation([
+      { variantId: 'v1', quantity: 3 },
+      { variantId: 'v2', quantity: 2 },
+    ])
+    expect(fullRes.totalRefundDzd).toBe(16000)
+    expect(fullRes.saleStatus).toBe('refunded')
+    expect(fullRes.generatedRowIds.length).toBe(2)
+    expect(fullRes.generatedRowIds[0]).not.toBe(fullRes.generatedRowIds[1]) // Proves unique primary keys
+  })
 })

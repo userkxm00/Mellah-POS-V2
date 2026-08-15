@@ -97,7 +97,7 @@ export function registerBizIpcHandlers(): void {
         throw new Error('يجب تحديد الزبون عند البيع بالتقسيط / الكريدي')
       }
 
-      // Check for quick custom items and ensure generic variant exists before foreign key insertion
+      // Deterministic error handling: ensure generic product & variant exist without silent .catch swallowing
       const hasCustomItems = payload.items.some((i) => i.variant_id.startsWith('v-custom-'))
       if (hasCustomItems) {
         const existingVariant = await db.query<{ id: string }>(
@@ -106,14 +106,17 @@ export function registerBizIpcHandlers(): void {
         )
         if (existingVariant.length === 0) {
           const nowSeed = new Date().toISOString()
-          await db.execute(
-            `INSERT INTO products (id, category_id, name, price_dzd, created_at, updated_at) VALUES (?, NULL, 'سلعة غير مسجلة', 0, ?, ?)`,
-            [CUSTOM_GENERIC_PRODUCT_ID, nowSeed, nowSeed]
-          ).catch(() => {})
+          const prodRows = await db.query<{ id: string }>('SELECT id FROM products WHERE id = ?', [CUSTOM_GENERIC_PRODUCT_ID])
+          if (prodRows.length === 0) {
+            await db.execute(
+              `INSERT INTO products (id, category_id, name, price_dzd, created_at, updated_at) VALUES (?, NULL, 'سلعة غير مسجلة', 0, ?, ?)`,
+              [CUSTOM_GENERIC_PRODUCT_ID, nowSeed, nowSeed]
+            )
+          }
           await db.execute(
             `INSERT INTO product_variants (id, product_id, branch_id, price_dzd, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)`,
             [CUSTOM_GENERIC_VARIANT_ID, CUSTOM_GENERIC_PRODUCT_ID, branchId, nowSeed, nowSeed]
-          ).catch(() => {})
+          )
         }
       }
 
@@ -294,12 +297,12 @@ export function registerBizIpcHandlers(): void {
     return { success: true }
   })
 
-  // ── Atomic Multi-Item Returns Processing ──
+  // ── Atomic Multi-Item Returns (Unique Row IDs, Authoritative DB Prices, Sale Status Update) ──
   ipcMain.handle('biz:returns:process', async (
     _event,
     payload: {
       originalSaleId: string
-      items: Array<{ variantId: string; quantity: number; unitPriceDzd: number }>
+      items: Array<{ variantId: string; quantity: number }>
       refundMethod: 'cash' | 'card' | 'store_credit'
       reason?: string
     }
@@ -311,7 +314,7 @@ export function registerBizIpcHandlers(): void {
       throw new Error('لم يتم تحديد أي عنصر للإرجاع')
     }
 
-    // Fetch original sale to derive branch_id and customer_id
+    // 1. Fetch original sale to derive branch_id and customer_id
     const sales = await db.query<{ id: string; branch_id: string; customer_id: string | null }>(
       'SELECT id, branch_id, customer_id FROM sales WHERE id = ?',
       [payload.originalSaleId]
@@ -322,29 +325,92 @@ export function registerBizIpcHandlers(): void {
     // Verify authorized branch access for original sale branch
     validateBranchAccess(session, origSale.branch_id)
 
+    // 2. Fetch authoritative sale_items from DB (NEVER trust renderer unit prices!)
+    const origSaleItems = await db.query<{ variant_id: string; quantity: number; unit_price_dzd: number }>(
+      'SELECT variant_id, quantity, unit_price_dzd FROM sale_items WHERE sale_id = ?',
+      [payload.originalSaleId]
+    )
+    if (origSaleItems.length === 0) throw new Error('لا توجد عناصر في الفاتورة الأصلية')
+
+    // Fetch existing returns for this sale to compute remaining returnable quantities
+    const origReturns = await db.query<{ variant_id: string; total_returned: number }>(
+      'SELECT variant_id, COALESCE(SUM(quantity), 0) as total_returned FROM returns WHERE original_sale_id = ? GROUP BY variant_id',
+      [payload.originalSaleId]
+    )
+
+    const returnedMap = new Map<string, number>()
+    for (const r of origReturns) {
+      returnedMap.set(r.variant_id, r.total_returned)
+    }
+
+    const itemMap = new Map<string, { purchasedQty: number; unitPriceDzd: number }>()
+    let totalPurchasedQtyAcrossSale = 0
+    for (const si of origSaleItems) {
+      itemMap.set(si.variant_id, { purchasedQty: si.quantity, unitPriceDzd: si.unit_price_dzd })
+      totalPurchasedQtyAcrossSale += si.quantity
+    }
+
+    // 3. Validate items & compute authoritative refund total
+    let totalRefundDzd = 0
     const now = new Date().toISOString()
     const operations: Array<{ sql: string; params: unknown[] }> = []
-
-    const returnId = generateUUID()
-    const totalRefundDzd = payload.items.reduce((sum, item) => sum + item.unitPriceDzd * item.quantity, 0)
+    const generatedReturnRowIds: string[] = []
 
     for (const item of payload.items) {
+      const dbItem = itemMap.get(item.variantId)
+      if (!dbItem) {
+        throw new Error(`عفواً! المنتج المطلوب إرجاعه (ID: ${item.variantId}) غير موجود في الفاتورة الأصلية`)
+      }
+
+      const alreadyReturned = returnedMap.get(item.variantId) ?? 0
+      const remainingReturnable = dbItem.purchasedQty - alreadyReturned
+
+      if (item.quantity <= 0) {
+        throw new Error('الكمية المطلوبة للإرجاع يجب أن تكون أكبر من 0')
+      }
+
+      if (item.quantity > remainingReturnable) {
+        throw new Error(`الكمية المطلوبة للإرجاع (${item.quantity}) تتجاوز الكمية المتبقية القابلة للإرجاع (${remainingReturnable})`)
+      }
+
+      // Authoritative DB unit price
+      const authoritativeUnitPrice = dbItem.unitPriceDzd
+      totalRefundDzd += authoritativeUnitPrice * item.quantity
+
+      // Distinct primary key returnRowId per returned item row
+      const returnRowId = generateUUID()
       const movementId = generateUUID()
+      generatedReturnRowIds.push(returnRowId)
 
       operations.push({
         sql: `INSERT INTO returns (id, branch_id, original_sale_id, variant_id, quantity, refund_method, reason, processed_by, created_at)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        params: [returnId, origSale.branch_id, payload.originalSaleId, item.variantId, item.quantity, payload.refundMethod, payload.reason ?? null, session.userId, now],
+        params: [returnRowId, origSale.branch_id, payload.originalSaleId, item.variantId, item.quantity, payload.refundMethod, payload.reason ?? null, session.userId, now],
       })
 
       operations.push({
         sql: `INSERT INTO stock_movements (id, branch_id, variant_id, type, quantity_change, reference_id, note, created_by, created_at)
               VALUES (?, ?, ?, 'return', ?, ?, ?, ?, ?)`,
-        params: [movementId, origSale.branch_id, item.variantId, item.quantity, returnId, `استرجاع (فاتورة #${payload.originalSaleId.slice(0, 8)})`, session.userId, now],
+        params: [movementId, origSale.branch_id, item.variantId, item.quantity, returnRowId, `استرجاع (فاتورة #${payload.originalSaleId.slice(0, 8)})`, session.userId, now],
       })
+
+      // Update map for overall sale status calculation
+      returnedMap.set(item.variantId, alreadyReturned + item.quantity)
     }
 
-    // Store Credit Refund: update customer balance in the SAME transaction
+    // 4. Calculate total returns across whole sale and update sale status (full vs partial refund)
+    let totalReturnedAcrossSale = 0
+    for (const [, qty] of returnedMap.entries()) {
+      totalReturnedAcrossSale += qty
+    }
+
+    const newSaleStatus = totalReturnedAcrossSale >= totalPurchasedQtyAcrossSale ? 'refunded' : 'partial_refund'
+    operations.push({
+      sql: `UPDATE sales SET status = ?, updated_at = ? WHERE id = ?`,
+      params: [newSaleStatus, now, payload.originalSaleId],
+    })
+
+    // 5. Store Credit Refund: update customer store_credit_balance in the SAME transaction
     if (payload.refundMethod === 'store_credit' && origSale.customer_id) {
       operations.push({
         sql: `UPDATE customers SET store_credit_balance = COALESCE(store_credit_balance, 0) + ?, updated_at = ? WHERE id = ?`,
@@ -352,19 +418,20 @@ export function registerBizIpcHandlers(): void {
       })
     }
 
+    const batchLogId = generatedReturnRowIds[0] ?? generateUUID()
     operations.push({
       sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'return_processed', 'returns', ?, ?, ?)`,
-      params: [generateUUID(), session.userId, returnId, `إرجاع ${payload.items.length} منتجات بمبلغ ${totalRefundDzd} دج (${payload.refundMethod})`, now],
+      params: [generateUUID(), session.userId, batchLogId, `إرجاع ${payload.items.length} منتجات بمبلغ ${totalRefundDzd} دج (${payload.refundMethod})`, now],
     })
 
-    // Execute whole return atomically in ONE database transaction
+    // Execute entire return atomically in ONE database transaction
     await withTransaction(async (tDb) => {
       for (const op of operations) {
         await tDb.execute(op.sql, op.params)
       }
     })
 
-    return { returnId, totalRefundDzd }
+    return { returnId: batchLogId, returnRowIds: generatedReturnRowIds, totalRefundDzd, saleStatus: newSaleStatus }
   })
 
   // ── Shift Close Authorization & Management ──
