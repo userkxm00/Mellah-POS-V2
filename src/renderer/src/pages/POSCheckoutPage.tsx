@@ -41,7 +41,7 @@ import { useHeldCartStore } from '@/stores/heldCartStore'
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
 import { processSale } from '@/services/saleService'
 import { printThermalReceipt } from '@/services/receiptService'
-import { useShiftStore } from '@/stores/shiftStore'
+import { useShiftStore, type ShiftState } from '@/stores/shiftStore'
 import { generateUUID } from '@/lib/uuid'
 import { POSCheckoutModals } from '@/components/pos/POSCheckoutModals'
 import { POSDebtRepaymentModal } from '@/components/pos/POSDebtRepaymentModal'
@@ -526,9 +526,9 @@ export function POSCheckoutPage({
   const t = useLanguageStore((s) => s.t)
   useLanguageStore((s) => s.version)
 
-  const activeShift = useShiftStore((s) => s.activeShift)
-  const fetchActiveShift = useShiftStore((s) => s.fetchActiveShift)
-  const isShiftLoading = useShiftStore((s) => s.isLoading)
+  const activeShift = useShiftStore((s: ShiftState) => s.activeShift)
+  const fetchActiveShift = useShiftStore((s: ShiftState) => s.fetchActiveShift)
+  const isShiftLoading = useShiftStore((s: ShiftState) => s.isLoading)
 
   const heldCarts = useHeldCartStore((s) => s.heldCarts)
   const holdCart = useHeldCartStore((s) => s.holdCart)

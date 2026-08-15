@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Lock } from 'lucide-react'
 import { Modal, Input } from '@/components/ui'
-import { useShiftStore } from '@/stores/shiftStore'
+import { useShiftStore, type ShiftState } from '@/stores/shiftStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 import { formatCurrency } from '@/lib/format'
@@ -31,9 +31,9 @@ function getShiftCloseToastMessage(diff: number): string {
 }
 
 export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): React.JSX.Element | null {
-  const activeShift = useShiftStore((s) => s.activeShift)
-  const closeShift = useShiftStore((s) => s.closeShift)
-  const isLoading = useShiftStore((s) => s.isLoading)
+  const activeShift = useShiftStore((s: ShiftState) => s.activeShift)
+  const closeShift = useShiftStore((s: ShiftState) => s.closeShift)
+  const isLoading = useShiftStore((s: ShiftState) => s.isLoading)
   const addToast = useToastStore((s) => s.addToast)
 
   const [cashSalesTotal, setCashSalesTotal] = useState<number>(0)

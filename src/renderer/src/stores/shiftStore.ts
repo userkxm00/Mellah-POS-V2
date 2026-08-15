@@ -24,13 +24,16 @@ export interface ShiftState {
 export function getActiveUserAndBranch(): { cashierId: string; branchId: string } {
   const user = useAuthStore.getState().currentUser
   const branch = useAuthStore.getState().currentBranch
+  if (!user || !branch) {
+    throw new Error('لا توجد جلسة مستخدم أو فرع نشط. يرجى تسجيل الدخول أولاً')
+  }
   return {
-    cashierId: user?.id ?? DEFAULT_CASHIER_ID,
-    branchId: branch?.id ?? DEFAULT_BRANCH_ID,
+    cashierId: user.id,
+    branchId: branch.id,
   }
 }
 
-export const useShiftStore = create<ShiftState>((set) => ({
+export const useShiftStore = create<ShiftState>((set, get) => ({
   activeShift: null,
   isLoading: false,
   error: null,
@@ -126,7 +129,7 @@ export const useShiftStore = create<ShiftState>((set) => ({
 
   closeShift: async (closingCashDzd: number) => {
     set({ isLoading: true, error: null })
-    const { activeShift } = useShiftStore.getState()
+    const activeShift = get().activeShift
     if (!activeShift) {
       const msg = 'لا توجد وردية مفتوحة لإغلاقها'
       set({ error: msg, isLoading: false })

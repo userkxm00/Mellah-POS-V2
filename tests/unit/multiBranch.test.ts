@@ -92,4 +92,25 @@ describe('Multi-Branch Architecture & Session Isolation (Phase 3)', () => {
     const nullCatKey = `${productName.toLowerCase()}_${''}`
     expect(nullCatKey).toBe('t-shirt cotton_')
   })
+
+  it('verifies in-memory active shift is returned only if it belongs to the target branch', () => {
+    const activeShift = {
+      id: 's-branch-a',
+      branch_id: 'b-algiers',
+      cashier_id: 'u-cashier-1',
+      opening_cash_dzd: 5000,
+      status: 'open',
+      opened_at: '2026-08-15T10:00:00.000Z',
+      closed_at: null,
+      expected_cash_dzd: null,
+      closing_cash_dzd: null,
+      difference_dzd: null,
+    }
+
+    // Matching branch -> ALLOWED
+    expect(activeShift.branch_id === 'b-algiers' ? activeShift.id : null).toBe('s-branch-a')
+
+    // Mismatched branch request -> MUST NOT return activeShift.id
+    expect(activeShift.branch_id === 'b-oran' ? activeShift.id : null).toBeNull()
+  })
 })

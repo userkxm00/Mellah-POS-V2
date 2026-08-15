@@ -93,7 +93,11 @@ export async function ensureSupabaseAuth(): Promise<boolean> {
     if (session) return true
 
     const activeBranch = useAuthStore.getState().currentBranch
-    const branchId = activeBranch?.id ?? ''
+    if (!activeBranch?.id) {
+      logger.warn('Cannot establish Supabase auth without active branch session')
+      return false
+    }
+    const branchId = activeBranch.id
 
     const { data, error } = await supabase.auth.signInAnonymously({
       options: {

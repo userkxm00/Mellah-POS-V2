@@ -17,7 +17,7 @@ import { printThermalReceipt } from '@/services/receiptService'
 import { exportSalesToCSV } from '@/services/exportService'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
-import { useShiftStore } from '@/stores/shiftStore'
+import { useShiftStore, type ShiftState } from '@/stores/shiftStore'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
 import { voidSale } from '@/services/voidSaleService'
 
@@ -106,7 +106,7 @@ interface SalesHistoryPageProps {
 export function SalesHistoryPage({ onBack }: SalesHistoryPageProps): React.JSX.Element {
   const t = useLanguageStore((s) => s.t)
   useLanguageStore((s) => s.version)
-  const activeShift = useShiftStore((s) => s.activeShift)
+  const activeShift = useShiftStore((s: ShiftState) => s.activeShift)
   const storeSettings = useStoreSettingsStore((s) => s.settings)
   const [sales, setSales] = useState<SaleRow[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)

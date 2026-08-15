@@ -95,8 +95,8 @@ export async function processCSVProductRow(
     productId = generateUUID()
     existingProductsMap.set(prodKey, productId)
     operations.push({
-      sql: `INSERT INTO products (id, category_id, name, price_dzd, cost_dzd, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      params: [productId, categoryId, productName, priceDzd, costDzd, now, now],
+      sql: `INSERT INTO products (id, branch_id, category_id, name, price_dzd, cost_dzd, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      params: [productId, branchId, categoryId, productName, priceDzd, costDzd, now, now],
     })
   }
 
@@ -117,6 +117,7 @@ export async function processCSVProductRow(
 }
 
 export async function importProductsFromCSV(csvContent: string): Promise<number> {
+  const branchId = getActiveBranchId()
   const lines = csvContent.split('\n').filter((l) => l.trim())
   if (lines.length <= 1) {
     throw new Error('ملف CSV فارغ أو لا يحتوي على بيانات')
@@ -127,7 +128,8 @@ export async function importProductsFromCSV(csvContent: string): Promise<number>
   const operations: Array<{ sql: string; params: unknown[] }> = []
 
   const catRows = await window.electron.db.query<{ id: string; name: string }>(
-    'SELECT id, name FROM categories WHERE deleted_at IS NULL'
+    'SELECT id, name FROM categories WHERE branch_id = ? AND deleted_at IS NULL',
+    [branchId]
   )
   const categoryMap = new Map<string, string>()
   for (const c of catRows) {
@@ -135,7 +137,8 @@ export async function importProductsFromCSV(csvContent: string): Promise<number>
   }
 
   const prodRows = await window.electron.db.query<{ id: string; name: string; category_id: string | null }>(
-    'SELECT id, name, category_id FROM products WHERE deleted_at IS NULL'
+    'SELECT id, name, category_id FROM products WHERE branch_id = ? AND deleted_at IS NULL',
+    [branchId]
   )
   const productMap = new Map<string, string>()
   for (const p of prodRows) {
