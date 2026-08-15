@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setMainSession, requireAuth, validateBranchAccess, MainSession } from '../../src/main/session'
-import { processCSVProductRow, CSVProductRow } from '../../src/renderer/src/services/csvProductImport'
+import { processCSVProductRow, importProductsFromCSV, CSVProductRow } from '../../src/renderer/src/services/csvProductImport'
 import { resolveActiveShiftId } from '../../src/renderer/src/lib/shiftUtils'
 import { useShiftStore } from '../../src/renderer/src/stores/shiftStore'
 import { useAuthStore } from '../../src/renderer/src/stores/authStore'
@@ -128,6 +128,19 @@ describe('Multi-Branch Architecture & Session Isolation (Phase 3)', () => {
 
     // T-Shirt/Men and T-Shirt/Women MUST be separate products!
     expect(existingProductsMap.get(`t-shirt_${cat1Id}`)).not.toBe(existingProductsMap.get(`t-shirt_${cat2Id}`))
+  })
+
+  it('imports products from full CSV string preserving category identity and active branch scoping', async () => {
+    const branch: Branch = { id: 'b-algiers', name: 'Algiers', address: null, created_at: '', updated_at: '', deleted_at: null }
+    useAuthStore.setState({ currentBranch: branch, isAuthenticated: true })
+
+    const csvData = `Name,Category,Price,Cost,Size,Color,Stock
+T-Shirt,Men,1000,600,M,Blue,10
+T-Shirt,Women,1200,700,S,Red,5
+T-Shirt,Men,1000,600,L,Blue,15`
+
+    const count = await importProductsFromCSV(csvData)
+    expect(count).toBe(3)
   })
 
   it('verifies resolveActiveShiftId returns in-memory shift only if it belongs to target branch', async () => {
