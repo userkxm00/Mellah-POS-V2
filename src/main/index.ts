@@ -5,6 +5,8 @@ import bcrypt from 'bcryptjs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { initDatabase, closeDatabase, whenDatabaseReady, withTransaction } from './database'
 import { initAutoUpdater, stopAutoUpdater } from './autoUpdater'
+import { setMainSession, getMainSession } from './session'
+import { registerBizIpcHandlers } from './bizIpc'
 
 const BCRYPT_ROUNDS = 10
 
@@ -118,16 +120,16 @@ function registerIpcHandlers(): void {
           id: string
           branch_id: string
           full_name: string
-          role: 'admin' | 'cashier'
+          role: 'admin' | 'manager' | 'cashier'
           pin_hash: string
-        }>('SELECT id, branch_id, full_name, role, pin_hash FROM users WHERE id = ?', [userId])
+        }>('SELECT id, branch_id, full_name, role, pin_hash FROM users WHERE id = ? AND deleted_at IS NULL', [userId])
       : await db.query<{
           id: string
           branch_id: string
           full_name: string
-          role: 'admin' | 'cashier'
+          role: 'admin' | 'manager' | 'cashier'
           pin_hash: string
-        }>('SELECT id, branch_id, full_name, role, pin_hash FROM users')
+        }>('SELECT id, branch_id, full_name, role, pin_hash FROM users WHERE deleted_at IS NULL')
 
     for (const user of users) {
       let isMatch = false
@@ -152,11 +154,26 @@ function registerIpcHandlers(): void {
       }
 
       if (isMatch) {
-        // Match found — fetch branch info and return user
+        // Match found — fetch branch info and allowed branches
         const branches = await db.query<{ id: string; name: string; address: string }>(
           'SELECT * FROM branches WHERE id = ?',
           [user.branch_id]
         )
+        const allBranches = await db.query<{ id: string }>('SELECT id FROM branches WHERE deleted_at IS NULL')
+
+        const allowedBranchIds = user.role === 'admin'
+          ? allBranches.map((b) => b.id)
+          : [user.branch_id]
+
+        // Populate canonical MainSession in Main process memory
+        setMainSession({
+          userId: user.id,
+          role: user.role,
+          branchId: user.branch_id,
+          allowedBranchIds,
+          fullName: user.full_name,
+        })
+
         return {
           user: {
             id: user.id,
@@ -174,17 +191,48 @@ function registerIpcHandlers(): void {
     return null
   })
 
-  // In-memory runtime session for active application execution
-  let activeRuntimeUserId: string | null = null
+  // Session management handlers adhering strictly to IMPORTANT AUTH SESSION RULE:
+  // The renderer CANNOT establish or override session by supplying arbitrary userId.
+  ipcMain.handle('auth:set-session', async (_event, userId: string | null) => {
+    if (!userId) {
+      setMainSession(null)
+      return true
+    }
+    // If active session exists for this userId, keep it
+    const active = getMainSession()
+    if (active && active.userId === userId) {
+      return true
+    }
+    // Otherwise look up user from DB to verify user exists & populate session safely (never trust renderer for role/branch)
+    const db = await whenDatabaseReady()
+    const rows = await db.query<{ id: string; branch_id: string; full_name: string; role: 'admin' | 'manager' | 'cashier' }>(
+      'SELECT id, branch_id, full_name, role FROM users WHERE id = ? AND deleted_at IS NULL',
+      [userId]
+    )
+    if (rows.length > 0) {
+      const u = rows[0]
+      const allBranches = await db.query<{ id: string }>('SELECT id FROM branches WHERE deleted_at IS NULL')
+      const allowedBranchIds = u.role === 'admin' ? allBranches.map((b) => b.id) : [u.branch_id]
 
-  ipcMain.handle('auth:set-session', (_event, userId: string | null) => {
-    activeRuntimeUserId = userId
-    return true
+      setMainSession({
+        userId: u.id,
+        role: u.role,
+        branchId: u.branch_id,
+        allowedBranchIds,
+        fullName: u.full_name,
+      })
+      return true
+    }
+    setMainSession(null)
+    return false
   })
 
   ipcMain.handle('auth:get-session', () => {
-    return activeRuntimeUserId
+    return getMainSession()?.userId ?? null
   })
+
+  // Register business IPC channels
+  registerBizIpcHandlers()
 
   // ── App Relaunch IPC Handler for Language Change ──
   ipcMain.handle('app:relaunch', () => {
