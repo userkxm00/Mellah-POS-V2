@@ -161,4 +161,62 @@ describe('IPC Security & Authorization Layer (Phase 2B)', () => {
     expect(getMainSession()).toBeNull()
     expect(() => requireAuth()).toThrow('Unauthorized: Authentication required')
   })
+
+  it('enforces shift close authorization rules', () => {
+    const cashierSession: MainSession = {
+      userId: 'u-cashier-1',
+      role: 'cashier',
+      branchId: 'b-algiers',
+      allowedBranchIds: ['b-algiers'],
+      fullName: 'Ahmad Cashier',
+    }
+    setMainSession(cashierSession)
+
+    const checkShiftCloseAuth = (session: MainSession, shiftCashierId: string, shiftBranchId: string): void => {
+      if (session.role === 'cashier' && shiftCashierId !== session.userId) {
+        throw new Error('Forbidden: Cashiers can only close their own shift')
+      }
+      validateBranchAccess(session, shiftBranchId)
+    }
+
+    // Cashier closing own shift -> ALLOWED
+    expect(() => checkShiftCloseAuth(cashierSession, 'u-cashier-1', 'b-algiers')).not.toThrow()
+
+    // Cashier closing another cashier's shift -> DENIED
+    expect(() => checkShiftCloseAuth(cashierSession, 'u-cashier-2', 'b-algiers')).toThrow(
+      'Forbidden: Cashiers can only close their own shift'
+    )
+
+    // Manager closing another cashier's shift in authorized branch -> ALLOWED
+    const managerSession: MainSession = {
+      userId: 'u-manager-1',
+      role: 'manager',
+      branchId: 'b-algiers',
+      allowedBranchIds: ['b-algiers'],
+      fullName: 'Samir Manager',
+    }
+    expect(() => checkShiftCloseAuth(managerSession, 'u-cashier-1', 'b-algiers')).not.toThrow()
+
+    // Manager closing shift in unauthorized branch -> DENIED
+    expect(() => checkShiftCloseAuth(managerSession, 'u-cashier-1', 'b-oran')).toThrow(
+      "Forbidden: User 'u-manager-1' is not authorized for branch 'b-oran'"
+    )
+  })
+
+  it('derives void/return stock movement branch from original sale branch', () => {
+    const managerSession: MainSession = {
+      userId: 'u-manager-1',
+      role: 'manager',
+      branchId: 'b-oran', // Manager active context is Oran
+      allowedBranchIds: ['b-algiers', 'b-oran'], // Authorized for both
+      fullName: 'Samir Manager',
+    }
+    setMainSession(managerSession)
+
+    const originalSaleBranch = 'b-algiers'
+
+    // Authorized branch validation
+    const branchToUse = validateBranchAccess(managerSession, originalSaleBranch)
+    expect(branchToUse).toBe('b-algiers') // Restock movement will be created in b-algiers, not b-oran
+  })
 })

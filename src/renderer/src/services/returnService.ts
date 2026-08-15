@@ -110,17 +110,18 @@ export async function processReturn(
   }
 
   if (window.electron?.biz?.returns?.process) {
-    for (const item of activeItems) {
-      await window.electron.biz.returns.process({
-        originalSaleId: saleId,
-        variantId: item.variant_id,
-        quantity: item.quantity,
-        refundMethod,
-        reason,
-      })
-    }
-    logger.info('Return processed via Main process IPC', { saleId, returnCount: activeItems.length })
-    return ''
+    const res = await window.electron.biz.returns.process({
+      originalSaleId: saleId,
+      items: activeItems.map((i) => ({
+        variantId: i.variant_id,
+        quantity: i.quantity,
+        unitPriceDzd: i.unit_price_dzd,
+      })),
+      refundMethod,
+      reason,
+    })
+    logger.info('Atomic return processed via Main process IPC', { saleId, returnId: (res as { returnId: string })?.returnId })
+    return (res as { returnId: string })?.returnId ?? ''
   }
 
   // Resolve authenticated cashier and branch — never fall back silently to defaults in financial records

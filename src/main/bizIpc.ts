@@ -1,14 +1,14 @@
 import { ipcMain } from 'electron'
+import crypto from 'node:crypto'
 import { whenDatabaseReady, withTransaction } from './database'
 import { requireAuth, requireRole, validateBranchAccess } from './session'
 import type { PaymentMethod } from '../renderer/src/types/database'
 
+export const CUSTOM_GENERIC_PRODUCT_ID = 'p-custom-generic-0000'
+export const CUSTOM_GENERIC_VARIANT_ID = 'v-custom-generic-0000'
+
 function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
+  return crypto.randomUUID()
 }
 
 export function registerBizIpcHandlers(): void {
@@ -97,7 +97,27 @@ export function registerBizIpcHandlers(): void {
         throw new Error('يجب تحديد الزبون عند البيع بالتقسيط / الكريدي')
       }
 
-      // 1. DB Stock Check
+      // Check for quick custom items and ensure generic variant exists before foreign key insertion
+      const hasCustomItems = payload.items.some((i) => i.variant_id.startsWith('v-custom-'))
+      if (hasCustomItems) {
+        const existingVariant = await db.query<{ id: string }>(
+          'SELECT id FROM product_variants WHERE id = ?',
+          [CUSTOM_GENERIC_VARIANT_ID]
+        )
+        if (existingVariant.length === 0) {
+          const nowSeed = new Date().toISOString()
+          await db.execute(
+            `INSERT INTO products (id, category_id, name, price_dzd, created_at, updated_at) VALUES (?, NULL, 'سلعة غير مسجلة', 0, ?, ?)`,
+            [CUSTOM_GENERIC_PRODUCT_ID, nowSeed, nowSeed]
+          ).catch(() => {})
+          await db.execute(
+            `INSERT INTO product_variants (id, product_id, branch_id, price_dzd, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)`,
+            [CUSTOM_GENERIC_VARIANT_ID, CUSTOM_GENERIC_PRODUCT_ID, branchId, nowSeed, nowSeed]
+          ).catch(() => {})
+        }
+      }
+
+      // Stock Check for non-custom items
       for (const item of payload.items) {
         if (item.variant_id.startsWith('v-custom-')) continue
         const stockRows = await db.query<{ current_stock: number }>(
@@ -145,10 +165,11 @@ export function registerBizIpcHandlers(): void {
       for (const item of payload.items) {
         const saleItemId = generateUUID()
         const movementId = generateUUID()
+        const targetVariantId = item.variant_id.startsWith('v-custom-') ? CUSTOM_GENERIC_VARIANT_ID : item.variant_id
 
         operations.push({
           sql: `INSERT INTO sale_items (id, sale_id, variant_id, quantity, unit_price_dzd, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-          params: [saleItemId, saleId, item.variant_id, item.quantity, item.unit_price_dzd, now],
+          params: [saleItemId, saleId, targetVariantId, item.quantity, item.unit_price_dzd, now],
         })
 
         if (!item.variant_id.startsWith('v-custom-')) {
@@ -158,6 +179,23 @@ export function registerBizIpcHandlers(): void {
             params: [movementId, branchId, item.variant_id, -item.quantity, saleId, cashierId, now],
           })
         }
+      }
+
+      // Customer Loyalty & Store Credit Updates in Transaction
+      if (payload.customerId) {
+        const settingsRows = await db.query<{ loyalty_enabled: number; loyalty_spend_per_point_dzd: number }>(
+          `SELECT loyalty_enabled, loyalty_spend_per_point_dzd FROM store_settings WHERE branch_id = ? LIMIT 1`,
+          [branchId]
+        )
+        const settings = settingsRows[0] ?? { loyalty_enabled: 0, loyalty_spend_per_point_dzd: 1000 }
+        const spendPerPoint = settings.loyalty_spend_per_point_dzd || 1000
+        const pointsEarned = settings.loyalty_enabled ? Math.floor(totalDzd / Math.max(1, spendPerPoint)) : 0
+        const pointsDeducted = Math.max(0, Math.floor(payload.redeemedPointsDzd ?? 0))
+
+        operations.push({
+          sql: `UPDATE customers SET loyalty_points = MAX(0, loyalty_points + ? - ?), updated_at = ? WHERE id = ?`,
+          params: [pointsEarned, pointsDeducted, now, payload.customerId],
+        })
       }
 
       if (payload.customerId && payload.storeCreditUsedDzd && payload.storeCreditUsedDzd > 0) {
@@ -170,6 +208,33 @@ export function registerBizIpcHandlers(): void {
         }
       }
 
+      // System Audit Log inside transaction
+      operations.push({
+        sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'sale_completed', 'sales', ?, ?, ?)`,
+        params: [generateUUID(), cashierId, saleId, `إتمام عملية بيع بمبلغ ${totalDzd} دج (${payload.paymentMethod})`, now],
+      })
+
+      // Sync Queue Enqueue inside transaction
+      operations.push({
+        sql: `INSERT INTO sync_queue (id, table_name, operation, payload, created_at, attempts) VALUES (?, 'sales', 'insert', ?, ?, 0)`,
+        params: [
+          generateUUID(),
+          JSON.stringify({
+            id: saleId,
+            branch_id: branchId,
+            shift_id: payload.shiftId,
+            cashier_id: cashierId,
+            total_dzd: totalDzd,
+            subtotal_dzd: subtotalDzd,
+            discount_dzd: discountVal,
+            payment_method: payload.paymentMethod,
+            status: 'completed',
+            created_at: now,
+          }),
+          now,
+        ],
+      })
+
       await withTransaction(async (tDb) => {
         for (const op of operations) {
           await tDb.execute(op.sql, op.params)
@@ -180,13 +245,24 @@ export function registerBizIpcHandlers(): void {
     }
   )
 
-  // ── Void Sale ──
+  // ── Void Sale (Derives branch_id from Original Sale) ──
   ipcMain.handle('biz:sales:void', async (_event, saleId: string, reason: string, items: Array<{ variant_id: string; quantity: number }>) => {
     const session = requireAuth()
     requireRole(session, ['admin', 'manager'])
-    const branchId = session.branchId
+    const db = await whenDatabaseReady()
 
     if (!reason.trim()) throw new Error('يرجى كتابة سبب الإلغاء')
+
+    // Fetch original sale to derive branch_id
+    const sales = await db.query<{ id: string; branch_id: string }>(
+      'SELECT id, branch_id FROM sales WHERE id = ?',
+      [saleId]
+    )
+    if (sales.length === 0) throw new Error('الفاتورة غير موجودة')
+    const origSale = sales[0]
+
+    // Verify authorized branch access for original sale branch
+    validateBranchAccess(session, origSale.branch_id)
 
     const now = new Date().toISOString()
     const operations: Array<{ sql: string; params: unknown[] }> = [
@@ -200,9 +276,14 @@ export function registerBizIpcHandlers(): void {
       operations.push({
         sql: `INSERT INTO stock_movements (id, branch_id, variant_id, type, quantity_change, reference_id, note, created_by, created_at)
               VALUES (?, ?, ?, 'adjustment', ?, ?, ?, ?, ?)`,
-        params: [generateUUID(), branchId, item.variant_id, item.quantity, saleId, `إلغاء فاتورة (#${saleId.slice(0, 8)}): ${reason.trim()}`, session.userId, now],
+        params: [generateUUID(), origSale.branch_id, item.variant_id, item.quantity, saleId, `إلغاء فاتورة (#${saleId.slice(0, 8)}): ${reason.trim()}`, session.userId, now],
       })
     }
+
+    operations.push({
+      sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'sale_voided', 'sales', ?, ?, ?)`,
+      params: [generateUUID(), session.userId, saleId, `إلغاء الفاتورة #${saleId.slice(0, 8)} — السبب: ${reason.trim()}`, now],
+    })
 
     await withTransaction(async (tDb) => {
       for (const op of operations) {
@@ -213,38 +294,80 @@ export function registerBizIpcHandlers(): void {
     return { success: true }
   })
 
-  // ── Returns ──
-  ipcMain.handle('biz:returns:process', async (_event, payload: { originalSaleId: string; variantId: string; quantity: number; refundMethod: string; reason?: string }) => {
+  // ── Atomic Multi-Item Returns Processing ──
+  ipcMain.handle('biz:returns:process', async (
+    _event,
+    payload: {
+      originalSaleId: string
+      items: Array<{ variantId: string; quantity: number; unitPriceDzd: number }>
+      refundMethod: 'cash' | 'card' | 'store_credit'
+      reason?: string
+    }
+  ) => {
     const session = requireAuth()
-    const branchId = session.branchId
+    const db = await whenDatabaseReady()
+
+    if (!payload.items || payload.items.length === 0) {
+      throw new Error('لم يتم تحديد أي عنصر للإرجاع')
+    }
+
+    // Fetch original sale to derive branch_id and customer_id
+    const sales = await db.query<{ id: string; branch_id: string; customer_id: string | null }>(
+      'SELECT id, branch_id, customer_id FROM sales WHERE id = ?',
+      [payload.originalSaleId]
+    )
+    if (sales.length === 0) throw new Error('الفاتورة الأصلية غير موجودة')
+    const origSale = sales[0]
+
+    // Verify authorized branch access for original sale branch
+    validateBranchAccess(session, origSale.branch_id)
+
     const now = new Date().toISOString()
+    const operations: Array<{ sql: string; params: unknown[] }> = []
 
     const returnId = generateUUID()
-    const movementId = generateUUID()
+    const totalRefundDzd = payload.items.reduce((sum, item) => sum + item.unitPriceDzd * item.quantity, 0)
 
-    const operations: Array<{ sql: string; params: unknown[] }> = [
-      {
+    for (const item of payload.items) {
+      const movementId = generateUUID()
+
+      operations.push({
         sql: `INSERT INTO returns (id, branch_id, original_sale_id, variant_id, quantity, refund_method, reason, processed_by, created_at)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        params: [returnId, branchId, payload.originalSaleId, payload.variantId, payload.quantity, payload.refundMethod, payload.reason ?? null, session.userId, now],
-      },
-      {
+        params: [returnId, origSale.branch_id, payload.originalSaleId, item.variantId, item.quantity, payload.refundMethod, payload.reason ?? null, session.userId, now],
+      })
+
+      operations.push({
         sql: `INSERT INTO stock_movements (id, branch_id, variant_id, type, quantity_change, reference_id, note, created_by, created_at)
               VALUES (?, ?, ?, 'return', ?, ?, ?, ?, ?)`,
-        params: [movementId, branchId, payload.variantId, payload.quantity, returnId, `استرجاع (فاتورة #${payload.originalSaleId.slice(0, 8)})`, session.userId, now],
-      },
-    ]
+        params: [movementId, origSale.branch_id, item.variantId, item.quantity, returnId, `استرجاع (فاتورة #${payload.originalSaleId.slice(0, 8)})`, session.userId, now],
+      })
+    }
 
+    // Store Credit Refund: update customer balance in the SAME transaction
+    if (payload.refundMethod === 'store_credit' && origSale.customer_id) {
+      operations.push({
+        sql: `UPDATE customers SET store_credit_balance = COALESCE(store_credit_balance, 0) + ?, updated_at = ? WHERE id = ?`,
+        params: [totalRefundDzd, now, origSale.customer_id],
+      })
+    }
+
+    operations.push({
+      sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'return_processed', 'returns', ?, ?, ?)`,
+      params: [generateUUID(), session.userId, returnId, `إرجاع ${payload.items.length} منتجات بمبلغ ${totalRefundDzd} دج (${payload.refundMethod})`, now],
+    })
+
+    // Execute whole return atomically in ONE database transaction
     await withTransaction(async (tDb) => {
       for (const op of operations) {
         await tDb.execute(op.sql, op.params)
       }
     })
 
-    return { returnId }
+    return { returnId, totalRefundDzd }
   })
 
-  // ── Shifts ──
+  // ── Shift Close Authorization & Management ──
   ipcMain.handle('biz:shifts:active', async (_event, targetBranchId?: string) => {
     const session = requireAuth()
     const branchId = validateBranchAccess(session, targetBranchId)
@@ -275,16 +398,26 @@ export function registerBizIpcHandlers(): void {
   })
 
   ipcMain.handle('biz:shifts:close', async (_event, shiftId: string, closingCashDzd: number) => {
-    requireAuth()
+    const session = requireAuth()
     const db = await whenDatabaseReady()
 
-    const shifts = await db.query<{ opening_cash_dzd: number; branch_id: string }>(
-      `SELECT opening_cash_dzd, branch_id FROM shifts WHERE id = ? AND status = 'open'`,
+    const shifts = await db.query<{ id: string; cashier_id: string; branch_id: string; opening_cash_dzd: number }>(
+      `SELECT id, cashier_id, branch_id, opening_cash_dzd FROM shifts WHERE id = ? AND status = 'open'`,
       [shiftId]
     )
     if (shifts.length === 0) throw new Error('الوردية غير موجودة أو مغلقة بالفعل')
 
-    const openingCash = shifts[0].opening_cash_dzd
+    const targetShift = shifts[0]
+
+    // Cashier can close ONLY their own shift
+    if (session.role === 'cashier' && targetShift.cashier_id !== session.userId) {
+      throw new Error('Forbidden: Cashiers can only close their own shift')
+    }
+
+    // Manager/Admin can close another cashier's shift ONLY if authorized for the shift's branch
+    validateBranchAccess(session, targetShift.branch_id)
+
+    const openingCash = targetShift.opening_cash_dzd
     const salesRows = await db.query<{ total_cash_sales: number | null }>(
       `SELECT SUM(cash_amount_dzd) as total_cash_sales FROM sales WHERE shift_id = ? AND status = 'completed'`,
       [shiftId]
