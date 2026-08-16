@@ -131,4 +131,84 @@ describe('Phase 2B Hardening & Typed IPC Audit Verification', () => {
     const finalCredit = (db.prepare('SELECT store_credit_balance FROM customers WHERE id = ?').get(customerId) as { store_credit_balance: number }).store_credit_balance
     expect(finalCredit).toBe(initialCredit - 200)
   })
+
+  it('verifies CloseShiftModal expected cash preview math matches IPC shift close calculation including partial cash refunds', () => {
+    const shiftModalId = 's-modal-test'
+    const openingCash = 5000
+
+    // Close existing shift to allow new open shift
+    db.prepare("UPDATE shifts SET status = 'closed' WHERE id = ?").run(shiftId)
+    db.prepare("INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status) VALUES (?, ?, ?, ?, 'open')").run(shiftModalId, branchId, cashierId, openingCash)
+
+    // Sale: 4000 DZD cash
+    db.prepare("INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES ('sale-mod-1', ?, ?, ?, 4000, 4000, 'cash', 'completed')").run(branchId, shiftModalId, cashierId)
+
+    // Customer Debt Repayment: 1000 DZD cash
+    db.prepare("INSERT INTO customer_payments (id, branch_id, shift_id, customer_id, amount_dzd, payment_method) VALUES ('cp-mod-1', ?, ?, ?, 1000, 'cash')").run(branchId, shiftModalId, customerId)
+
+    // Partial Cash Return in this shift: 1500 DZD
+    db.prepare(`
+      INSERT INTO returns (id, branch_id, shift_id, original_sale_id, variant_id, quantity, unit_price_dzd, refund_method, processed_by)
+      VALUES ('ret-mod-1', ?, ?, 'sale-mod-1', ?, 1, 1500, 'cash', ?)
+    `).run(branchId, shiftModalId, variantId, cashierId)
+
+    // Query values using the EXACT queries executed by CloseShiftModal and biz:shifts:close IPC
+    const salesCash = (db.prepare("SELECT COALESCE(SUM(cash_amount_dzd), 0) as c FROM sales WHERE shift_id = ? AND status != 'voided'").get(shiftModalId) as { c: number }).c
+    const repayCash = (db.prepare("SELECT COALESCE(SUM(amount_dzd), 0) as r FROM customer_payments WHERE shift_id = ? AND payment_method = 'cash'").get(shiftModalId) as { r: number }).r
+    const refundCash = (db.prepare("SELECT COALESCE(SUM(quantity * unit_price_dzd), 0) as rf FROM returns WHERE shift_id = ? AND refund_method = 'cash'").get(shiftModalId) as { rf: number }).rf
+
+    const expectedCashUI = openingCash + salesCash + repayCash - refundCash
+
+    expect(salesCash).toBe(4000)
+    expect(repayCash).toBe(1000)
+    expect(refundCash).toBe(1500)
+    expect(expectedCashUI).toBe(8500) // 5000 + 4000 + 1000 - 1500 = 8500 DZD
+  })
+
+  it('repairs pre-existing pending sync_queue sale payloads missing cash_amount_dzd and card_amount_dzd', () => {
+    const oldSaleId = 'sale-pre-migration-10'
+    const oldSyncId = 'sync-pre-migration-10'
+
+    // Insert sale with cash_amount_dzd = 6000, card_amount_dzd = 0
+    db.prepare("INSERT INTO sales (id, branch_id, cashier_id, total_dzd, cash_amount_dzd, card_amount_dzd, payment_method, status) VALUES (?, ?, ?, 6000, 6000, 0, 'cash', 'completed')").run(oldSaleId, branchId, cashierId)
+
+    // Insert pre-existing pending sync_queue row with payload missing cash_amount_dzd / card_amount_dzd
+    const legacyPayload = JSON.stringify({
+      id: oldSaleId,
+      branch_id: branchId,
+      total_dzd: 6000,
+      payment_method: 'cash',
+      status: 'completed',
+    })
+    db.prepare("INSERT INTO sync_queue (id, table_name, operation, payload) VALUES (?, 'sales', 'insert', ?)").run(oldSyncId, legacyPayload)
+
+    // Execute migration 0011 repair query
+    db.exec(`
+      UPDATE sync_queue
+      SET payload = json_set(
+        payload,
+        '$.cash_amount_dzd',
+        COALESCE(
+          (SELECT s.cash_amount_dzd FROM sales s WHERE s.id = json_extract(sync_queue.payload, '$.id')),
+          CASE WHEN json_extract(payload, '$.payment_method') = 'card' THEN 0 ELSE json_extract(payload, '$.total_dzd') END
+        ),
+        '$.card_amount_dzd',
+        COALESCE(
+          (SELECT s.card_amount_dzd FROM sales s WHERE s.id = json_extract(sync_queue.payload, '$.id')),
+          CASE WHEN json_extract(payload, '$.payment_method') = 'card' THEN json_extract(payload, '$.total_dzd') ELSE 0 END
+        )
+      )
+      WHERE table_name = 'sales'
+        AND synced_at IS NULL
+        AND (json_extract(payload, '$.cash_amount_dzd') IS NULL OR json_extract(payload, '$.card_amount_dzd') IS NULL);
+    `)
+
+    // Verify repaired payload string in DB
+    const syncRow = db.prepare('SELECT payload FROM sync_queue WHERE id = ?').get(oldSyncId) as { payload: string }
+    const repaired = JSON.parse(syncRow.payload)
+
+    expect(repaired.cash_amount_dzd).toBe(6000)
+    expect(repaired.card_amount_dzd).toBe(0)
+    expect(repaired.payment_method).toBe('cash')
+  })
 })

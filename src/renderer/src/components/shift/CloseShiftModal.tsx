@@ -39,6 +39,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): Reac
   const [cashSalesTotal, setCashSalesTotal] = useState<number>(0)
   const [cardSalesTotal, setCardSalesTotal] = useState<number>(0)
   const [cashRepaymentsTotal, setCashRepaymentsTotal] = useState<number>(0)
+  const [cashRefundsTotal, setCashRefundsTotal] = useState<number>(0)
   const [closingCashInput, setClosingCashInput] = useState<string>('')
   const [isFetchingSummary, setIsFetchingSummary] = useState<boolean>(false)
 
@@ -51,7 +52,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): Reac
              COALESCE(SUM(cash_amount_dzd), 0) as cash_total,
              COALESCE(SUM(card_amount_dzd), 0) as card_total
            FROM sales 
-           WHERE shift_id = ? AND status = 'completed'`,
+           WHERE shift_id = ? AND status != 'voided'`,
           [activeShift.id]
         ),
         window.electron.db.query<{ repayments_total: number }>(
@@ -60,16 +61,24 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): Reac
            WHERE shift_id = ? AND payment_method = 'cash'`,
           [activeShift.id]
         ).catch(() => [{ repayments_total: 0 }]),
+        window.electron.db.query<{ refunds_total: number }>(
+          `SELECT COALESCE(SUM(quantity * unit_price_dzd), 0) as refunds_total
+           FROM returns
+           WHERE shift_id = ? AND refund_method = 'cash'`,
+          [activeShift.id]
+        ).catch(() => [{ refunds_total: 0 }]),
       ])
-        .then(([salesRows, repayRows]) => {
+        .then(([salesRows, repayRows, refundRows]) => {
           const cash = salesRows[0]?.cash_total ?? 0
           const card = salesRows[0]?.card_total ?? 0
           const repayments = repayRows[0]?.repayments_total ?? 0
+          const refunds = refundRows[0]?.refunds_total ?? 0
           setCashSalesTotal(cash)
           setCardSalesTotal(card)
           setCashRepaymentsTotal(repayments)
-          // Mirror shiftStore.closeShift() formula: opening + cashSales + repayments
-          const expected = (activeShift.opening_cash_dzd || 0) + cash + repayments
+          setCashRefundsTotal(refunds)
+          // Mirror biz:shifts:close IPC formula: opening + cashSales + repayments - cashRefunds
+          const expected = (activeShift.opening_cash_dzd || 0) + cash + repayments - refunds
           setClosingCashInput(String(expected))
         })
         .catch(() => {
@@ -84,8 +93,9 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps): Reac
   if (!activeShift) return null
 
   const openingCash = activeShift.opening_cash_dzd || 0
-  // Mirror shiftStore.closeShift() formula exactly: opening + cashSales + cashRepayments
-  const expectedCash = openingCash + cashSalesTotal + cashRepaymentsTotal
+  // Mirror biz:shifts:close IPC formula exactly: opening + cashSales + cashRepayments - cashRefunds
+  const expectedCash = openingCash + cashSalesTotal + cashRepaymentsTotal - cashRefundsTotal
+
   const closingCashNum = Number.parseFloat(closingCashInput) || 0
   const difference = closingCashNum - expectedCash
 

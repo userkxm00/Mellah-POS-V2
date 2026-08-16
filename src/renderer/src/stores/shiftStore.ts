@@ -155,7 +155,7 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
       const salesRows = await window.electron.db.query<{ total_cash_sales: number | null }>(
         `SELECT SUM(cash_amount_dzd) as total_cash_sales 
          FROM sales 
-         WHERE shift_id = ? AND status = 'completed'`,
+         WHERE shift_id = ? AND status != 'voided'`,
         [activeShift.id]
       )
 
@@ -166,10 +166,19 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
         [activeShift.id]
       )
 
+      const returnRows = await window.electron.db.query<{ total_cash_refunds: number | null }>(
+        `SELECT SUM(quantity * unit_price_dzd) as total_cash_refunds
+         FROM returns
+         WHERE shift_id = ? AND refund_method = 'cash'`,
+        [activeShift.id]
+      )
+
       const totalCashSales = salesRows[0]?.total_cash_sales ?? 0
       const totalRepayments = repaymentRows[0]?.total_repayments ?? 0
-      const expectedCash = activeShift.opening_cash_dzd + totalCashSales + totalRepayments
+      const totalCashRefunds = returnRows[0]?.total_cash_refunds ?? 0
+      const expectedCash = activeShift.opening_cash_dzd + totalCashSales + totalRepayments - totalCashRefunds
       const difference = closingCashDzd - expectedCash
+
 
       const now = new Date().toISOString()
 

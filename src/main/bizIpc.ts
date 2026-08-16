@@ -357,7 +357,7 @@ export function registerBizIpcHandlers(): void {
     _event,
     payload: {
       originalSaleId: string
-      items: Array<{ variantId: string; quantity: number }>
+      items: Array<{ variantId: string; quantity: number; saleItemId?: string }>
       refundMethod: 'cash' | 'card' | 'store_credit'
       reason?: string
     }
@@ -369,9 +369,9 @@ export function registerBizIpcHandlers(): void {
       throw new Error('لم يتم تحديد أي عنصر للإرجاع')
     }
 
-    // 1. Fetch original sale to derive branch_id and customer_id
-    const sales = await db.query<{ id: string; branch_id: string; customer_id: string | null }>(
-      'SELECT id, branch_id, customer_id FROM sales WHERE id = ?',
+    // 1. Fetch original sale to derive branch_id, shift_id and customer_id
+    const sales = await db.query<{ id: string; branch_id: string; shift_id: string | null; customer_id: string | null }>(
+      'SELECT id, branch_id, shift_id, customer_id FROM sales WHERE id = ?',
       [payload.originalSaleId]
     )
     if (sales.length === 0) throw new Error('الفاتورة الأصلية غير موجودة')
@@ -381,27 +381,37 @@ export function registerBizIpcHandlers(): void {
     validateBranchAccess(session, origSale.branch_id)
 
     // 2. Fetch authoritative sale_items from DB (NEVER trust renderer unit prices!)
-    const origSaleItems = await db.query<{ variant_id: string; quantity: number; unit_price_dzd: number }>(
-      'SELECT variant_id, quantity, unit_price_dzd FROM sale_items WHERE sale_id = ?',
+    const origSaleItems = await db.query<{ id: string; variant_id: string; quantity: number; unit_price_dzd: number }>(
+      'SELECT id, variant_id, quantity, unit_price_dzd FROM sale_items WHERE sale_id = ?',
       [payload.originalSaleId]
     )
     if (origSaleItems.length === 0) throw new Error('لا توجد عناصر في الفاتورة الأصلية')
 
-    // Fetch existing returns for this sale to compute remaining returnable quantities
-    const origReturns = await db.query<{ variant_id: string; total_returned: number }>(
-      'SELECT variant_id, COALESCE(SUM(quantity), 0) as total_returned FROM returns WHERE original_sale_id = ? GROUP BY variant_id',
+    // Active shift for current cashier/branch at return processing time
+    const activeShiftRows = await db.query<{ id: string }>(
+      `SELECT id FROM shifts WHERE branch_id = ? AND cashier_id = ? AND status = 'open' ORDER BY opened_at DESC LIMIT 1`,
+      [origSale.branch_id, session.userId]
+    )
+    const currentShiftId = activeShiftRows[0]?.id ?? null
+
+    if (payload.refundMethod === 'cash' && !currentShiftId) {
+      throw new Error('لا توجد وردية مفتوحة للكاشير لتسجيل استرجاع نقدي')
+    }
+
+    // Fetch existing returns for this sale to compute remaining returnable quantities per sale_item_id / variant_id
+    const origReturns = await db.query<{ sale_item_id: string | null; variant_id: string; total_returned: number }>(
+      'SELECT sale_item_id, variant_id, COALESCE(SUM(quantity), 0) as total_returned FROM returns WHERE original_sale_id = ? GROUP BY sale_item_id, variant_id',
       [payload.originalSaleId]
     )
 
     const returnedMap = new Map<string, number>()
     for (const r of origReturns) {
-      returnedMap.set(r.variant_id, r.total_returned)
+      const key = r.sale_item_id || r.variant_id
+      returnedMap.set(key, (returnedMap.get(key) ?? 0) + r.total_returned)
     }
 
-    const itemMap = new Map<string, { purchasedQty: number; unitPriceDzd: number }>()
     let totalPurchasedQtyAcrossSale = 0
     for (const si of origSaleItems) {
-      itemMap.set(si.variant_id, { purchasedQty: si.quantity, unitPriceDzd: si.unit_price_dzd })
       totalPurchasedQtyAcrossSale += si.quantity
     }
 
@@ -412,13 +422,17 @@ export function registerBizIpcHandlers(): void {
     const generatedReturnRowIds: string[] = []
 
     for (const item of payload.items) {
-      const dbItem = itemMap.get(item.variantId)
+      const dbItem = item.saleItemId
+        ? origSaleItems.find((si) => si.id === item.saleItemId)
+        : origSaleItems.find((si) => si.variant_id === item.variantId)
+
       if (!dbItem) {
         throw new Error(`عفواً! المنتج المطلوب إرجاعه (ID: ${item.variantId}) غير موجود في الفاتورة الأصلية`)
       }
 
-      const alreadyReturned = returnedMap.get(item.variantId) ?? 0
-      const remainingReturnable = dbItem.purchasedQty - alreadyReturned
+      const lookupKey = dbItem.id || dbItem.variant_id
+      const alreadyReturned = returnedMap.get(lookupKey) ?? 0
+      const remainingReturnable = dbItem.quantity - alreadyReturned
 
       if (item.quantity <= 0) {
         throw new Error('الكمية المطلوبة للإرجاع يجب أن تكون أكبر من 0')
@@ -429,7 +443,7 @@ export function registerBizIpcHandlers(): void {
       }
 
       // Authoritative DB unit price
-      const authoritativeUnitPrice = dbItem.unitPriceDzd
+      const authoritativeUnitPrice = dbItem.unit_price_dzd
       totalRefundDzd += authoritativeUnitPrice * item.quantity
 
       // Distinct primary key returnRowId per returned item row
@@ -437,20 +451,21 @@ export function registerBizIpcHandlers(): void {
       const movementId = generateUUID()
       generatedReturnRowIds.push(returnRowId)
 
-      operations.push({
-        sql: `INSERT INTO returns (id, branch_id, original_sale_id, variant_id, quantity, refund_method, reason, processed_by, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        params: [returnRowId, origSale.branch_id, payload.originalSaleId, item.variantId, item.quantity, payload.refundMethod, payload.reason ?? null, session.userId, now],
-      })
-
-      operations.push({
-        sql: `INSERT INTO stock_movements (id, branch_id, variant_id, type, quantity_change, reference_id, note, created_by, created_at)
-              VALUES (?, ?, ?, 'return', ?, ?, ?, ?, ?)`,
-        params: [movementId, origSale.branch_id, item.variantId, item.quantity, returnRowId, `استرجاع (فاتورة #${payload.originalSaleId.slice(0, 8)})`, session.userId, now],
-      })
+      operations.push(
+        {
+          sql: `INSERT INTO returns (id, branch_id, shift_id, original_sale_id, sale_item_id, variant_id, quantity, unit_price_dzd, refund_method, reason, processed_by, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          params: [returnRowId, origSale.branch_id, currentShiftId, payload.originalSaleId, dbItem.id, item.variantId, item.quantity, authoritativeUnitPrice, payload.refundMethod, payload.reason ?? null, session.userId, now],
+        },
+        {
+          sql: `INSERT INTO stock_movements (id, branch_id, variant_id, type, quantity_change, reference_id, note, created_by, created_at)
+                VALUES (?, ?, ?, 'return', ?, ?, ?, ?, ?)`,
+          params: [movementId, origSale.branch_id, item.variantId, item.quantity, returnRowId, `استرجاع (فاتورة #${payload.originalSaleId.slice(0, 8)})`, session.userId, now],
+        }
+      )
 
       // Update map for overall sale status calculation
-      returnedMap.set(item.variantId, alreadyReturned + item.quantity)
+      returnedMap.set(lookupKey, alreadyReturned + item.quantity)
     }
 
     // 4. Calculate total returns across whole sale and update sale status (full vs partial refund)
@@ -561,11 +576,9 @@ export function registerBizIpcHandlers(): void {
     const totalRepayments = repaymentRows[0]?.total_repayments ?? 0
 
     const returnRows = await db.query<{ total_cash_refunds: number | null }>(
-      `SELECT SUM(r.quantity * si.unit_price_dzd) as total_cash_refunds 
-       FROM returns r 
-       JOIN sale_items si ON si.sale_id = r.original_sale_id AND si.variant_id = r.variant_id 
-       JOIN sales s ON s.id = r.original_sale_id 
-       WHERE s.shift_id = ? AND r.refund_method = 'cash'`,
+      `SELECT SUM(quantity * unit_price_dzd) as total_cash_refunds
+       FROM returns
+       WHERE shift_id = ? AND refund_method = 'cash'`,
       [shiftId]
     )
     const totalCashRefunds = returnRows[0]?.total_cash_refunds ?? 0
@@ -581,6 +594,7 @@ export function registerBizIpcHandlers(): void {
 
     return { expectedCash, difference }
   })
+
 
   // ── Users & Branches (Admin Only) ──
   ipcMain.handle('biz:users:list', async () => {
