@@ -352,6 +352,48 @@ export function registerBizIpcHandlers(): void {
     return { success: true }
   })
 
+interface SaleItemRecord {
+  id: string
+  variant_id: string
+  quantity: number
+  unit_price_dzd: number
+}
+
+function processReturnItemValidation(
+  item: { variantId: string; quantity: number; saleItemId?: string },
+  origSaleItems: SaleItemRecord[],
+  explicitReturnedByLine: Map<string, number>,
+  totalReturnedByVariant: Map<string, number>,
+  totalPurchasedByVariant: Map<string, number>
+): SaleItemRecord {
+  const dbItem = item.saleItemId
+    ? origSaleItems.find((si) => si.id === item.saleItemId)
+    : origSaleItems.find((si) => si.variant_id === item.variantId)
+
+  if (!dbItem) {
+    throw new Error(`عفواً! المنتج المطلوب إرجاعه (ID: ${item.variantId}) غير موجود في الفاتورة الأصلية`)
+  }
+
+  const explicitReturnedForLine = explicitReturnedByLine.get(dbItem.id) ?? 0
+  const lineMaxReturnable = dbItem.quantity - explicitReturnedForLine
+
+  const totalPurchasedVariant = totalPurchasedByVariant.get(dbItem.variant_id) ?? dbItem.quantity
+  const totalReturnedVariant = totalReturnedByVariant.get(dbItem.variant_id) ?? 0
+  const variantMaxReturnable = totalPurchasedVariant - totalReturnedVariant
+
+  const remainingReturnable = Math.max(0, Math.min(lineMaxReturnable, variantMaxReturnable))
+
+  if (item.quantity <= 0) {
+    throw new Error('الكمية المطلوبة للإرجاع يجب أن تكون أكبر من 0')
+  }
+
+  if (item.quantity > remainingReturnable) {
+    throw new Error(`الكمية المطلوبة للإرجاع (${item.quantity}) تتجاوز الكمية المتبقية القابلة للإرجاع (${remainingReturnable})`)
+  }
+
+  return dbItem
+}
+
   // ── Atomic Multi-Item Returns (Unique Row IDs, Authoritative DB Prices, Sale Status Update) ──
   ipcMain.handle('biz:returns:process', async (
     _event,
@@ -381,7 +423,7 @@ export function registerBizIpcHandlers(): void {
     validateBranchAccess(session, origSale.branch_id)
 
     // 2. Fetch authoritative sale_items from DB (NEVER trust renderer unit prices!)
-    const origSaleItems = await db.query<{ id: string; variant_id: string; quantity: number; unit_price_dzd: number }>(
+    const origSaleItems = await db.query<SaleItemRecord>(
       'SELECT id, variant_id, quantity, unit_price_dzd FROM sale_items WHERE sale_id = ?',
       [payload.originalSaleId]
     )
@@ -398,21 +440,27 @@ export function registerBizIpcHandlers(): void {
       throw new Error('لا توجد وردية مفتوحة للكاشير لتسجيل استرجاع نقدي')
     }
 
-    // Fetch existing returns for this sale to compute remaining returnable quantities per sale_item_id / variant_id
+    // Fetch existing returns for this sale to compute remaining returnable quantities per sale_item_id & variant_id
     const origReturns = await db.query<{ sale_item_id: string | null; variant_id: string; total_returned: number }>(
       'SELECT sale_item_id, variant_id, COALESCE(SUM(quantity), 0) as total_returned FROM returns WHERE original_sale_id = ? GROUP BY sale_item_id, variant_id',
       [payload.originalSaleId]
     )
 
-    const returnedMap = new Map<string, number>()
+    const explicitReturnedByLine = new Map<string, number>()
+    const totalReturnedByVariant = new Map<string, number>()
+
     for (const r of origReturns) {
-      const key = r.sale_item_id || r.variant_id
-      returnedMap.set(key, (returnedMap.get(key) ?? 0) + r.total_returned)
+      if (r.sale_item_id) {
+        explicitReturnedByLine.set(r.sale_item_id, (explicitReturnedByLine.get(r.sale_item_id) ?? 0) + r.total_returned)
+      }
+      totalReturnedByVariant.set(r.variant_id, (totalReturnedByVariant.get(r.variant_id) ?? 0) + r.total_returned)
     }
 
+    const totalPurchasedByVariant = new Map<string, number>()
     let totalPurchasedQtyAcrossSale = 0
     for (const si of origSaleItems) {
       totalPurchasedQtyAcrossSale += si.quantity
+      totalPurchasedByVariant.set(si.variant_id, (totalPurchasedByVariant.get(si.variant_id) ?? 0) + si.quantity)
     }
 
     // 3. Validate items & compute authoritative refund total
@@ -422,25 +470,9 @@ export function registerBizIpcHandlers(): void {
     const generatedReturnRowIds: string[] = []
 
     for (const item of payload.items) {
-      const dbItem = item.saleItemId
-        ? origSaleItems.find((si) => si.id === item.saleItemId)
-        : origSaleItems.find((si) => si.variant_id === item.variantId)
-
-      if (!dbItem) {
-        throw new Error(`عفواً! المنتج المطلوب إرجاعه (ID: ${item.variantId}) غير موجود في الفاتورة الأصلية`)
-      }
-
-      const lookupKey = dbItem.id || dbItem.variant_id
-      const alreadyReturned = returnedMap.get(lookupKey) ?? 0
-      const remainingReturnable = dbItem.quantity - alreadyReturned
-
-      if (item.quantity <= 0) {
-        throw new Error('الكمية المطلوبة للإرجاع يجب أن تكون أكبر من 0')
-      }
-
-      if (item.quantity > remainingReturnable) {
-        throw new Error(`الكمية المطلوبة للإرجاع (${item.quantity}) تتجاوز الكمية المتبقية القابلة للإرجاع (${remainingReturnable})`)
-      }
+      const dbItem = processReturnItemValidation(item, origSaleItems, explicitReturnedByLine, totalReturnedByVariant, totalPurchasedByVariant)
+      const explicitReturnedForLine = explicitReturnedByLine.get(dbItem.id) ?? 0
+      const totalReturnedVariant = totalReturnedByVariant.get(dbItem.variant_id) ?? 0
 
       // Authoritative DB unit price
       const authoritativeUnitPrice = dbItem.unit_price_dzd
@@ -464,13 +496,14 @@ export function registerBizIpcHandlers(): void {
         }
       )
 
-      // Update map for overall sale status calculation
-      returnedMap.set(lookupKey, alreadyReturned + item.quantity)
+      // Update maps for overall sale status calculation & batch items tracking
+      explicitReturnedByLine.set(dbItem.id, explicitReturnedForLine + item.quantity)
+      totalReturnedByVariant.set(dbItem.variant_id, totalReturnedVariant + item.quantity)
     }
 
     // 4. Calculate total returns across whole sale and update sale status (full vs partial refund)
     let totalReturnedAcrossSale = 0
-    for (const [, qty] of returnedMap.entries()) {
+    for (const qty of totalReturnedByVariant.values()) {
       totalReturnedAcrossSale += qty
     }
 

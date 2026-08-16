@@ -5,15 +5,43 @@ ALTER TABLE returns ADD COLUMN shift_id TEXT REFERENCES shifts(id);
 ALTER TABLE returns ADD COLUMN sale_item_id TEXT REFERENCES sale_items(id);
 ALTER TABLE returns ADD COLUMN unit_price_dzd REAL;
 
--- Backfill unit_price_dzd for existing returns from sale_items
+-- Backfill sale_item_id ONLY when there is EXACTLY ONE matching sale_items row for (original_sale_id, variant_id)
+UPDATE returns
+SET sale_item_id = (
+  SELECT si.id
+  FROM sale_items si
+  WHERE si.sale_id = returns.original_sale_id AND si.variant_id = returns.variant_id
+)
+WHERE sale_item_id IS NULL
+  AND (
+    SELECT COUNT(*)
+    FROM sale_items si
+    WHERE si.sale_id = returns.original_sale_id AND si.variant_id = returns.variant_id
+  ) = 1;
+
+-- Backfill unit_price_dzd from sale_items when deterministic:
+-- Case A: sale_item_id was backfilled deterministically
 UPDATE returns
 SET unit_price_dzd = (
-  SELECT si.unit_price_dzd 
-  FROM sale_items si 
-  WHERE si.sale_id = returns.original_sale_id AND si.variant_id = returns.variant_id 
-  LIMIT 1
+  SELECT si.unit_price_dzd
+  FROM sale_items si
+  WHERE si.id = returns.sale_item_id
 )
-WHERE unit_price_dzd IS NULL;
+WHERE unit_price_dzd IS NULL AND sale_item_id IS NOT NULL;
+
+-- Case B: sale_item_id is NULL, but ALL matching sale_items rows have the EXACT SAME unit_price_dzd
+UPDATE returns
+SET unit_price_dzd = (
+  SELECT MIN(si.unit_price_dzd)
+  FROM sale_items si
+  WHERE si.sale_id = returns.original_sale_id AND si.variant_id = returns.variant_id
+)
+WHERE unit_price_dzd IS NULL
+  AND (
+    SELECT COUNT(DISTINCT si.unit_price_dzd)
+    FROM sale_items si
+    WHERE si.sale_id = returns.original_sale_id AND si.variant_id = returns.variant_id
+  ) = 1;
 
 -- Backfill shift_id for existing returns from original sales
 UPDATE returns
@@ -39,6 +67,6 @@ SET payload = json_set(
     CASE WHEN json_extract(payload, '$.payment_method') = 'card' THEN json_extract(payload, '$.total_dzd') ELSE 0 END
   )
 )
-WHERE table_name = 'sales' 
-  AND synced_at IS NULL 
+WHERE table_name = 'sales'
+  AND synced_at IS NULL
   AND (json_extract(payload, '$.cash_amount_dzd') IS NULL OR json_extract(payload, '$.card_amount_dzd') IS NULL);

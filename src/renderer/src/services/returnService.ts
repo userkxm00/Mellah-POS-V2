@@ -60,7 +60,7 @@ export async function lookupSaleForReturn(saleId: string): Promise<SaleReturnLoo
 
   const sale = sales[0]
 
-  // 2. Fetch Sale Items & Previously Returned Quantities
+  // 2. Fetch Sale Items & Returns
   const items = await window.electron.db.query<{
     sale_item_id: string
     variant_id: string
@@ -70,25 +70,56 @@ export async function lookupSaleForReturn(saleId: string): Promise<SaleReturnLoo
     barcode: string | null
     unit_price_dzd: number
     quantity_purchased: number
-    quantity_returned_so_far: number
   }>(
     `SELECT 
        si.id as sale_item_id, si.variant_id, p.name as product_name, v.size, v.color, v.barcode,
-       si.unit_price_dzd, si.quantity as quantity_purchased,
-       COALESCE(SUM(r.quantity), 0) as quantity_returned_so_far
+       si.unit_price_dzd, si.quantity as quantity_purchased
      FROM sale_items si
      JOIN product_variants v ON v.id = si.variant_id
      JOIN products p ON p.id = v.product_id
-     LEFT JOIN returns r ON r.original_sale_id = si.sale_id AND (r.sale_item_id = si.id OR (r.sale_item_id IS NULL AND r.variant_id = si.variant_id))
-     WHERE si.sale_id = ?
-     GROUP BY si.id`,
+     WHERE si.sale_id = ?`,
     [cleanId]
   )
 
-  const mappedItems: SaleReturnLookupItem[] = items.map((i) => ({
-    ...i,
-    max_returnable: Math.max(0, i.quantity_purchased - i.quantity_returned_so_far),
-  }))
+  const rawReturns = await window.electron.db.query<{
+    sale_item_id: string | null
+    variant_id: string
+    quantity: number
+  }>(
+    `SELECT sale_item_id, variant_id, quantity FROM returns WHERE original_sale_id = ?`,
+    [cleanId]
+  )
+
+  const explicitReturnedByLine = new Map<string, number>()
+  const totalReturnedByVariant = new Map<string, number>()
+  for (const r of rawReturns) {
+    if (r.sale_item_id) {
+      explicitReturnedByLine.set(r.sale_item_id, (explicitReturnedByLine.get(r.sale_item_id) ?? 0) + r.quantity)
+    }
+    totalReturnedByVariant.set(r.variant_id, (totalReturnedByVariant.get(r.variant_id) ?? 0) + r.quantity)
+  }
+
+  const totalPurchasedByVariant = new Map<string, number>()
+  for (const i of items) {
+    totalPurchasedByVariant.set(i.variant_id, (totalPurchasedByVariant.get(i.variant_id) ?? 0) + i.quantity_purchased)
+  }
+
+  const mappedItems: SaleReturnLookupItem[] = items.map((i) => {
+    const explicitReturned = explicitReturnedByLine.get(i.sale_item_id) ?? 0
+    const lineMax = i.quantity_purchased - explicitReturned
+
+    const totalPurchasedVar = totalPurchasedByVariant.get(i.variant_id) ?? i.quantity_purchased
+    const totalReturnedVar = totalReturnedByVariant.get(i.variant_id) ?? 0
+    const variantMax = totalPurchasedVar - totalReturnedVar
+
+    const maxReturnable = Math.max(0, Math.min(lineMax, variantMax))
+
+    return {
+      ...i,
+      quantity_returned_so_far: explicitReturned,
+      max_returnable: maxReturnable,
+    }
+  })
 
   return {
     sale_id: sale.id,
