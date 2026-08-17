@@ -3,6 +3,7 @@ import { Search, Banknote, Tag, RefreshCw } from 'lucide-react'
 import { Modal, Button, Input, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { lookupSaleForReturn, processReturn, type SaleReturnLookupResult, type SaleReturnLookupItem } from '@/services/returnService'
+import { getLineKey, calculateDynamicLineMax, buildReturnItemsPayload } from '@/services/returnAllocation'
 import { printThermalReturnReceipt } from '@/services/receiptService'
 import { useStoreSettingsStore } from '@/stores/storeSettingsStore'
 import { formatCurrency } from '@/lib/format'
@@ -34,10 +35,10 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
     try {
       const data = await lookupSaleForReturn(saleInput)
       setSaleData(data)
-      // Initialize return quantities to 0
+      // Initialize return quantities to 0 keying by stable line key (sale_item_id)
       const initialMap: Record<string, number> = {}
       for (const item of data.items) {
-        initialMap[item.variant_id] = 0
+        initialMap[getLineKey(item)] = 0
       }
       setReturnQtyMap(initialMap)
     } catch (err) {
@@ -49,15 +50,15 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
     }
   }
 
-  const handleQuantityChange = (variantId: string, qty: number, max: number): void => {
+  const handleQuantityChange = (lineKey: string, qty: number, max: number): void => {
     const val = Math.max(0, Math.min(qty, max))
-    setReturnQtyMap((prev) => ({ ...prev, [variantId]: val }))
+    setReturnQtyMap((prev) => ({ ...prev, [lineKey]: val }))
   }
 
   const calculateTotalRefund = (): number => {
     if (!saleData) return 0
     return saleData.items.reduce((acc, item) => {
-      const qty = returnQtyMap[item.variant_id] || 0
+      const qty = returnQtyMap[getLineKey(item)] || 0
       return acc + item.unit_price_dzd * qty
     }, 0)
   }
@@ -72,14 +73,7 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
 
     setIsSubmitting(true)
     try {
-      const returnItems = Object.entries(returnQtyMap).map(([variant_id, quantity]) => {
-        const item = saleData.items.find((i) => i.variant_id === variant_id)
-        return {
-          variant_id,
-          quantity,
-          unit_price_dzd: item?.unit_price_dzd ?? 0,
-        }
-      })
+      const returnItems = buildReturnItemsPayload(saleData.items, returnQtyMap)
 
       const returnId = await processReturn(saleData.sale_id, returnItems, refundMethod, reason)
 
@@ -94,7 +88,7 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
           date: new Date().toISOString(),
           cashierName: saleData.cashier_name,
           items: returnItems.map((ri) => {
-            const matched = saleData.items.find((item) => item.variant_id === ri.variant_id)
+            const matched = saleData.items.find((item) => getLineKey(item) === getLineKey(ri))
             return {
               product_name: matched?.product_name ?? 'منتج',
               size: matched?.size,
@@ -171,19 +165,21 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
       key: 'return_qty',
       header: 'الكمية المراد إرجاعها',
       render: (row) => {
-        const currentQty = returnQtyMap[row.variant_id] || 0
+        const lineKey = getLineKey(row)
+        const currentQty = returnQtyMap[lineKey] || 0
+        const dynamicMax = saleData ? calculateDynamicLineMax(row, saleData.items, returnQtyMap) : row.max_returnable
         return (
           <input
             type="number"
             min="0"
-            max={row.max_returnable}
-            disabled={row.max_returnable === 0}
+            max={dynamicMax}
+            disabled={row.max_returnable === 0 || (dynamicMax === 0 && currentQty === 0)}
             value={currentQty}
             onChange={(e) =>
               handleQuantityChange(
-                row.variant_id,
+                lineKey,
                 Number.parseInt(e.target.value, 10) || 0,
-                row.max_returnable
+                dynamicMax
               )
             }
             className="w-20 px-2 py-1 rounded border border-border text-xs font-bold text-accent bg-white"
@@ -239,7 +235,7 @@ export function ReturnModal({ isOpen, onClose, onSuccess }: ReturnModalProps): R
             <Table
               columns={itemColumns}
               data={saleData.items}
-              rowKey={(row) => row.variant_id}
+              rowKey={(row) => getLineKey(row)}
             />
 
             {/* Refund options */}

@@ -15,6 +15,7 @@ export interface SaleReturnLookupItem {
   quantity_purchased: number
   quantity_returned_so_far: number
   max_returnable: number
+  variant_max_returnable?: number
 }
 
 export interface SaleReturnLookupResult {
@@ -118,6 +119,7 @@ export async function lookupSaleForReturn(saleId: string): Promise<SaleReturnLoo
       ...i,
       quantity_returned_so_far: explicitReturned,
       max_returnable: maxReturnable,
+      variant_max_returnable: Math.max(0, variantMax),
     }
   })
 
