@@ -534,6 +534,65 @@ export function registerBizIpcHandlers(): void {
     return { id: shiftId, branch_id: branchId, cashier_id: session.userId, opening_cash_dzd: openingCashDzd, status: 'open', opened_at: now }
   })
 
+  ipcMain.handle('biz:shifts:summary', async (_event, shiftId: string) => {
+    const session = requireAuth()
+    const db = await whenDatabaseReady()
+
+    const shifts = await db.query<{ id: string; cashier_id: string; branch_id: string; opening_cash_dzd: number }>(
+      `SELECT id, cashier_id, branch_id, opening_cash_dzd FROM shifts WHERE id = ? AND status = 'open'`,
+      [shiftId]
+    )
+    if (shifts.length === 0) throw new Error('الوردية غير موجودة أو مغلقة بالفعل')
+
+    const targetShift = shifts[0]
+
+    if (session.role === 'cashier' && targetShift.cashier_id !== session.userId) {
+      throw new Error('Forbidden: Cashiers can only view summary for their own shift')
+    }
+
+    validateBranchAccess(session, targetShift.branch_id)
+
+    const openingCash = targetShift.opening_cash_dzd || 0
+
+    const salesRows = await db.query<{ cash_total: number | null; card_total: number | null }>(
+      `SELECT
+         COALESCE(SUM(cash_amount_dzd), 0) as cash_total,
+         COALESCE(SUM(card_amount_dzd), 0) as card_total
+       FROM sales
+       WHERE shift_id = ? AND status != 'voided'`,
+      [shiftId]
+    )
+    const cashSales = salesRows[0]?.cash_total ?? 0
+    const cardSales = salesRows[0]?.card_total ?? 0
+
+    const repaymentRows = await db.query<{ repayments_total: number | null }>(
+      `SELECT COALESCE(SUM(amount_dzd), 0) as repayments_total
+       FROM customer_payments
+       WHERE shift_id = ? AND payment_method = 'cash'`,
+      [shiftId]
+    )
+    const cashRepayments = repaymentRows[0]?.repayments_total ?? 0
+
+    const returnRows = await db.query<{ refunds_total: number | null }>(
+      `SELECT COALESCE(SUM(quantity * unit_price_dzd), 0) as refunds_total
+       FROM returns
+       WHERE shift_id = ? AND refund_method = 'cash'`,
+      [shiftId]
+    )
+    const cashRefunds = returnRows[0]?.refunds_total ?? 0
+
+    const expectedCash = openingCash + cashSales + cashRepayments - cashRefunds
+
+    return {
+      openingCash,
+      cashSales,
+      cardSales,
+      cashRepayments,
+      cashRefunds,
+      expectedCash,
+    }
+  })
+
   ipcMain.handle('biz:shifts:close', async (_event, shiftId: string, closingCashDzd: number) => {
     const session = requireAuth()
     const db = await whenDatabaseReady()

@@ -119,6 +119,14 @@ export interface BizApi {
     active: <T = unknown>(targetBranchId?: string) => Promise<T | null>
     open: <T = unknown>(openingCashDzd: number, targetBranchId?: string) => Promise<T>
     close: (shiftId: string, closingCashDzd: number) => Promise<{ expectedCash: number; difference: number }>
+    summary: (shiftId: string) => Promise<{
+      openingCash: number
+      cashSales: number
+      cardSales: number
+      cashRepayments: number
+      cashRefunds: number
+      expectedCash: number
+    }>
   }
   customers: {
     list: <T = unknown>(targetBranchId?: string) => Promise<T[]>
@@ -196,6 +204,7 @@ const api: ElectronApi = {
       active: (targetBranchId?: string) => ipcRenderer.invoke('biz:shifts:active', targetBranchId),
       open: (openingCashDzd: number, targetBranchId?: string) => ipcRenderer.invoke('biz:shifts:open', openingCashDzd, targetBranchId),
       close: (shiftId: string, closingCashDzd: number) => ipcRenderer.invoke('biz:shifts:close', shiftId, closingCashDzd),
+      summary: (shiftId: string) => ipcRenderer.invoke('biz:shifts:summary', shiftId),
     },
     customers: {
       list: (targetBranchId?: string) => ipcRenderer.invoke('biz:customers:list', targetBranchId),

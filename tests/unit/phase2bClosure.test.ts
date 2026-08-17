@@ -165,6 +165,172 @@ describe('Phase 2B Hardening & Typed IPC Audit Verification', () => {
     expect(expectedCashUI).toBe(8500) // 5000 + 4000 + 1000 - 1500 = 8500 DZD
   })
 
+  describe('PHASE 2B-6 — Shift Close Refund Consistency (TEST 1 to TEST 7)', () => {
+    // Pure calculation function representing identical backend / frontend expected cash formula
+    function computeExpectedCash(shiftId: string, openingCash: number): {
+      cashSales: number
+      repayments: number
+      cashRefunds: number
+      expectedCash: number
+    } {
+      const salesCash = (
+        db
+          .prepare(
+            "SELECT COALESCE(SUM(cash_amount_dzd), 0) as c FROM sales WHERE shift_id = ? AND status != 'voided'"
+          )
+          .get(shiftId) as { c: number }
+      ).c
+      const repayCash = (
+        db
+          .prepare(
+            "SELECT COALESCE(SUM(amount_dzd), 0) as r FROM customer_payments WHERE shift_id = ? AND payment_method = 'cash'"
+          )
+          .get(shiftId) as { r: number }
+      ).r
+      const refundCash = (
+        db
+          .prepare(
+            "SELECT COALESCE(SUM(quantity * unit_price_dzd), 0) as rf FROM returns WHERE shift_id = ? AND refund_method = 'cash'"
+          )
+          .get(shiftId) as { rf: number }
+      ).rf
+      return {
+        cashSales: salesCash,
+        repayments: repayCash,
+        cashRefunds: refundCash,
+        expectedCash: openingCash + salesCash + repayCash - refundCash,
+      }
+    }
+
+    it('TEST 1 — normal cash sale (Opening 10000, Cash Sales 5000 -> Expected 15000)', () => {
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE branch_id = ? AND cashier_id = ? AND status = 'open'").run(branchId, cashierId)
+      const sId = 's-test1'
+      const opening = 10000
+      db.prepare("INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status) VALUES (?, ?, ?, ?, 'open')").run(sId, branchId, cashierId, opening)
+      db.prepare("INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES ('sale-t1', ?, ?, ?, 5000, 5000, 'cash', 'completed')").run(branchId, sId, cashierId)
+
+      const result = computeExpectedCash(sId, opening)
+      expect(result.cashSales).toBe(5000)
+      expect(result.repayments).toBe(0)
+      expect(result.cashRefunds).toBe(0)
+      expect(result.expectedCash).toBe(15000)
+
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE id = ?").run(sId)
+    })
+
+    it('TEST 2 — cash refund (Opening 10000, Cash Sales 5000, Cash Refund 1000 -> Expected 14000)', () => {
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE branch_id = ? AND cashier_id = ? AND status = 'open'").run(branchId, cashierId)
+      const sId = 's-test2'
+      const opening = 10000
+      db.prepare("INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status) VALUES (?, ?, ?, ?, 'open')").run(sId, branchId, cashierId, opening)
+      db.prepare("INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES ('sale-t2', ?, ?, ?, 5000, 5000, 'cash', 'completed')").run(branchId, sId, cashierId)
+      db.prepare("INSERT INTO returns (id, branch_id, shift_id, original_sale_id, variant_id, quantity, unit_price_dzd, refund_method, processed_by) VALUES ('ret-t2', ?, ?, 'sale-t2', ?, 1, 1000, 'cash', ?)").run(branchId, sId, variantId, cashierId)
+
+      const result = computeExpectedCash(sId, opening)
+      expect(result.cashSales).toBe(5000)
+      expect(result.cashRefunds).toBe(1000)
+      expect(result.expectedCash).toBe(14000)
+
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE id = ?").run(sId)
+    })
+
+    it('TEST 3 — partial_refund sale (sale with partial_refund status and valid cash split agrees)', () => {
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE branch_id = ? AND cashier_id = ? AND status = 'open'").run(branchId, cashierId)
+      const sId = 's-test3'
+      const opening = 10000
+      db.prepare("INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status) VALUES (?, ?, ?, ?, 'open')").run(sId, branchId, cashierId, opening)
+
+      // Original sale: 6000 DZD cash (status: partial_refund after line returned)
+      db.prepare("INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES ('sale-t3', ?, ?, ?, 6000, 6000, 'cash', 'partial_refund')").run(branchId, sId, cashierId)
+      // Cash return: 2000 DZD
+      db.prepare("INSERT INTO returns (id, branch_id, shift_id, original_sale_id, variant_id, quantity, unit_price_dzd, refund_method, processed_by) VALUES ('ret-t3', ?, ?, 'sale-t3', ?, 1, 2000, 'cash', ?)").run(branchId, sId, variantId, cashierId)
+
+      const result = computeExpectedCash(sId, opening)
+      // 10000 opening + 6000 cash sale - 2000 refund = 14000
+      expect(result.cashSales).toBe(6000)
+      expect(result.cashRefunds).toBe(2000)
+      expect(result.expectedCash).toBe(14000)
+
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE id = ?").run(sId)
+    })
+
+    it('TEST 4 — store credit refund (Cash Sales 5000, Store-Credit Refund 1000 -> Expected physical cash MUST remain 15000)', () => {
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE branch_id = ? AND cashier_id = ? AND status = 'open'").run(branchId, cashierId)
+      const sId = 's-test4'
+      const opening = 10000
+      db.prepare("INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status) VALUES (?, ?, ?, ?, 'open')").run(sId, branchId, cashierId, opening)
+      db.prepare("INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES ('sale-t4', ?, ?, ?, 5000, 5000, 'cash', 'completed')").run(branchId, sId, cashierId)
+      // Store credit refund: 1000 DZD (non-cash)
+      db.prepare("INSERT INTO returns (id, branch_id, shift_id, original_sale_id, variant_id, quantity, unit_price_dzd, refund_method, processed_by) VALUES ('ret-t4', ?, ?, 'sale-t4', ?, 1, 1000, 'store_credit', ?)").run(branchId, sId, variantId, cashierId)
+
+      const result = computeExpectedCash(sId, opening)
+      expect(result.cashSales).toBe(5000)
+      expect(result.cashRefunds).toBe(0) // Non-cash return excluded from physical cash deduction
+      expect(result.expectedCash).toBe(15000)
+
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE id = ?").run(sId)
+    })
+
+    it('TEST 5 — multiple refunds (Multiple cash refunds aggregated exactly once)', () => {
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE branch_id = ? AND cashier_id = ? AND status = 'open'").run(branchId, cashierId)
+      const sId = 's-test5'
+      const opening = 5000
+      db.prepare("INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status) VALUES (?, ?, ?, ?, 'open')").run(sId, branchId, cashierId, opening)
+      db.prepare("INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES ('sale-t5', ?, ?, ?, 8000, 8000, 'cash', 'completed')").run(branchId, sId, cashierId)
+      // Refund 1: 1500 DZD cash
+      db.prepare("INSERT INTO returns (id, branch_id, shift_id, original_sale_id, variant_id, quantity, unit_price_dzd, refund_method, processed_by) VALUES ('ret-t5-1', ?, ?, 'sale-t5', ?, 1, 1500, 'cash', ?)").run(branchId, sId, variantId, cashierId)
+      // Refund 2: 500 DZD cash
+      db.prepare("INSERT INTO returns (id, branch_id, shift_id, original_sale_id, variant_id, quantity, unit_price_dzd, refund_method, processed_by) VALUES ('ret-t5-2', ?, ?, 'sale-t5', ?, 1, 500, 'cash', ?)").run(branchId, sId, variantId, cashierId)
+
+      const result = computeExpectedCash(sId, opening)
+      expect(result.cashSales).toBe(8000)
+      expect(result.cashRefunds).toBe(2000) // 1500 + 500
+      expect(result.expectedCash).toBe(11000) // 5000 + 8000 - 2000 = 11000
+
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE id = ?").run(sId)
+    })
+
+    it('TEST 6 — shift isolation (Refund belonging to Shift A does not alter Shift B expected cash)', () => {
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE branch_id = ? AND cashier_id = ? AND status = 'open'").run(branchId, cashierId)
+      const sIdA = 's-test6-A'
+      const sIdB = 's-test6-B'
+      const opening = 5000
+      db.prepare("INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status) VALUES (?, ?, ?, ?, 'closed')").run(sIdA, branchId, cashierId, opening)
+      db.prepare("INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status) VALUES (?, ?, ?, ?, 'open')").run(sIdB, branchId, cashierId, opening)
+
+      // Sale in Shift A
+      db.prepare("INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES ('sale-t6-a', ?, ?, ?, 4000, 4000, 'cash', 'completed')").run(branchId, sIdA, cashierId)
+      // Refund in Shift A
+      db.prepare("INSERT INTO returns (id, branch_id, shift_id, original_sale_id, variant_id, quantity, unit_price_dzd, refund_method, processed_by) VALUES ('ret-t6-a', ?, ?, 'sale-t6-a', ?, 1, 1000, 'cash', ?)").run(branchId, sIdA, variantId, cashierId)
+
+      // Sale in Shift B
+      db.prepare("INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES ('sale-t6-b', ?, ?, ?, 3000, 3000, 'cash', 'completed')").run(branchId, sIdB, cashierId)
+
+      // Shift B calculation MUST be isolated from Shift A's refund
+      const resultB = computeExpectedCash(sIdB, opening)
+      expect(resultB.cashSales).toBe(3000)
+      expect(resultB.cashRefunds).toBe(0)
+      expect(resultB.expectedCash).toBe(8000) // 5000 + 3000 = 8000
+
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE id = ?").run(sIdB)
+    })
+
+    it('TEST 7 — zero refunds (Normal shift close calculation unchanged when no refunds exist)', () => {
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE branch_id = ? AND cashier_id = ? AND status = 'open'").run(branchId, cashierId)
+      const sId = 's-test7'
+      const opening = 2000
+      db.prepare("INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status) VALUES (?, ?, ?, ?, 'open')").run(sId, branchId, cashierId, opening)
+      db.prepare("INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES ('sale-t7', ?, ?, ?, 3500, 3500, 'cash', 'completed')").run(branchId, sId, cashierId)
+
+      const result = computeExpectedCash(sId, opening)
+      expect(result.cashSales).toBe(3500)
+      expect(result.cashRefunds).toBe(0)
+      expect(result.expectedCash).toBe(5500)
+
+      db.prepare("UPDATE shifts SET status = 'closed' WHERE id = ?").run(sId)
+    })
+  })
+
   it('repairs pre-existing pending sync_queue sale payloads missing cash_amount_dzd and card_amount_dzd', () => {
     const oldSaleId = 'sale-pre-migration-10'
     const oldSyncId = 'sync-pre-migration-10'
