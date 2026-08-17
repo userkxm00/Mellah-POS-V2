@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Provide global window mock for node environment
 if (typeof window === 'undefined') {
-  ;(global as unknown as { window: Record<string, unknown> }).window = {}
+  (global as unknown as { window: Record<string, unknown> }).window = {}
 }
 
 import { processSale } from '../../src/renderer/src/services/saleService'

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Shift } from '@/types/database'
 import { logger } from '@/lib/logger'
+import { useAuthStore } from '@/stores/authStore'
 
 export const DEFAULT_BRANCH_ID = 'b1111111-1111-4111-8111-111111111111'
 export const DEFAULT_CASHIER_ID = 'u2222222-2222-4222-8222-222222222222'
