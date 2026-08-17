@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Wallet, CreditCard, CheckCircle2 } from 'lucide-react'
 import { Modal, Input } from '@/components/ui'
-import { generateUUID } from '@/lib/uuid'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
@@ -81,23 +80,7 @@ export function POSDebtRepaymentModal({
           shiftId,
         })
       } else {
-        const paymentId = generateUUID()
-        const now = new Date().toISOString()
-
-        await window.electron.db.execute(
-          `INSERT INTO customer_payments (id, branch_id, shift_id, customer_id, amount_dzd, payment_method, notes, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            paymentId,
-            activeBranch.id,
-            shiftId,
-            customer.id,
-            amount,
-            paymentMethod,
-            notesInput.trim() || null,
-            now,
-          ]
-        )
+        throw new Error('قناة الاتصال بالخادم غير متوفرة لتسجيل تسديد الدين')
       }
 
       addToast({
