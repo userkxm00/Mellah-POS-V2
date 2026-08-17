@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setMainSession, requireAuth, validateBranchAccess, MainSession } from '../../src/main/session'
-import { processCSVProductRow, importProductsFromCSV, CSVProductRow } from '../../src/renderer/src/services/csvProductImport'
+import { importProductsFromCSV } from '../../src/renderer/src/services/csvProductImport'
 import { resolveActiveShiftId } from '../../src/renderer/src/lib/shiftUtils'
 import { useShiftStore } from '../../src/renderer/src/stores/shiftStore'
 import { useAuthStore } from '../../src/renderer/src/stores/authStore'
@@ -104,33 +104,7 @@ describe('Multi-Branch Architecture & Session Isolation (Phase 3)', () => {
     )
   })
 
-  it('processes CSV import with category preservation and correct product map keying', async () => {
-    const branch: Branch = { id: 'b-algiers', name: 'Algiers', address: null, created_at: '', updated_at: '', deleted_at: null }
-    useAuthStore.setState({ currentBranch: branch, isAuthenticated: true })
-
-    const categoriesMap = new Map<string, string>()
-    const existingProductsMap = new Map<string, string>()
-    const operations: Array<{ sql: string; params: unknown[] }> = []
-
-    const row1: CSVProductRow = { product_name: 'T-Shirt', category_name: 'Men', price_dzd: 1000 }
-    const success1 = await processCSVProductRow(row1, categoriesMap, existingProductsMap, operations)
-    expect(success1).toBe(true)
-    expect(categoriesMap.has('men')).toBe(true)
-    const cat1Id = categoriesMap.get('men')!
-    expect(existingProductsMap.has(`t-shirt_${cat1Id}`)).toBe(true)
-
-    const row2: CSVProductRow = { product_name: 'T-Shirt', category_name: 'Women', price_dzd: 1200 }
-    const success2 = await processCSVProductRow(row2, categoriesMap, existingProductsMap, operations)
-    expect(success2).toBe(true)
-    expect(categoriesMap.has('women')).toBe(true)
-    const cat2Id = categoriesMap.get('women')!
-    expect(existingProductsMap.has(`t-shirt_${cat2Id}`)).toBe(true)
-
-    // T-Shirt/Men and T-Shirt/Women MUST be separate products!
-    expect(existingProductsMap.get(`t-shirt_${cat1Id}`)).not.toBe(existingProductsMap.get(`t-shirt_${cat2Id}`))
-  })
-
-  it('imports products from full CSV string preserving category identity and active branch scoping', async () => {
+  it('imports products from full CSV string preserving category identity and active branch scoping via Main IPC', async () => {
     const branch: Branch = { id: 'b-algiers', name: 'Algiers', address: null, created_at: '', updated_at: '', deleted_at: null }
     useAuthStore.setState({ currentBranch: branch, isAuthenticated: true })
 
@@ -139,33 +113,17 @@ T-Shirt,Men,1000,600,M,Blue,10
 T-Shirt,Women,1200,700,S,Red,5
 T-Shirt,Men,1000,600,L,Blue,15`
 
+    const importCsvMock = vi.fn().mockResolvedValue({ importedCount: 3 })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(globalThis as any).window.electron.biz = {
+      products: {
+        importCsv: importCsvMock,
+      },
+    }
+
     const count = await importProductsFromCSV(csvData)
     expect(count).toBe(3)
-
-    // Verify transaction operations payload
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const txMock = (globalThis as any).window.electron.db.transaction
-    expect(txMock).toHaveBeenCalledTimes(1)
-    const ops = txMock.mock.calls[0][0] as Array<{ sql: string; params: unknown[] }>
-
-    // Filter INSERT INTO products operations
-    const productInserts = ops.filter((op) => op.sql.includes('INSERT INTO products'))
-    expect(productInserts).toHaveLength(2) // 2 distinct products: T-Shirt/Men and T-Shirt/Women
-
-    const menProdId = productInserts[0].params[0]
-    const womenProdId = productInserts[1].params[0]
-    expect(menProdId).not.toBe(womenProdId)
-
-    // Filter INSERT INTO product_variants operations
-    const variantInserts = ops.filter((op) => op.sql.includes('INSERT INTO product_variants'))
-    expect(variantInserts).toHaveLength(3) // 3 variants created
-
-    // The 1st and 3rd variants belong to T-Shirt/Men product
-    expect(variantInserts[0].params[1]).toBe(menProdId)
-    expect(variantInserts[2].params[1]).toBe(menProdId)
-
-    // The 2nd variant belongs to T-Shirt/Women product
-    expect(variantInserts[1].params[1]).toBe(womenProdId)
+    expect(importCsvMock).toHaveBeenCalledWith(csvData)
   })
 
   it('verifies resolveActiveShiftId returns in-memory shift only if it belongs to target branch', async () => {

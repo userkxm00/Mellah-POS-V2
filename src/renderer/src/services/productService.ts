@@ -1,18 +1,4 @@
-import { generateUUID } from '@/lib/uuid'
 import { logger } from '@/lib/logger'
-import { useAuthStore } from '@/stores/authStore'
-
-function getActiveUserAndBranch(): { cashierId: string; branchId: string } {
-  const user = useAuthStore.getState().currentUser
-  const branch = useAuthStore.getState().currentBranch
-  if (!user || !branch) {
-    throw new Error('لا توجد جلسة مستخدم أو فرع نشط. يرجى تسجيل الدخول أولاً')
-  }
-  return {
-    cashierId: user.id,
-    branchId: branch.id,
-  }
-}
 
 export interface VariantInput {
   size: string | null
@@ -59,81 +45,22 @@ export async function createProductWithVariants(
   input: CreateProductInput
 ): Promise<string> {
   validateCreateProductInput(input)
-  const { cashierId, branchId } = getActiveUserAndBranch()
 
-  const productId = generateUUID()
-  const now = new Date().toISOString()
-  const operations: Array<{ sql: string; params: unknown[] }> = []
-
-  // 1. Insert Product
-  operations.push({
-    sql: `INSERT INTO products 
-          (id, branch_id, category_id, name, description, image_url, price_dzd, cost_dzd, created_at, updated_at) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    params: [
-      productId,
-      branchId,
-      input.category_id,
-      input.name.trim(),
-      input.description ? input.description.trim() : null,
-      input.image_url || null,
-      input.price_dzd,
-      input.cost_dzd,
-      now,
-      now,
-    ],
-  })
-
-  // 2. Insert Variants & Initial Stock Movements Ledger entries
-  for (const v of input.variants) {
-    const variantId = generateUUID()
-    const movementId = generateUUID()
-
-    operations.push({
-      sql: `INSERT INTO product_variants 
-            (id, product_id, branch_id, size, color, barcode, sku, price_dzd, created_at, updated_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      params: [
-        variantId,
-        productId,
-        branchId,
-        v.size ? v.size.trim() : null,
-        v.color ? v.color.trim() : null,
-        v.barcode.trim(),
-        v.sku ? v.sku.trim() : null,
-        v.price_dzd,
-        now,
-        now,
-      ],
+  if (window.electron?.biz?.products?.create) {
+    const res = await window.electron.biz.products.create({
+      name: input.name,
+      category_id: input.category_id,
+      description: input.description,
+      price_dzd: input.price_dzd,
+      cost_dzd: input.cost_dzd,
+      image_url: input.image_url,
+      variants: input.variants,
     })
-
-    // If starting stock > 0, insert restock movement
-    if (v.initial_stock > 0) {
-      operations.push({
-        sql: `INSERT INTO stock_movements 
-              (id, branch_id, variant_id, type, quantity_change, note, created_by, created_at) 
-              VALUES (?, ?, ?, 'restock', ?, 'مخزون أولي عند إضافة المنتج', ?, ?)`,
-        params: [
-          movementId,
-          branchId,
-          variantId,
-          v.initial_stock,
-          cashierId,
-          now,
-        ],
-      })
-    }
+    logger.info('Product created with variants via Main IPC', { productId: res.productId, variantCount: input.variants.length })
+    return res.productId
   }
 
-  try {
-    await window.electron.db.transaction(operations)
-    logger.info('Product created with variants', { productId, variantCount: input.variants.length })
-    return productId
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'فشل إضافة المنتج'
-    logger.error('Failed to create product', err)
-    throw new Error(`تعذر حفظ المنتج: ${msg}`)
-  }
+  throw new Error('قناة الاتصال بالخادم غير متوفرة لإضافة المنتج')
 }
 
 export async function addStockMovement(
@@ -146,32 +73,18 @@ export async function addStockMovement(
     throw new Error('يرجى تحديد كمية التعديل')
   }
 
-  const { cashierId, branchId } = getActiveUserAndBranch()
-  const id = generateUUID()
-  const now = new Date().toISOString()
-
-  try {
-    await window.electron.db.execute(
-      `INSERT INTO stock_movements 
-       (id, branch_id, variant_id, type, quantity_change, note, created_by, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        branchId,
-        variantId,
-        type,
-        quantityChange,
-        note.trim() || 'تعديل مخزون يدوياً',
-        cashierId,
-        now,
-      ]
-    )
-    logger.info('Stock movement added', { variantId, type, quantityChange })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'فشل تعديل المخزون'
-    logger.error('Add stock movement failed', err)
-    throw new Error(msg)
+  if (window.electron?.biz?.inventory?.adjustStock) {
+    await window.electron.biz.inventory.adjustStock({
+      variantId,
+      type,
+      quantityChange,
+      note,
+    })
+    logger.info('Stock movement added via Main IPC', { variantId, type, quantityChange })
+    return
   }
+
+  throw new Error('قناة الاتصال بالخادم غير متوفرة لتعديل المخزون')
 }
 
 export interface LowStockVariant {

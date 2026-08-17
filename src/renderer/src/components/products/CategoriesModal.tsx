@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Edit2, Trash2 } from 'lucide-react'
 import { Modal, Button, Input } from '@/components/ui'
-import { generateUUID } from '@/lib/uuid'
-import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 
 interface CategoryRow {
@@ -53,15 +51,14 @@ export function CategoriesModal({
 
     setIsLoading(true)
     try {
-      const id = generateUUID()
-      const now = new Date().toISOString()
-      const activeBranch = useAuthStore.getState().currentBranch
-      if (!activeBranch) throw new Error('لا توجد جلسة فرع نشطة')
-
-      await window.electron.db.execute(
-        'INSERT INTO categories (id, branch_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-        [id, activeBranch.id, name, now, now]
-      )
+      if (window.electron?.biz?.categories?.manage) {
+        await window.electron.biz.categories.manage({
+          action: 'create',
+          name,
+        })
+      } else {
+        throw new Error('قناة الاتصال بالخادم غير متوفرة لإضافة الفئة')
+      }
       addToast({ message: 'تم إضافة الفئة بنجاح', variant: 'success' })
       setNewCatName('')
       await fetchCategories()
@@ -79,11 +76,15 @@ export function CategoriesModal({
 
     setIsLoading(true)
     try {
-      const now = new Date().toISOString()
-      await window.electron.db.execute(
-        'UPDATE categories SET name = ?, updated_at = ? WHERE id = ?',
-        [name, now, id]
-      )
+      if (window.electron?.biz?.categories?.manage) {
+        await window.electron.biz.categories.manage({
+          action: 'update',
+          id,
+          name,
+        })
+      } else {
+        throw new Error('قناة الاتصال بالخادم غير متوفرة لتعديل الفئة')
+      }
       addToast({ message: 'تم تحديث اسم الفئة بنجاح', variant: 'success' })
       setEditingId(null)
       await fetchCategories()
@@ -100,11 +101,14 @@ export function CategoriesModal({
 
     setIsLoading(true)
     try {
-      const now = new Date().toISOString()
-      await window.electron.db.execute(
-        'UPDATE categories SET deleted_at = ? WHERE id = ?',
-        [now, id]
-      )
+      if (window.electron?.biz?.categories?.manage) {
+        await window.electron.biz.categories.manage({
+          action: 'delete',
+          id,
+        })
+      } else {
+        throw new Error('قناة الاتصال بالخادم غير متوفرة لحذف الفئة')
+      }
       addToast({ message: 'تم حذف الفئة', variant: 'info' })
       await fetchCategories()
       onCategoryChanged()

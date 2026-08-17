@@ -112,33 +112,14 @@ export function ProductsPage({ onNavigateToPos }: { onNavigateToPos: () => void 
 
     setIsBulkSaving(true)
     try {
-      const now = new Date().toISOString()
-      if (bulkCatId) {
-        if (bulkAdjustmentType === 'percent') {
-          const factor = 1 + bulkAdjustmentVal / 100.0
-          await window.electron.db.execute(
-            `UPDATE products SET price_dzd = ROUND(price_dzd * ?, 2), updated_at = ? WHERE deleted_at IS NULL AND category_id = ?`,
-            [factor, now, bulkCatId]
-          )
-        } else {
-          await window.electron.db.execute(
-            `UPDATE products SET price_dzd = MAX(0, price_dzd + ?), updated_at = ? WHERE deleted_at IS NULL AND category_id = ?`,
-            [bulkAdjustmentVal, now, bulkCatId]
-          )
-        }
+      if (window.electron?.biz?.products?.bulkUpdatePrice) {
+        await window.electron.biz.products.bulkUpdatePrice({
+          bulkCatId: bulkCatId || undefined,
+          bulkAdjustmentType,
+          bulkAdjustmentVal,
+        })
       } else {
-        if (bulkAdjustmentType === 'percent') {
-          const factor = 1 + bulkAdjustmentVal / 100.0
-          await window.electron.db.execute(
-            `UPDATE products SET price_dzd = ROUND(price_dzd * ?, 2), updated_at = ? WHERE deleted_at IS NULL`,
-            [factor, now]
-          )
-        } else {
-          await window.electron.db.execute(
-            `UPDATE products SET price_dzd = MAX(0, price_dzd + ?), updated_at = ? WHERE deleted_at IS NULL`,
-            [bulkAdjustmentVal, now]
-          )
-        }
+        throw new Error('قناة الاتصال بالخادم غير متوفرة لتعديل الأسعار الجماعي')
       }
 
       addToast({ message: t('تم تحديث أسعار المنتجات المحددة بنجاح!'), variant: 'success' })

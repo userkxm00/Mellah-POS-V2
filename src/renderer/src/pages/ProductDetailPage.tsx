@@ -7,8 +7,6 @@ import { StockAdjustmentModal } from '@/components/products/StockAdjustmentModal
 import { useToastStore } from '@/stores/toastStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useAuthStore } from '@/stores/authStore'
-import { generateUUID } from '@/lib/uuid'
-import { recordAuditLog } from '@/services/auditLogService'
 import type { ProductVariantWithStock } from '@/types/database'
 
 interface ProductDetailData {
@@ -180,22 +178,20 @@ export function ProductDetailPage({
     if (!product || !editName.trim()) return
     setIsSaving(true)
     try {
-      const now = new Date().toISOString()
-      await window.electron.db.execute(
-        `UPDATE products SET name = ?, description = ?, price_dzd = ?, cost_dzd = ?, image_url = ?, category_id = ?, updated_at = ? WHERE id = ?`,
-        [
-          editName.trim(),
-          editDescription.trim() || null,
-          Number.parseFloat(editPrice) || product.price_dzd,
-          editCost ? Number.parseFloat(editCost) : null,
-          editImageUrl || null,
-          editCategoryId || null,
-          now,
-          product.id,
-        ]
-      )
+      if (window.electron?.biz?.products?.update) {
+        await window.electron.biz.products.update({
+          id: product.id,
+          name: editName.trim(),
+          description: editDescription.trim() || null,
+          price_dzd: Number.parseFloat(editPrice) || product.price_dzd,
+          cost_dzd: editCost ? Number.parseFloat(editCost) : null,
+          image_url: editImageUrl || null,
+          category_id: editCategoryId || null,
+        })
+      } else {
+        throw new Error('قناة الاتصال بالخادم غير متوفرة لتعديل المنتج')
+      }
       addToast({ message: t('تم تحديث بيانات المنتج بنجاح'), variant: 'success' })
-      recordAuditLog('product_updated', 'products', `تعديل المنتج: ${editName.trim()}`, product.id).catch(() => {})
       setIsEditMode(false)
       await loadProductDetail()
     } catch (err) {// eslint-disable-next-line no-console
@@ -209,18 +205,12 @@ export function ProductDetailPage({
   const handleDeleteProduct = async (): Promise<void> => {
     if (!product) return
     try {
-      const now = new Date().toISOString()
-      await window.electron.db.execute(
-        `UPDATE products SET deleted_at = ?, updated_at = ? WHERE id = ?`,
-        [now, now, product.id]
-      )
-      // Also soft-delete all variants
-      await window.electron.db.execute(
-        `UPDATE product_variants SET deleted_at = ? WHERE product_id = ?`,
-        [now, product.id]
-      )
+      if (window.electron?.biz?.products?.delete) {
+        await window.electron.biz.products.delete(product.id)
+      } else {
+        throw new Error('قناة الاتصال بالخادم غير متوفرة لحذف المنتج')
+      }
       addToast({ message: `${t('تم حذف المنتج')} "${product.name}"`, variant: 'success' })
-      recordAuditLog('product_deleted', 'products', `حذف المنتج: ${product.name}`, product.id).catch(() => {})
       onBack()
     } catch (err) {// eslint-disable-next-line no-console
       console.error("[ProductDetailPage]", err); addToast({ message: t('فشل حذف المنتج'), variant: 'error' })
@@ -233,27 +223,17 @@ export function ProductDetailPage({
     if (!product) return
     setIsAddingVariant(true)
     try {
-      const variantId = generateUUID()
-      const now = new Date().toISOString()
-      const activeBranch = useAuthStore.getState().currentBranch
-      if (!activeBranch) throw new Error('لا توجد جلسة فرع نشطة')
-      const branchId = activeBranch.id
-
-      await window.electron.db.execute(
-        `INSERT INTO product_variants (id, product_id, branch_id, size, color, barcode, price_dzd, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          variantId,
-          product.id,
-          branchId,
-          newSize.trim() || null,
-          newColor.trim() || null,
-          newBarcode.trim() || null,
-          newVariantPrice ? Number.parseFloat(newVariantPrice) : null,
-          now,
-          now,
-        ]
-      )
+      if (window.electron?.biz?.products?.addVariant) {
+        await window.electron.biz.products.addVariant({
+          productId: product.id,
+          size: newSize.trim() || null,
+          color: newColor.trim() || null,
+          barcode: newBarcode.trim() || null,
+          priceDzd: newVariantPrice ? Number.parseFloat(newVariantPrice) : null,
+        })
+      } else {
+        throw new Error('قناة الاتصال بالخادم غير متوفرة لإضافة الخيار')
+      }
       addToast({ message: t('تم إضافة خيار جديد للمنتج'), variant: 'success' })
       setIsAddVariantOpen(false)
       setNewSize('')
