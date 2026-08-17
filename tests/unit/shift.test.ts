@@ -60,6 +60,27 @@ describe('Shift & Cash Drawer Management (Phase 2)', () => {
     expect(shift).toBeDefined()
     expect(shift.opening_cash_dzd).toBe(5000)
     expect(shift.status).toBe('open')
+
+    // Close shift to allow subsequent test shifts
+    db.prepare("UPDATE shifts SET status = 'closed', closed_at = datetime('now') WHERE id = ?").run(shiftId)
+  })
+
+  it('prevents multiple open shifts for the same cashier and branch at DB level', () => {
+    const shift1 = 's-unique-1'
+    const shift2 = 's-unique-2'
+
+    db.prepare(
+      "INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status, opened_at) VALUES (?, ?, ?, 1000, 'open', datetime('now'))"
+    ).run(shift1, branchId, cashierId)
+
+    // Attempting to open a second shift for the same cashier/branch MUST fail at DB level
+    expect(() => {
+      db.prepare(
+        "INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status, opened_at) VALUES (?, ?, ?, 2000, 'open', datetime('now'))"
+      ).run(shift2, branchId, cashierId)
+    }).toThrow(/UNIQUE constraint failed/)
+
+    db.prepare("UPDATE shifts SET status = 'closed', closed_at = datetime('now') WHERE id = ?").run(shift1)
   })
 
   it('calculates expected cash excluding card sales on shift close', () => {
@@ -74,23 +95,23 @@ describe('Shift & Cash Drawer Management (Phase 2)', () => {
     // Add 3 sales in this shift:
     // Sale 1: Cash 2500 DA
     db.prepare(
-      "INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, payment_method, status) VALUES ('sale-1', ?, ?, ?, 2500, 'cash', 'completed')"
+      "INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES ('sale-1', ?, ?, ?, 2500, 2500, 'cash', 'completed')"
     ).run(branchId, shiftId, cashierId)
 
     // Sale 2: Cash 1500 DA
     db.prepare(
-      "INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, payment_method, status) VALUES ('sale-2', ?, ?, ?, 1500, 'cash', 'completed')"
+      "INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES ('sale-2', ?, ?, ?, 1500, 1500, 'cash', 'completed')"
     ).run(branchId, shiftId, cashierId)
 
     // Sale 3: Card 4000 DA (Should be EXCLUDED from physical cash count)
     db.prepare(
-      "INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, payment_method, status) VALUES ('sale-3', ?, ?, ?, 4000, 'card', 'completed')"
+      "INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, card_amount_dzd, payment_method, status) VALUES ('sale-3', ?, ?, ?, 4000, 4000, 'card', 'completed')"
     ).run(branchId, shiftId, cashierId)
 
     // Query total cash sales
     const cashSalesRow = db
       .prepare(
-        "SELECT SUM(total_dzd) as cash_total FROM sales WHERE shift_id = ? AND payment_method IN ('cash', 'mixed') AND status = 'completed'"
+        "SELECT SUM(cash_amount_dzd) as cash_total FROM sales WHERE shift_id = ? AND status = 'completed'"
       )
       .get(shiftId) as { cash_total: number }
 
@@ -134,7 +155,7 @@ describe('Shift & Cash Drawer Management (Phase 2)', () => {
     ).run(shiftIdShort, branchId, cashierId, openingCash)
 
     db.prepare(
-      "INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, payment_method, status) VALUES ('sale-s1', ?, ?, ?, 2000, 'cash', 'completed')"
+      "INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES ('sale-s1', ?, ?, ?, 2000, 2000, 'cash', 'completed')"
     ).run(branchId, shiftIdShort, cashierId)
 
     // Query actual expected cash calculation from DB
@@ -156,6 +177,8 @@ describe('Shift & Cash Drawer Management (Phase 2)', () => {
 
     expect(actualExpected).toBe(5000)
     expect(diff).toBe(-200) // Shortage verified via real shift calculation query
+
+    db.prepare("UPDATE shifts SET status = 'closed', closed_at = datetime('now') WHERE id = ?").run(shiftIdShort)
   })
 
   it('correctly includes mixed sales, credit cash portions, and customer debt cash repayments in expected cash', () => {
@@ -184,7 +207,7 @@ describe('Shift & Cash Drawer Management (Phase 2)', () => {
       "INSERT INTO customer_payments (id, branch_id, shift_id, customer_id, amount_dzd, payment_method) VALUES ('cp-1', ?, ?, 'cust-1', 3000, 'cash')"
     ).run(branchId, shiftId)
 
-    // Query sales physical cash: cash sales (total_dzd) + mixed/credit cash (COALESCE(cash_amount_dzd, paid_amount_dzd, 0))
+    // Query sales physical cash
     const salesCashRow = db.prepare(`
       SELECT SUM(
         CASE 
@@ -211,5 +234,7 @@ describe('Shift & Cash Drawer Management (Phase 2)', () => {
     expect(salesCash).toBe(11000)
     expect(debtCash).toBe(3000)
     expect(totalExpected).toBe(24000)
+
+    db.prepare("UPDATE shifts SET status = 'closed', closed_at = datetime('now') WHERE id = ?").run(shiftId)
   })
 })

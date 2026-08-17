@@ -120,15 +120,23 @@ export async function processSale(
 
   if (paymentMethod === 'cash') {
     cashPaid = totalDzd
+    cardPaid = 0
   } else if (paymentMethod === 'card') {
+    cashPaid = 0
     cardPaid = totalDzd
   } else if (paymentMethod === 'mixed') {
-    cashPaid = mixedCashDzd ?? totalDzd / 2
-    cardPaid = mixedCardDzd ?? totalDzd / 2
+    const mixedCash = mixedCashDzd ?? 0
+    const mixedCard = mixedCardDzd ?? 0
+    if (mixedCash <= 0 || mixedCard <= 0 || Math.abs(mixedCash + mixedCard - totalDzd) > 0.01) {
+      throw new Error('في حالة الدفع المختلط، يجب أن تكون مبالغ النقدي والبطاقة أكبر من الصفر ومجموعهما يساوي إجمالي الفاتورة بالضبط')
+    }
+    cashPaid = mixedCash
+    cardPaid = mixedCard
   } else if (paymentMethod === 'credit') {
     paidAmountDzd = Math.min(totalDzd, Math.max(0, creditDepositDzd ?? 0))
     remainingDebtDzd = totalDzd - paidAmountDzd
     cashPaid = paidAmountDzd
+    cardPaid = 0
   }
 
   const operations: Array<{ sql: string; params: unknown[] }> = []

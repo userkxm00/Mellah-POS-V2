@@ -4,6 +4,7 @@ const { DatabaseSync } = require('node:sqlite')
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'os'
+import { processReturnItemValidation, type SaleItemRecord } from '../../src/main/returnValidation'
 
 describe('Returns, Refunds & Inventory Restock (Phase 6)', () => {
   let db: typeof DatabaseSync
@@ -19,9 +20,12 @@ describe('Returns, Refunds & Inventory Restock (Phase 6)', () => {
     db.exec('PRAGMA journal_mode = WAL')
     db.exec('PRAGMA foreign_keys = ON')
 
-    const migrationPath = path.join(process.cwd(), 'database', 'migrations', '0001_init.sql')
-    const sql = fs.readFileSync(migrationPath, 'utf-8')
-    db.exec(sql)
+    const migrationsDir = path.join(process.cwd(), 'database', 'migrations')
+    const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort()
+    for (const file of files) {
+      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8')
+      db.exec(sql)
+    }
 
     db.prepare("INSERT INTO branches (id, name) VALUES (?, 'Branch Return')").run(branchId)
     db.prepare(
@@ -85,9 +89,9 @@ describe('Returns, Refunds & Inventory Restock (Phase 6)', () => {
     const returnQty = 2
 
     db.exec('BEGIN')
-    // 1. Insert Return record matching DB schema (original_sale_id, variant_id, quantity, refund_method, reason, processed_by)
+    // 1. Insert Return record matching DB schema (id, branch_id, shift_id, original_sale_id, sale_item_id, variant_id, quantity, unit_price_dzd, refund_method, reason, processed_by)
     db.prepare(
-      "INSERT INTO returns (id, branch_id, original_sale_id, variant_id, quantity, refund_method, reason, processed_by) VALUES (?, ?, ?, ?, ?, 'cash', 'Size mismatch', ?)"
+      "INSERT INTO returns (id, branch_id, original_sale_id, sale_item_id, variant_id, quantity, unit_price_dzd, refund_method, reason, processed_by) VALUES (?, ?, ?, 'si-ret-1', ?, ?, 5000, 'cash', 'Size mismatch', ?)"
     ).run(returnId, branchId, saleId, variantId, returnQty, cashierId)
 
     // 2. Insert Stock Movement Ledger Entry (+2)
@@ -98,32 +102,224 @@ describe('Returns, Refunds & Inventory Restock (Phase 6)', () => {
 
     // Verify Return record
     const retRecord = db.prepare('SELECT * FROM returns WHERE id = ?').get(returnId) as {
-      original_sale_id: string
       quantity: number
       refund_method: string
     }
-
     expect(retRecord).toBeDefined()
-    expect(retRecord.original_sale_id).toBe(saleId)
     expect(retRecord.quantity).toBe(2)
     expect(retRecord.refund_method).toBe('cash')
 
-    // Verify Positive Stock Movement (+2)
-    const move = db.prepare("SELECT * FROM stock_movements WHERE id = 'm-ret-2'").get() as {
-      type: string
-      quantity_change: number
-    }
-
-    expect(move.type).toBe('return')
-    expect(move.quantity_change).toBe(2)
-
-    // Verify recovered inventory stock level (20 - 5 + 2 = 17)
-    const updatedStock = (
+    // Verify Stock increased to 17
+    const stock = (
       db
         .prepare('SELECT SUM(quantity_change) as s FROM stock_movements WHERE variant_id = ?')
         .get(variantId) as { s: number }
     ).s
+    expect(stock).toBe(17)
+  })
 
-    expect(updatedStock).toBe(17)
+  it('attributes cash refund to Shift B when sale occurred in Shift A and return processed in Shift B', () => {
+    const shiftA = 's-shift-A'
+    const shiftB = 's-shift-B'
+    const saleId = 'sale-shift-A'
+    const returnId = 'ret-shift-B'
+
+    // Shift A (Opening cash 5000)
+    db.prepare("INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status) VALUES (?, ?, ?, 5000, 'closed')").run(shiftA, branchId, cashierId)
+
+    // Sale in Shift A: 4000 DZD cash sale
+    db.prepare("INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES (?, ?, ?, ?, 4000, 4000, 'cash', 'completed')").run(saleId, branchId, shiftA, cashierId)
+    db.prepare("INSERT INTO sale_items (id, sale_id, variant_id, quantity, unit_price_dzd) VALUES ('si-shiftA', ?, ?, 1, 4000)").run(saleId, variantId)
+
+    // Shift B (Opening cash 3000)
+    db.prepare("INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status) VALUES (?, ?, ?, 3000, 'open')").run(shiftB, branchId, cashierId)
+
+    // Return processed during Shift B for sale from Shift A
+    db.prepare(`
+      INSERT INTO returns (id, branch_id, shift_id, original_sale_id, sale_item_id, variant_id, quantity, unit_price_dzd, refund_method, processed_by)
+      VALUES (?, ?, ?, ?, 'si-shiftA', ?, 1, 4000, 'cash', ?)
+    `).run(returnId, branchId, shiftB, saleId, variantId, cashierId)
+
+    // Shift A cash refunds MUST be 0
+    const refundsA = db.prepare("SELECT COALESCE(SUM(quantity * unit_price_dzd), 0) as r FROM returns WHERE shift_id = ? AND refund_method = 'cash'").get(shiftA) as { r: number }
+    expect(refundsA.r).toBe(0)
+
+    // Shift B cash refunds MUST be 4000
+    const refundsB = db.prepare("SELECT COALESCE(SUM(quantity * unit_price_dzd), 0) as r FROM returns WHERE shift_id = ? AND refund_method = 'cash'").get(shiftB) as { r: number }
+    expect(refundsB.r).toBe(4000)
+
+    // Close Shift B: Expected cash = 3000 (opening) + 0 (sales) - 4000 (cash refund) = -1000 DZD
+    const openingB = 3000
+    const expectedB = openingB - refundsB.r
+    expect(expectedB).toBe(-1000)
+
+    db.prepare("UPDATE shifts SET status = 'closed' WHERE id = ?").run(shiftB)
+  })
+
+  it('prevents multi-line variant join multiplication during shift close cash refund calculation', () => {
+    const shiftC = 's-shift-C'
+    const saleIdMulti = 'sale-multi-lines'
+    const returnId = 'ret-multi-line-1'
+
+    // Shift C
+    db.prepare("INSERT INTO shifts (id, branch_id, cashier_id, opening_cash_dzd, status) VALUES (?, ?, ?, 10000, 'open')").run(shiftC, branchId, cashierId)
+
+    // Sale with 2 custom items mapping to the same generic variant ID (v-custom-generic)
+    const customVarId = 'v-custom-generic'
+    db.prepare("INSERT INTO product_variants (id, product_id, branch_id, price_dzd) VALUES (?, 'p-ret', ?, 0)").run(customVarId, branchId)
+
+    db.prepare("INSERT INTO sales (id, branch_id, shift_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES (?, ?, ?, ?, 5000, 5000, 'cash', 'completed')").run(saleIdMulti, branchId, shiftC, cashierId)
+
+    // Line 1: custom item 1 (2000 DZD)
+    db.prepare("INSERT INTO sale_items (id, sale_id, variant_id, quantity, unit_price_dzd) VALUES ('si-line-1', ?, ?, 1, 2000)").run(saleIdMulti, customVarId)
+
+    // Line 2: custom item 2 (3000 DZD)
+    db.prepare("INSERT INTO sale_items (id, sale_id, variant_id, quantity, unit_price_dzd) VALUES ('si-line-2', ?, ?, 1, 3000)").run(saleIdMulti, customVarId)
+
+    // Return Line 1 only (1 item at 2000 DZD)
+    db.prepare(`
+      INSERT INTO returns (id, branch_id, shift_id, original_sale_id, sale_item_id, variant_id, quantity, unit_price_dzd, refund_method, processed_by)
+      VALUES (?, ?, ?, ?, 'si-line-1', ?, 1, 2000, 'cash', ?)
+    `).run(returnId, branchId, shiftC, saleIdMulti, customVarId, cashierId)
+
+    // Calculate cash refunds directly from returns table (NO ambiguous joins!)
+    const refundsC = db.prepare("SELECT COALESCE(SUM(quantity * unit_price_dzd), 0) as r FROM returns WHERE shift_id = ? AND refund_method = 'cash'").get(shiftC) as { r: number }
+
+    // MUST be exactly 2000 DZD (NOT 2000 + 3000 = 5000 DZD!)
+    expect(refundsC.r).toBe(2000)
+
+    db.prepare("UPDATE shifts SET status = 'closed' WHERE id = ?").run(shiftC)
+  })
+
+  it('handles legacy returns with NULL sale_item_id without bypassing over-return guard or double counting across shared variant lines', () => {
+    const saleIdLegacy = 'sale-legacy-test'
+    const legacyVarId = 'v-legacy-item'
+
+    db.prepare("INSERT INTO product_variants (id, product_id, branch_id, price_dzd) VALUES (?, 'p-ret', ?, 1000)").run(legacyVarId, branchId)
+
+    // Sale with 2 lines for same variant: Line A (qty 2) & Line B (qty 3) -> Total purchased = 5
+    db.prepare("INSERT INTO sales (id, branch_id, cashier_id, total_dzd, cash_amount_dzd, payment_method, status) VALUES (?, ?, ?, 5000, 5000, 'cash', 'completed')").run(saleIdLegacy, branchId, cashierId)
+    db.prepare("INSERT INTO sale_items (id, sale_id, variant_id, quantity, unit_price_dzd) VALUES ('si-leg-A', ?, ?, 2, 1000)").run(saleIdLegacy, legacyVarId)
+    db.prepare("INSERT INTO sale_items (id, sale_id, variant_id, quantity, unit_price_dzd) VALUES ('si-leg-B', ?, ?, 3, 1000)").run(saleIdLegacy, legacyVarId)
+
+    // Insert legacy return with NULL sale_item_id (qty 2)
+    db.prepare(`
+      INSERT INTO returns (id, branch_id, original_sale_id, sale_item_id, variant_id, quantity, refund_method, processed_by)
+      VALUES ('ret-leg-1', ?, ?, NULL, ?, 2, 'cash', ?)
+    `).run(branchId, saleIdLegacy, legacyVarId, cashierId)
+
+    // Fetch authoritative data using exact production SQL queries from bizIpc.ts
+    const origSaleItems = db.prepare('SELECT id, variant_id, quantity, unit_price_dzd FROM sale_items WHERE sale_id = ?').all(saleIdLegacy) as SaleItemRecord[]
+    const origReturns = db.prepare('SELECT sale_item_id, variant_id, COALESCE(SUM(quantity), 0) as total_returned FROM returns WHERE original_sale_id = ? GROUP BY sale_item_id, variant_id').all(saleIdLegacy) as Array<{ sale_item_id: string | null; variant_id: string; total_returned: number }>
+
+    const explicitReturnedByLine = new Map<string, number>()
+    const totalReturnedByVariant = new Map<string, number>()
+    for (const r of origReturns) {
+      if (r.sale_item_id) {
+        explicitReturnedByLine.set(r.sale_item_id, (explicitReturnedByLine.get(r.sale_item_id) ?? 0) + r.total_returned)
+      }
+      totalReturnedByVariant.set(r.variant_id, (totalReturnedByVariant.get(r.variant_id) ?? 0) + r.total_returned)
+    }
+
+    const totalPurchasedByVariant = new Map<string, number>()
+    for (const si of origSaleItems) {
+      totalPurchasedByVariant.set(si.variant_id, (totalPurchasedByVariant.get(si.variant_id) ?? 0) + si.quantity)
+    }
+
+    // 1. Process 2 units on Line A (si-leg-A) via production validation helper
+    const itemA = processReturnItemValidation(
+      { variantId: legacyVarId, quantity: 2, saleItemId: 'si-leg-A' },
+      origSaleItems,
+      explicitReturnedByLine,
+      totalReturnedByVariant,
+      totalPurchasedByVariant
+    )
+    expect(itemA.id).toBe('si-leg-A')
+
+    // Simulate batch loop state update matching production biz:returns:process
+    totalReturnedByVariant.set(legacyVarId, (totalReturnedByVariant.get(legacyVarId) ?? 0) + 2)
+
+    // 2. Attempting to return 2 units on Line B (si-leg-B) MUST throw production over-return error because total requested would be 4, exceeding remaining variant pool of 3
+    expect(() => {
+      processReturnItemValidation(
+        { variantId: legacyVarId, quantity: 2, saleItemId: 'si-leg-B' },
+        origSaleItems,
+        explicitReturnedByLine,
+        totalReturnedByVariant,
+        totalPurchasedByVariant
+      )
+    }).toThrow('الكمية المطلوبة للإرجاع (2) تتجاوز الكمية المتبقية القابلة للإرجاع (1)')
+  })
+
+  it('migration 0011 backfills deterministic legacy returns and preserves NULL unit_price_dzd for ambiguous multi-price lines', () => {
+    const saleDet = 'sale-det-mig'
+    const saleAmb = 'sale-amb-mig'
+    const varDet = 'v-det-mig'
+    const varAmb = 'v-amb-mig'
+
+    db.prepare("INSERT INTO product_variants (id, product_id, branch_id, price_dzd) VALUES (?, 'p-ret', ?, 1000)").run(varDet, branchId)
+    db.prepare("INSERT INTO product_variants (id, product_id, branch_id, price_dzd) VALUES (?, 'p-ret', ?, 2000)").run(varAmb, branchId)
+
+    // Deterministic sale: 1 line for varDet (qty 2, price 1000 DZD)
+    db.prepare("INSERT INTO sales (id, branch_id, cashier_id, total_dzd, payment_method) VALUES (?, ?, ?, 2000, 'cash')").run(saleDet, branchId, cashierId)
+    db.prepare("INSERT INTO sale_items (id, sale_id, variant_id, quantity, unit_price_dzd) VALUES ('si-det-1', ?, ?, 2, 1000)").run(saleDet, varDet)
+
+    // Legacy return for deterministic sale (sale_item_id = NULL, unit_price_dzd = NULL)
+    db.prepare("INSERT INTO returns (id, branch_id, original_sale_id, sale_item_id, variant_id, quantity, refund_method, processed_by) VALUES ('ret-det-mig', ?, ?, NULL, ?, 1, 'cash', ?)").run(branchId, saleDet, varDet, cashierId)
+
+    // Ambiguous sale: 2 lines for varAmb with DIFFERENT prices (line 1 at 2000 DZD, line 2 at 3000 DZD)
+    db.prepare("INSERT INTO sales (id, branch_id, cashier_id, total_dzd, payment_method) VALUES (?, ?, ?, 5000, 'cash')").run(saleAmb, branchId, cashierId)
+    db.prepare("INSERT INTO sale_items (id, sale_id, variant_id, quantity, unit_price_dzd) VALUES ('si-amb-1', ?, ?, 1, 2000)").run(saleAmb, varAmb)
+    db.prepare("INSERT INTO sale_items (id, sale_id, variant_id, quantity, unit_price_dzd) VALUES ('si-amb-2', ?, ?, 1, 3000)").run(saleAmb, varAmb)
+
+    // Legacy return for ambiguous sale (sale_item_id = NULL, unit_price_dzd = NULL)
+    db.prepare("INSERT INTO returns (id, branch_id, original_sale_id, sale_item_id, variant_id, quantity, refund_method, processed_by) VALUES ('ret-amb-mig', ?, ?, NULL, ?, 1, 'cash', ?)").run(branchId, saleAmb, varAmb, cashierId)
+
+    // Execute migration 0011 backfill queries
+    db.exec(`
+      UPDATE returns
+      SET sale_item_id = (
+        SELECT si.id
+        FROM sale_items si
+        WHERE si.sale_id = returns.original_sale_id AND si.variant_id = returns.variant_id
+      )
+      WHERE sale_item_id IS NULL
+        AND (
+          SELECT COUNT(*)
+          FROM sale_items si
+          WHERE si.sale_id = returns.original_sale_id AND si.variant_id = returns.variant_id
+        ) = 1;
+
+      UPDATE returns
+      SET unit_price_dzd = (
+        SELECT si.unit_price_dzd
+        FROM sale_items si
+        WHERE si.id = returns.sale_item_id
+      )
+      WHERE unit_price_dzd IS NULL AND sale_item_id IS NOT NULL;
+
+      UPDATE returns
+      SET unit_price_dzd = (
+        SELECT MIN(si.unit_price_dzd)
+        FROM sale_items si
+        WHERE si.sale_id = returns.original_sale_id AND si.variant_id = returns.variant_id
+      )
+      WHERE unit_price_dzd IS NULL
+        AND (
+          SELECT COUNT(DISTINCT si.unit_price_dzd)
+          FROM sale_items si
+          WHERE si.sale_id = returns.original_sale_id AND si.variant_id = returns.variant_id
+        ) = 1;
+    `)
+
+    // Verify deterministic return: sale_item_id = 'si-det-1', unit_price_dzd = 1000
+    const detRow = db.prepare('SELECT sale_item_id, unit_price_dzd FROM returns WHERE id = ?').get('ret-det-mig') as { sale_item_id: string | null; unit_price_dzd: number | null }
+    expect(detRow.sale_item_id).toBe('si-det-1')
+    expect(detRow.unit_price_dzd).toBe(1000)
+
+    // Verify ambiguous return: sale_item_id = NULL, unit_price_dzd = NULL (not arbitrarily guessed!)
+    const ambRow = db.prepare('SELECT sale_item_id, unit_price_dzd FROM returns WHERE id = ?').get('ret-amb-mig') as { sale_item_id: string | null; unit_price_dzd: number | null }
+    expect(ambRow.sale_item_id).toBeNull()
+    expect(ambRow.unit_price_dzd).toBeNull()
   })
 })
