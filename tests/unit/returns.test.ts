@@ -4,6 +4,7 @@ const { DatabaseSync } = require('node:sqlite')
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'os'
+import { processReturnItemValidation, type SaleItemRecord } from '../../src/main/returnValidation'
 
 describe('Returns, Refunds & Inventory Restock (Phase 6)', () => {
   let db: typeof DatabaseSync
@@ -207,35 +208,47 @@ describe('Returns, Refunds & Inventory Restock (Phase 6)', () => {
       VALUES ('ret-leg-1', ?, ?, NULL, ?, 2, 'cash', ?)
     `).run(branchId, saleIdLegacy, legacyVarId, cashierId)
 
-    // Query existing returns for dual-constraint calculation
-    const rawReturns = db.prepare('SELECT sale_item_id, variant_id, COALESCE(SUM(quantity), 0) as total_returned FROM returns WHERE original_sale_id = ? GROUP BY sale_item_id, variant_id').all(saleIdLegacy) as Array<{ sale_item_id: string | null; variant_id: string; total_returned: number }>
+    // Fetch authoritative data using exact production SQL queries from bizIpc.ts
+    const origSaleItems = db.prepare('SELECT id, variant_id, quantity, unit_price_dzd FROM sale_items WHERE sale_id = ?').all(saleIdLegacy) as SaleItemRecord[]
+    const origReturns = db.prepare('SELECT sale_item_id, variant_id, COALESCE(SUM(quantity), 0) as total_returned FROM returns WHERE original_sale_id = ? GROUP BY sale_item_id, variant_id').all(saleIdLegacy) as Array<{ sale_item_id: string | null; variant_id: string; total_returned: number }>
 
     const explicitReturnedByLine = new Map<string, number>()
     const totalReturnedByVariant = new Map<string, number>()
-    for (const r of rawReturns) {
+    for (const r of origReturns) {
       if (r.sale_item_id) {
         explicitReturnedByLine.set(r.sale_item_id, (explicitReturnedByLine.get(r.sale_item_id) ?? 0) + r.total_returned)
       }
       totalReturnedByVariant.set(r.variant_id, (totalReturnedByVariant.get(r.variant_id) ?? 0) + r.total_returned)
     }
 
-    const totalPurchasedVariant = 5 // Line A (2) + Line B (3)
-    const totalReturnedVariant = totalReturnedByVariant.get(legacyVarId) ?? 0 // 2 legacy returned
+    const totalPurchasedByVariant = new Map<string, number>()
+    for (const si of origSaleItems) {
+      totalPurchasedByVariant.set(si.variant_id, (totalPurchasedByVariant.get(si.variant_id) ?? 0) + si.quantity)
+    }
 
-    // Calculate max returnable for Line A (qty 2)
-    const explicitLineA = explicitReturnedByLine.get('si-leg-A') ?? 0
-    const maxLineA = Math.max(0, Math.min(2 - explicitLineA, totalPurchasedVariant - totalReturnedVariant))
-    expect(maxLineA).toBe(2) // min(2-0, 5-2) = 2
+    // 1. Process 2 units on Line A (si-leg-A) via production validation helper
+    const itemA = processReturnItemValidation(
+      { variantId: legacyVarId, quantity: 2, saleItemId: 'si-leg-A' },
+      origSaleItems,
+      explicitReturnedByLine,
+      totalReturnedByVariant,
+      totalPurchasedByVariant
+    )
+    expect(itemA.id).toBe('si-leg-A')
 
-    // Calculate max returnable for Line B (qty 3)
-    const explicitLineB = explicitReturnedByLine.get('si-leg-B') ?? 0
-    const maxLineB = Math.max(0, Math.min(3 - explicitLineB, totalPurchasedVariant - totalReturnedVariant))
-    expect(maxLineB).toBe(3) // min(3-0, 5-2) = 3
+    // Simulate batch loop state update matching production biz:returns:process
+    totalReturnedByVariant.set(legacyVarId, (totalReturnedByVariant.get(legacyVarId) ?? 0) + 2)
 
-    // If 2 items are returned on Line B, new total returned for variant becomes 4 (2 legacy + 2 new).
-    const newTotalReturnedVar = totalReturnedVariant + 2
-    const remainingAfterLineB = Math.max(0, Math.min(2 - explicitLineA, totalPurchasedVariant - newTotalReturnedVar))
-    expect(remainingAfterLineB).toBe(1) // min(2-0, 5-4) = 1 (cannot over-return beyond 5 total!)
+    // 2. Attempting to return 2 units on Line B (si-leg-B) MUST throw production over-return error because total requested would be 4, exceeding remaining variant pool of 3
+    expect(() => {
+      processReturnItemValidation(
+        { variantId: legacyVarId, quantity: 2, saleItemId: 'si-leg-B' },
+        origSaleItems,
+        explicitReturnedByLine,
+        totalReturnedByVariant,
+        totalPurchasedByVariant
+      )
+    }).toThrow('الكمية المطلوبة للإرجاع (2) تتجاوز الكمية المتبقية القابلة للإرجاع (1)')
   })
 
   it('migration 0011 backfills deterministic legacy returns and preserves NULL unit_price_dzd for ambiguous multi-price lines', () => {
