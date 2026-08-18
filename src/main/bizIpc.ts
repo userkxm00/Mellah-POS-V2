@@ -1262,8 +1262,8 @@ export function registerBizIpcHandlers(): void {
     } else if (input.action === 'delete') {
       if (!input.id) throw new Error('يرجى تحديد الفئة للحذف')
       operations.push({
-        sql: `DELETE FROM categories WHERE id = ? AND (branch_id = ? OR branch_id IS NULL)`,
-        params: [input.id, branchId],
+        sql: `UPDATE categories SET deleted_at = ?, updated_at = ? WHERE id = ? AND (branch_id = ? OR branch_id IS NULL)`,
+        params: [now, now, input.id, branchId],
       })
       operations.push({
         sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'category_deleted', 'categories', ?, ?, ?)`,

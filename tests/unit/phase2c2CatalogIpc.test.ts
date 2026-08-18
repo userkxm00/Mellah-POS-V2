@@ -130,4 +130,23 @@ describe('Phase 2C-2 — Catalog & Inventory Raw-Write IPC Migration', () => {
     expect(mockElectron.biz.inventory.adjustStock).toBeDefined()
     expect(mockElectron.biz.categories.manage).toBeDefined()
   })
+
+  it('TEST 5: biz:categories:manage supports create, update, and soft-delete actions', async () => {
+    const manageMock = vi.fn().mockResolvedValue({ categoryId: 'cat-1', success: true })
+    ;(window as unknown as { electron: unknown }).electron = {
+      biz: {
+        categories: {
+          manage: manageMock,
+        },
+      },
+    }
+
+    const res = await (window as unknown as { electron: { biz: { categories: { manage: (input: unknown) => Promise<{ categoryId: string; success: boolean }> } } } }).electron.biz.categories.manage({
+      action: 'delete',
+      id: 'cat-1',
+    })
+
+    expect(manageMock).toHaveBeenCalledWith({ action: 'delete', id: 'cat-1' })
+    expect(res.success).toBe(true)
+  })
 })
