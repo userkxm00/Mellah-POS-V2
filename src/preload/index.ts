@@ -150,6 +150,20 @@ export interface BizApi {
     load: <T = unknown>() => Promise<T | null>
     save: (settings: Record<string, unknown>) => Promise<{ success: boolean }>
   }
+  products: {
+    create: (input: unknown) => Promise<{ productId: string; variantIds: string[] }>
+    update: (input: unknown) => Promise<{ success: boolean }>
+    delete: (productId: string) => Promise<{ success: boolean }>
+    addVariant: (input: unknown) => Promise<{ variantId: string }>
+    bulkUpdatePrice: (input: unknown) => Promise<{ success: boolean }>
+    importCsv: (csvContent: string) => Promise<{ importedCount: number }>
+  }
+  inventory: {
+    adjustStock: (input: unknown) => Promise<{ success: boolean }>
+  }
+  categories: {
+    manage: (input: unknown) => Promise<{ categoryId?: string; success: boolean }>
+  }
 }
 
 export interface ElectronApi {
@@ -227,6 +241,20 @@ const api: ElectronApi = {
     settings: {
       load: () => ipcRenderer.invoke('biz:settings:load'),
       save: (settings: Record<string, unknown>) => ipcRenderer.invoke('biz:settings:save', settings),
+    },
+    products: {
+      create: (input: unknown) => ipcRenderer.invoke('biz:products:create', input),
+      update: (input: unknown) => ipcRenderer.invoke('biz:products:update', input),
+      delete: (productId: string) => ipcRenderer.invoke('biz:products:delete', productId),
+      addVariant: (input: unknown) => ipcRenderer.invoke('biz:products:addVariant', input),
+      bulkUpdatePrice: (input: unknown) => ipcRenderer.invoke('biz:products:bulkUpdatePrice', input),
+      importCsv: (csvContent: string) => ipcRenderer.invoke('biz:products:importCsv', csvContent),
+    },
+    inventory: {
+      adjustStock: (input: unknown) => ipcRenderer.invoke('biz:inventory:adjustStock', input),
+    },
+    categories: {
+      manage: (input: unknown) => ipcRenderer.invoke('biz:categories:manage', input),
     },
   },
   openModuleWindow: (moduleName: string): Promise<void> => {

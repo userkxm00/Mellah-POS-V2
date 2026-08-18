@@ -713,4 +713,575 @@ export function registerBizIpcHandlers(): void {
 
     return { success: true }
   })
+
+  // ── Catalog & Inventory Management (Phase 2C-2) ──
+
+  // 1. Create product with variant matrix & initial stock
+  ipcMain.handle('biz:products:create', async (_event, input: {
+    name: string
+    category_id: string | null
+    description: string | null
+    price_dzd: number
+    cost_dzd: number | null
+    image_url?: string | null
+    variants: Array<{
+      size: string | null
+      color: string | null
+      barcode: string
+      sku: string | null
+      price_dzd: number | null
+      initial_stock: number
+    }>
+  }) => {
+    const session = requireAuth()
+    const branchId = validateBranchAccess(session)
+    requireRole(session, ['admin', 'manager'])
+
+    if (!input.name || !input.name.trim()) {
+      throw new Error('يرجى إدخال اسم المنتج')
+    }
+    if (!input.variants || input.variants.length === 0) {
+      throw new Error('يرجى إضافة خيار (Variant) واحد على الأقل للمنتج')
+    }
+    const barcodes = input.variants.map((v) => v.barcode.trim())
+    if (barcodes.length !== new Set(barcodes).size) {
+      throw new Error('يوجد مكرر في الباركود المدخل ضمن الخيارات')
+    }
+    for (const v of input.variants) {
+      const cleanBarcode = v.barcode.trim()
+      if (!cleanBarcode) {
+        throw new Error('يرجى إدخال رمز الباركود لكل خيار')
+      }
+      if (cleanBarcode.length > 256) {
+        throw new Error('رمز الباركود طويل جداً (الحد الأقصى 256 حرف)')
+      }
+    }
+
+    const productId = generateUUID()
+    const now = new Date().toISOString()
+    const variantIds: string[] = []
+    const operations: Array<{ sql: string; params: unknown[] }> = []
+
+    operations.push({
+      sql: `INSERT INTO products
+            (id, branch_id, category_id, name, description, image_url, price_dzd, cost_dzd, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      params: [
+        productId,
+        branchId,
+        input.category_id,
+        input.name.trim(),
+        input.description ? input.description.trim() : null,
+        input.image_url || null,
+        input.price_dzd,
+        input.cost_dzd,
+        now,
+        now,
+      ],
+    })
+
+    for (const v of input.variants) {
+      const variantId = generateUUID()
+      variantIds.push(variantId)
+      const movementId = generateUUID()
+
+      operations.push({
+        sql: `INSERT INTO product_variants
+              (id, product_id, branch_id, size, color, barcode, sku, price_dzd, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        params: [
+          variantId,
+          productId,
+          branchId,
+          v.size ? v.size.trim() : null,
+          v.color ? v.color.trim() : null,
+          v.barcode.trim(),
+          v.sku ? v.sku.trim() : null,
+          v.price_dzd,
+          now,
+          now,
+        ],
+      })
+
+      if (v.initial_stock > 0) {
+        operations.push({
+          sql: `INSERT INTO stock_movements
+                (id, branch_id, variant_id, type, quantity_change, note, created_by, created_at)
+                VALUES (?, ?, ?, 'restock', ?, 'مخزون أولي عند إضافة المنتج', ?, ?)`,
+          params: [
+            movementId,
+            branchId,
+            variantId,
+            v.initial_stock,
+            session.userId,
+            now,
+          ],
+        })
+      }
+    }
+
+    operations.push({
+      sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'product_created', 'products', ?, ?, ?)`,
+      params: [generateUUID(), session.userId, productId, `إضافة المنتج: ${input.name.trim()}`, now],
+    })
+
+    operations.push({
+      sql: `INSERT INTO sync_queue (id, table_name, operation, payload, created_at, attempts) VALUES (?, 'products', 'insert', ?, ?, 0)`,
+      params: [generateUUID(), JSON.stringify({ id: productId, name: input.name.trim(), branch_id: branchId }), now],
+    })
+
+    await withTransaction(async (db) => {
+      for (const op of operations) {
+        await db.execute(op.sql, op.params)
+      }
+    })
+
+    return { productId, variantIds }
+  })
+
+  // 2. Update product header
+  ipcMain.handle('biz:products:update', async (_event, input: {
+    id: string
+    name: string
+    description?: string | null
+    price_dzd: number
+    cost_dzd?: number | null
+    image_url?: string | null
+    category_id?: string | null
+  }) => {
+    const session = requireAuth()
+    const branchId = validateBranchAccess(session)
+    requireRole(session, ['admin', 'manager'])
+
+    if (!input.id || !input.name.trim()) {
+      throw new Error('يرجى تحديد المنتج وإدخال الاسم')
+    }
+
+    const now = new Date().toISOString()
+    const operations: Array<{ sql: string; params: unknown[] }> = [
+      {
+        sql: `UPDATE products SET name = ?, description = ?, price_dzd = ?, cost_dzd = ?, image_url = ?, category_id = ?, updated_at = ? WHERE id = ? AND branch_id = ?`,
+        params: [
+          input.name.trim(),
+          input.description ? input.description.trim() : null,
+          input.price_dzd,
+          input.cost_dzd ?? null,
+          input.image_url ?? null,
+          input.category_id ?? null,
+          now,
+          input.id,
+          branchId,
+        ],
+      },
+      {
+        sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'product_updated', 'products', ?, ?, ?)`,
+        params: [generateUUID(), session.userId, input.id, `تعديل المنتج: ${input.name.trim()}`, now],
+      },
+      {
+        sql: `INSERT INTO sync_queue (id, table_name, operation, payload, created_at, attempts) VALUES (?, 'products', 'update', ?, ?, 0)`,
+        params: [generateUUID(), JSON.stringify({ id: input.id, name: input.name.trim(), branch_id: branchId }), now],
+      },
+    ]
+
+    await withTransaction(async (db) => {
+      for (const op of operations) {
+        await db.execute(op.sql, op.params)
+      }
+    })
+
+    return { success: true }
+  })
+
+  // 3. Delete product (soft delete product & variants)
+  ipcMain.handle('biz:products:delete', async (_event, productId: string) => {
+    const session = requireAuth()
+    const branchId = validateBranchAccess(session)
+    requireRole(session, ['admin', 'manager'])
+
+    if (!productId) throw new Error('يرجى تحديد المنتج للحذف')
+
+    const now = new Date().toISOString()
+    const operations: Array<{ sql: string; params: unknown[] }> = [
+      {
+        sql: `UPDATE products SET deleted_at = ?, updated_at = ? WHERE id = ? AND branch_id = ?`,
+        params: [now, now, productId, branchId],
+      },
+      {
+        sql: `UPDATE product_variants SET deleted_at = ? WHERE product_id = ? AND branch_id = ?`,
+        params: [now, productId, branchId],
+      },
+      {
+        sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'product_deleted', 'products', ?, ?, ?)`,
+        params: [generateUUID(), session.userId, productId, `حذف المنتج: ${productId}`, now],
+      },
+      {
+        sql: `INSERT INTO sync_queue (id, table_name, operation, payload, created_at, attempts) VALUES (?, 'products', 'delete', ?, ?, 0)`,
+        params: [generateUUID(), JSON.stringify({ id: productId, deleted_at: now, branch_id: branchId }), now],
+      },
+    ]
+
+    await withTransaction(async (db) => {
+      for (const op of operations) {
+        await db.execute(op.sql, op.params)
+      }
+    })
+
+    return { success: true }
+  })
+
+  // 4. Add single variant
+  ipcMain.handle('biz:products:addVariant', async (_event, input: {
+    productId: string
+    size: string | null
+    color: string | null
+    barcode: string | null
+    priceDzd: number | null
+  }) => {
+    const session = requireAuth()
+    const branchId = validateBranchAccess(session)
+    requireRole(session, ['admin', 'manager'])
+
+    if (!input.productId) throw new Error('يرجى تحديد المنتج')
+
+    const variantId = generateUUID()
+    const now = new Date().toISOString()
+
+    const operations: Array<{ sql: string; params: unknown[] }> = [
+      {
+        sql: `INSERT INTO product_variants (id, product_id, branch_id, size, color, barcode, price_dzd, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        params: [
+          variantId,
+          input.productId,
+          branchId,
+          input.size ? input.size.trim() : null,
+          input.color ? input.color.trim() : null,
+          input.barcode ? input.barcode.trim() : null,
+          input.priceDzd ?? null,
+          now,
+          now,
+        ],
+      },
+      {
+        sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'variant_added', 'product_variants', ?, ?, ?)`,
+        params: [generateUUID(), session.userId, variantId, `إضافة خيار جديد للمنتج: ${input.productId}`, now],
+      },
+      {
+        sql: `INSERT INTO sync_queue (id, table_name, operation, payload, created_at, attempts) VALUES (?, 'product_variants', 'insert', ?, ?, 0)`,
+        params: [generateUUID(), JSON.stringify({ id: variantId, product_id: input.productId, branch_id: branchId }), now],
+      },
+    ]
+
+    await withTransaction(async (db) => {
+      for (const op of operations) {
+        await db.execute(op.sql, op.params)
+      }
+    })
+
+    return { variantId }
+  })
+
+  // 5. Bulk price adjustment
+  ipcMain.handle('biz:products:bulkUpdatePrice', async (_event, input: {
+    bulkCatId?: string
+    bulkAdjustmentType: 'percent' | 'fixed'
+    bulkAdjustmentVal: number
+  }) => {
+    const session = requireAuth()
+    const branchId = validateBranchAccess(session)
+    requireRole(session, ['admin', 'manager'])
+
+    if (input.bulkAdjustmentVal === 0) {
+      throw new Error('يرجى إدخال قيمة التعديل')
+    }
+
+    const now = new Date().toISOString()
+    let updateSql = ''
+    const params: unknown[] = []
+
+    if (input.bulkCatId) {
+      if (input.bulkAdjustmentType === 'percent') {
+        const factor = 1 + input.bulkAdjustmentVal / 100.0
+        updateSql = `UPDATE products SET price_dzd = ROUND(price_dzd * ?, 2), updated_at = ? WHERE deleted_at IS NULL AND category_id = ? AND branch_id = ?`
+        params.push(factor, now, input.bulkCatId, branchId)
+      } else {
+        updateSql = `UPDATE products SET price_dzd = MAX(0, price_dzd + ?), updated_at = ? WHERE deleted_at IS NULL AND category_id = ? AND branch_id = ?`
+        params.push(input.bulkAdjustmentVal, now, input.bulkCatId, branchId)
+      }
+    } else {
+      if (input.bulkAdjustmentType === 'percent') {
+        const factor = 1 + input.bulkAdjustmentVal / 100.0
+        updateSql = `UPDATE products SET price_dzd = ROUND(price_dzd * ?, 2), updated_at = ? WHERE deleted_at IS NULL AND branch_id = ?`
+        params.push(factor, now, branchId)
+      } else {
+        updateSql = `UPDATE products SET price_dzd = MAX(0, price_dzd + ?), updated_at = ? WHERE deleted_at IS NULL AND branch_id = ?`
+        params.push(input.bulkAdjustmentVal, now, branchId)
+      }
+    }
+
+    const operations: Array<{ sql: string; params: unknown[] }> = [
+      { sql: updateSql, params },
+      {
+        sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'bulk_price_updated', 'products', ?, ?, ?)`,
+        params: [generateUUID(), session.userId, branchId, `تعديل جماعي للأسعار (${input.bulkAdjustmentType}: ${input.bulkAdjustmentVal})`, now],
+      },
+      {
+        sql: `INSERT INTO sync_queue (id, table_name, operation, payload, created_at, attempts) VALUES (?, 'products', 'bulk_update', ?, ?, 0)`,
+        params: [generateUUID(), JSON.stringify({ branch_id: branchId, type: input.bulkAdjustmentType, val: input.bulkAdjustmentVal }), now],
+      },
+    ]
+
+    await withTransaction(async (db) => {
+      for (const op of operations) {
+        await db.execute(op.sql, op.params)
+      }
+    })
+
+    return { success: true }
+  })
+
+  // 6. CSV Bulk Product Import
+  ipcMain.handle('biz:products:importCsv', async (_event, csvContent: string) => {
+    const session = requireAuth()
+    const branchId = validateBranchAccess(session)
+    requireRole(session, ['admin', 'manager'])
+
+    if (!csvContent || !csvContent.trim()) {
+      throw new Error('ملف CSV فارغ أو لا يحتوي على بيانات')
+    }
+
+    const lines = csvContent.split('\n').filter((l) => l.trim())
+    if (lines.length <= 1) {
+      throw new Error('ملف CSV فارغ أو لا يحتوي على بيانات')
+    }
+
+    const header = lines[0].toLowerCase().split(',').map((h) => h.trim().replace(/^"|"$/g, ''))
+    const nameIdx = header.findIndex((h) => h.includes('name') || h.includes('اسم') || h.includes('منتج'))
+    const priceIdx = header.findIndex((h) => h.includes('price') || h.includes('سعر'))
+    if (nameIdx === -1 || priceIdx === -1) {
+      throw new Error('يجب أن يحتوي ملف CSV على عمود اسم المنتج (Name) وسعر البيع (Price)')
+    }
+    const costIdx = header.findIndex((h) => h.includes('cost') || h.includes('تكلفة'))
+    const categoryIdx = header.findIndex((h) => h.includes('category') || h.includes('فئة'))
+    const sizeIdx = header.findIndex((h) => h.includes('size') || h.includes('مقاس'))
+    const colorIdx = header.findIndex((h) => h.includes('color') || h.includes('لون'))
+    const barcodeIdx = header.findIndex((h) => h.includes('barcode') || h.includes('باركود'))
+    const stockIdx = header.findIndex((h) => h.includes('stock') || h.includes('مخزون') || h.includes('كمية'))
+
+    const db = await whenDatabaseReady()
+    const catRows = await db.query<{ id: string; name: string }>(
+      'SELECT id, name FROM categories WHERE (branch_id = ? OR branch_id IS NULL) AND deleted_at IS NULL',
+      [branchId]
+    )
+    const categoryMap = new Map<string, string>()
+    for (const c of catRows) {
+      categoryMap.set(c.name.toLowerCase(), c.id)
+    }
+
+    const prodRows = await db.query<{ id: string; name: string; category_id: string | null }>(
+      'SELECT id, name, category_id FROM products WHERE branch_id = ? AND deleted_at IS NULL',
+      [branchId]
+    )
+    const productMap = new Map<string, string>()
+    for (const p of prodRows) {
+      productMap.set(`${p.name.toLowerCase()}_${p.category_id ?? ''}`, p.id)
+    }
+
+    const now = new Date().toISOString()
+    const operations: Array<{ sql: string; params: unknown[] }> = []
+    let importedCount = 0
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim()
+      if (!line) continue
+
+      const cols = line.split(',').map((c) => c.trim().replace(/^"|"$/g, ''))
+      const productName = cols[nameIdx]?.trim()
+      const priceDzd = Number.parseFloat(cols[priceIdx]) || 0
+      if (!productName || priceDzd <= 0) continue
+
+      const categoryName = categoryIdx !== -1 ? cols[categoryIdx]?.trim() : undefined
+      const costDzd = costIdx !== -1 ? Number.parseFloat(cols[costIdx]) || 0 : 0
+      const size = sizeIdx !== -1 ? cols[sizeIdx]?.trim() || null : null
+      const color = colorIdx !== -1 ? cols[colorIdx]?.trim() || null : null
+      const barcode = barcodeIdx !== -1 ? cols[barcodeIdx]?.trim() || null : null
+      const stock = stockIdx !== -1 ? Number.parseInt(cols[stockIdx], 10) || 0 : 0
+
+      let categoryId: string | null = null
+      if (categoryName) {
+        const catLower = categoryName.toLowerCase()
+        if (categoryMap.has(catLower)) {
+          categoryId = categoryMap.get(catLower)!
+        } else {
+          categoryId = generateUUID()
+          operations.push({
+            sql: `INSERT INTO categories (id, branch_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+            params: [categoryId, branchId, categoryName, now, now],
+          })
+          categoryMap.set(catLower, categoryId)
+        }
+      }
+
+      const prodKey = `${productName.toLowerCase()}_${categoryId ?? ''}`
+      let productId: string
+      if (productMap.has(prodKey)) {
+        productId = productMap.get(prodKey)!
+      } else {
+        productId = generateUUID()
+        productMap.set(prodKey, productId)
+        operations.push({
+          sql: `INSERT INTO products (id, branch_id, category_id, name, price_dzd, cost_dzd, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          params: [productId, branchId, categoryId, productName, priceDzd, costDzd, now, now],
+        })
+      }
+
+      const variantId = generateUUID()
+      operations.push({
+        sql: `INSERT INTO product_variants (id, product_id, branch_id, size, color, barcode, price_dzd, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        params: [variantId, productId, branchId, size, color, barcode, priceDzd, now, now],
+      })
+
+      if (stock > 0) {
+        operations.push({
+          sql: `INSERT INTO stock_movements (id, branch_id, variant_id, type, quantity_change, note, created_at) VALUES (?, ?, ?, 'restock', ?, 'استيراد أولي من ملف CSV', ?)`,
+          params: [generateUUID(), branchId, variantId, stock, now],
+        })
+      }
+
+      importedCount++
+    }
+
+    if (operations.length > 0) {
+      operations.push({
+        sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'csv_imported', 'products', ?, ?, ?)`,
+        params: [generateUUID(), session.userId, branchId, `استيراد ${importedCount} منتجات من ملف CSV`, now],
+      })
+
+      operations.push({
+        sql: `INSERT INTO sync_queue (id, table_name, operation, payload, created_at, attempts) VALUES (?, 'products', 'csv_import', ?, ?, 0)`,
+        params: [generateUUID(), JSON.stringify({ branch_id: branchId, count: importedCount }), now],
+      })
+
+      await withTransaction(async (db) => {
+        for (const op of operations) {
+          await db.execute(op.sql, op.params)
+        }
+      })
+    }
+
+    return { importedCount }
+  })
+
+  // 7. Stock Adjustment / Movement Recording
+  ipcMain.handle('biz:inventory:adjustStock', async (_event, input: {
+    variantId: string
+    type: 'restock' | 'adjustment'
+    quantityChange: number
+    note: string
+  }) => {
+    const session = requireAuth()
+    const branchId = validateBranchAccess(session)
+    requireRole(session, ['admin', 'manager'])
+
+    if (!input.variantId) throw new Error('يرجى تحديد الخيار')
+    if (!input.quantityChange || input.quantityChange === 0) {
+      throw new Error('يرجى تحديد كمية التعديل')
+    }
+
+    const movementId = generateUUID()
+    const now = new Date().toISOString()
+    const operations: Array<{ sql: string; params: unknown[] }> = [
+      {
+        sql: `INSERT INTO stock_movements
+              (id, branch_id, variant_id, type, quantity_change, note, created_by, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        params: [
+          movementId,
+          branchId,
+          input.variantId,
+          input.type,
+          input.quantityChange,
+          input.note.trim() || 'تعديل مخزون يدوياً',
+          session.userId,
+          now,
+        ],
+      },
+      {
+        sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'stock_adjusted', 'stock_movements', ?, ?, ?)`,
+        params: [generateUUID(), session.userId, movementId, `تعديل المخزون (${input.type}: ${input.quantityChange})`, now],
+      },
+      {
+        sql: `INSERT INTO sync_queue (id, table_name, operation, payload, created_at, attempts) VALUES (?, 'stock_movements', 'insert', ?, ?, 0)`,
+        params: [generateUUID(), JSON.stringify({ id: movementId, variant_id: input.variantId, quantity_change: input.quantityChange }), now],
+      },
+    ]
+
+    await withTransaction(async (db) => {
+      for (const op of operations) {
+        await db.execute(op.sql, op.params)
+      }
+    })
+
+    return { success: true }
+  })
+
+  // 8. Categories CRUD Management
+  ipcMain.handle('biz:categories:manage', async (_event, input: {
+    action: 'create' | 'update' | 'delete'
+    id?: string
+    name?: string
+  }) => {
+    const session = requireAuth()
+    const branchId = validateBranchAccess(session)
+    requireRole(session, ['admin', 'manager'])
+
+    const now = new Date().toISOString()
+    const operations: Array<{ sql: string; params: unknown[] }> = []
+    let categoryId = input.id
+
+    if (input.action === 'create') {
+      if (!input.name || !input.name.trim()) throw new Error('يرجى إدخال اسم الفئة')
+      categoryId = generateUUID()
+      operations.push({
+        sql: `INSERT INTO categories (id, branch_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+        params: [categoryId, branchId, input.name.trim(), now, now],
+      })
+      operations.push({
+        sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'category_created', 'categories', ?, ?, ?)`,
+        params: [generateUUID(), session.userId, categoryId, `إضافة الفئة: ${input.name.trim()}`, now],
+      })
+    } else if (input.action === 'update') {
+      if (!input.id || !input.name || !input.name.trim()) throw new Error('يرجى تحديد الفئة وإدخال الاسم الجديد')
+      operations.push({
+        sql: `UPDATE categories SET name = ?, updated_at = ? WHERE id = ? AND (branch_id = ? OR branch_id IS NULL)`,
+        params: [input.name.trim(), now, input.id, branchId],
+      })
+      operations.push({
+        sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'category_updated', 'categories', ?, ?, ?)`,
+        params: [generateUUID(), session.userId, input.id, `تعديل الفئة: ${input.name.trim()}`, now],
+      })
+    } else if (input.action === 'delete') {
+      if (!input.id) throw new Error('يرجى تحديد الفئة للحذف')
+      operations.push({
+        sql: `UPDATE categories SET deleted_at = ?, updated_at = ? WHERE id = ? AND (branch_id = ? OR branch_id IS NULL)`,
+        params: [now, now, input.id, branchId],
+      })
+      operations.push({
+        sql: `INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, details, created_at) VALUES (?, ?, 'category_deleted', 'categories', ?, ?, ?)`,
+        params: [generateUUID(), session.userId, input.id, `حذف الفئة: ${input.id}`, now],
+      })
+    }
+
+    operations.push({
+      sql: `INSERT INTO sync_queue (id, table_name, operation, payload, created_at, attempts) VALUES (?, 'categories', ?, ?, ?, 0)`,
+      params: [generateUUID(), input.action, JSON.stringify({ id: categoryId, name: input.name, branch_id: branchId }), now],
+    })
+
+    await withTransaction(async (db) => {
+      for (const op of operations) {
+        await db.execute(op.sql, op.params)
+      }
+    })
+
+    return { categoryId, success: true }
+  })
 }
